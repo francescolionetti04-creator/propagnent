@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: propagnent-ai
+    runtime: python
+    region: frankfurt          # Europa — più vicino a Livorno/Pisa
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start_server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    # Disk persistente per il DB (opzionale — $7/mese)
+    # Se non lo attivi il DB viene ricreato ad ogni restart (scraper popola)
+    # disk:
+    #   name: propagnent-db
+    #   mountPath: /data
+    #   sizeGB: 1

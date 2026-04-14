@@ -1,0 +1,23 @@
+# Database (generato da scraper all'avvio)
+backend/propagnent.db
+backend/propagnent.db-shm
+backend/propagnent.db-wal
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.venv/
+venv/
+env/
+.env
+
+# MacOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Log
+*.log
