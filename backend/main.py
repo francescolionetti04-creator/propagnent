@@ -30,6 +30,15 @@ init_db()
 scraper_running = False
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Se il DB è vuoto, avvia lo scraper in background al primo boot (es. Render)."""
+    stats = get_stats()
+    if stats["totale"] < 10:
+        print("[Startup] DB vuoto — avvio scraping automatico in background...")
+        threading.Thread(target=_popola_db_in_background, daemon=True).start()
+
+
 def _popola_db_in_background():
     """Lancia scraper in un thread separato se il DB è vuoto."""
     import time

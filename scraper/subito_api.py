@@ -205,8 +205,8 @@ def salva_annunci(annunci_raw: list) -> int:
                 indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                 prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                 intel_privato, intel_warning, ai_insight,
-                is_nuovo, data_inserimento, url_originale
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                is_nuovo, data_inserimento, url_originale, foto_url
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             a.get("indirizzo"), a.get("indirizzo_preciso", False),
             a.get("zona"), a.get("tipo", "Appartamento"),
@@ -218,7 +218,8 @@ def salva_annunci(annunci_raw: list) -> int:
             a.get("telefono"),
             intel["intel_privato"], intel["intel_warning"], intel["ai_insight"],
             a.get("is_nuovo", True),
-            ora.isoformat(), url
+            ora.isoformat(), url,
+            a.get("foto_url"),
         ))
         nuovi += 1
 
@@ -267,6 +268,14 @@ def parse_ads_json(data: dict, provincia: str) -> list:
             # Tipo immobile
             tipo = determina_tipo(titolo)
 
+            # Prima foto — cdn_base_url con rule gallery-desktop-2x-auto (~800px, avif)
+            images = a.get("images", []) or []
+            foto_url = None
+            if images:
+                cdn = images[0].get("cdn_base_url", "")
+                if cdn:
+                    foto_url = cdn + "?rule=gallery-desktop-2x-auto"
+
             annunci.append({
                 "titolo": titolo,
                 "indirizzo": indirizzo_raw,
@@ -281,6 +290,7 @@ def parse_ads_json(data: dict, provincia: str) -> list:
                 "inserzionista": inserzionista,
                 "telefono": None,
                 "url": ann_url,
+                "foto_url": foto_url,
                 "is_nuovo": True,
             })
         except Exception as e:

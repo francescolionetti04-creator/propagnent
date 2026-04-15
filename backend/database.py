@@ -4,7 +4,8 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "propagnent.db")
 
-ANNUNCI_ESEMPIO = [
+# Mantenuta solo per retrocompatibilità — non inserita più nel DB
+_ANNUNCI_ESEMPIO_LEGACY = [
     {
         "indirizzo": "Via Leoncino 8, 37121 Verona",
         "indirizzo_preciso": True,
@@ -167,31 +168,21 @@ def init_db():
             ai_insight TEXT,
             is_nuovo BOOLEAN DEFAULT FALSE,
             data_inserimento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            url_originale TEXT UNIQUE
+            url_originale TEXT UNIQUE,
+            foto_url TEXT
         )
     """)
+
+    # Migrazione: aggiunge foto_url se il DB è già esistente senza quella colonna
+    try:
+        cur.execute("ALTER TABLE annunci ADD COLUMN foto_url TEXT")
+    except Exception:
+        pass  # colonna già presente
+
+    # Rimuove eventuali annunci di esempio (Verona/Garda) rimasti da versioni precedenti
+    cur.execute("DELETE FROM annunci WHERE url_originale LIKE 'https://esempio.it%'")
+
     conn.commit()
-
-    cur.execute("SELECT COUNT(*) FROM annunci")
-    count = cur.fetchone()[0]
-    if count == 0:
-        for a in ANNUNCI_ESEMPIO:
-            cur.execute("""
-                INSERT OR IGNORE INTO annunci
-                (indirizzo, indirizzo_preciso, zona, tipo, mq, camere, prezzo,
-                 giorni_online, fonte, agenzie, proprietario, telefono,
-                 intel_privato, intel_warning, ai_insight, is_nuovo, url_originale)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, (
-                a["indirizzo"], a["indirizzo_preciso"], a["zona"], a["tipo"],
-                a["mq"], a["camere"], a["prezzo"], a["giorni_online"],
-                a["fonte"], a["agenzie"], a["proprietario"], a["telefono"],
-                a["intel_privato"], a["intel_warning"], a["ai_insight"],
-                a["is_nuovo"], a["url_originale"]
-            ))
-        conn.commit()
-        print(f"[DB] Inseriti {len(ANNUNCI_ESEMPIO)} annunci di esempio.")
-
     conn.close()
 
 

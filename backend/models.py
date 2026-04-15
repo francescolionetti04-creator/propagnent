@@ -24,6 +24,7 @@ class Annuncio:
     is_nuovo: bool
     data_inserimento: str
     url_originale: Optional[str]
+    foto_url: Optional[str]
 
     @staticmethod
     def from_row(row: dict) -> "Annuncio":
@@ -53,6 +54,7 @@ class Annuncio:
             is_nuovo=bool(row.get("is_nuovo")),
             data_inserimento=str(row.get("data_inserimento") or ""),
             url_originale=row.get("url_originale"),
+            foto_url=row.get("foto_url"),
         )
 
     def to_dict(self) -> dict:
@@ -76,4 +78,5 @@ class Annuncio:
             "is_nuovo": self.is_nuovo,
             "data_inserimento": self.data_inserimento,
             "url_originale": self.url_originale,
+            "foto_url": self.foto_url,
         }

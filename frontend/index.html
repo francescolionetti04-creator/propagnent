@@ -71,6 +71,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .lcard-stripe{width:5px;flex-shrink:0}
 .lcard-body{flex:1;padding:1rem 1.2rem}
 
+/* ── Foto annuncio ── */
+.card-photo{position:relative;height:180px;overflow:hidden;background:#e8e8e4;flex-shrink:0}
+.card-photo img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.lcard:hover .card-photo img{transform:scale(1.03)}
+.card-photo-overlay{position:absolute;bottom:9px;left:9px;display:flex;gap:5px;pointer-events:none}
+.cp-badge{background:rgba(0,0,0,.62);color:#fff;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.card-photo.no-photo{display:flex;align-items:center;justify-content:center;height:90px}
+.card-photo.no-photo::after{content:'🏠';font-size:32px;opacity:.25}
+
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:.65rem;flex-wrap:wrap}
 .card-addr{font-size:15px;font-weight:700;color:#1a1a1a;display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.3}
 .addr-badge{display:inline-flex;align-items:center;gap:3px;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap}
@@ -436,7 +445,19 @@ function cardHTML(d) {
     <button class="cf-btn cf-outline" onclick="showScript('telefono',${id})">&#128222; Script chiamata</button>
     <button class="cf-btn cf-blue" onclick="showValuta(${id})">&#128161; Valuta</button>`;
 
+  const fotoHtml = d.foto_url
+    ? `<div class="card-photo">
+        <img src="${d.foto_url}" alt="${d.tipo} ${d.zona}" loading="lazy"
+          onerror="this.closest('.card-photo').classList.add('no-photo');this.remove()">
+        <div class="card-photo-overlay">
+          <span class="cp-badge">${d.tipo}</span>
+          <span class="cp-badge">${d.zona}</span>
+        </div>
+      </div>`
+    : '';
+
   return `<div class="lcard ${cls}">
+    ${fotoHtml}
     <div class="lcard-inner">
       <div class="lcard-stripe" style="background:${stripe}"></div>
       <div class="lcard-body">
