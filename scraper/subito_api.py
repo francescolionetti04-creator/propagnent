@@ -268,13 +268,15 @@ def parse_ads_json(data: dict, provincia: str) -> list:
             # Tipo immobile
             tipo = determina_tipo(titolo)
 
-            # Prima foto — cdn_base_url con rule gallery-desktop-2x-auto (~800px, avif)
+            # Fino a 5 foto — cdn_base_url + rule gallery-desktop-2x-auto (avif ~800px)
+            # Storico in foto_url come JSON array per supportare la galleria
             images = a.get("images", []) or []
-            foto_url = None
-            if images:
-                cdn = images[0].get("cdn_base_url", "")
+            foto_list = []
+            for img in images[:5]:
+                cdn = img.get("cdn_base_url", "")
                 if cdn:
-                    foto_url = cdn + "?rule=gallery-desktop-2x-auto"
+                    foto_list.append(cdn + "?rule=gallery-desktop-2x-auto")
+            foto_url = json.dumps(foto_list) if foto_list else None
 
             annunci.append({
                 "titolo": titolo,

@@ -24,7 +24,8 @@ class Annuncio:
     is_nuovo: bool
     data_inserimento: str
     url_originale: Optional[str]
-    foto_url: Optional[str]
+    foto_url: Optional[str]       # prima foto (backward compat)
+    foto_urls: List[str]          # tutte le foto (galleria)
 
     @staticmethod
     def from_row(row: dict) -> "Annuncio":
@@ -34,6 +35,18 @@ class Annuncio:
                 agenzie = json.loads(agenzie)
             except Exception:
                 agenzie = []
+
+        # foto_url può essere una singola URL (vecchio) o JSON array (nuovo)
+        raw_foto = row.get("foto_url") or ""
+        if raw_foto.startswith("["):
+            try:
+                foto_urls = [u for u in json.loads(raw_foto) if u]
+            except Exception:
+                foto_urls = []
+        else:
+            foto_urls = [raw_foto] if raw_foto else []
+        foto_url = foto_urls[0] if foto_urls else None
+
         return Annuncio(
             id=row["id"],
             indirizzo=row["indirizzo"],
@@ -54,7 +67,8 @@ class Annuncio:
             is_nuovo=bool(row.get("is_nuovo")),
             data_inserimento=str(row.get("data_inserimento") or ""),
             url_originale=row.get("url_originale"),
-            foto_url=row.get("foto_url"),
+            foto_url=foto_url,
+            foto_urls=foto_urls,
         )
 
     def to_dict(self) -> dict:
@@ -79,4 +93,5 @@ class Annuncio:
             "data_inserimento": self.data_inserimento,
             "url_originale": self.url_originale,
             "foto_url": self.foto_url,
+            "foto_urls": self.foto_urls,
         }

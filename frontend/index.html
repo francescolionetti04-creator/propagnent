@@ -71,14 +71,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .lcard-stripe{width:5px;flex-shrink:0}
 .lcard-body{flex:1;padding:1rem 1.2rem}
 
-/* ── Foto annuncio ── */
-.card-photo{position:relative;height:180px;overflow:hidden;background:#e8e8e4;flex-shrink:0}
-.card-photo img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
-.lcard:hover .card-photo img{transform:scale(1.03)}
-.card-photo-overlay{position:absolute;bottom:9px;left:9px;display:flex;gap:5px;pointer-events:none}
+/* ── Card cliccabile ── */
+.lcard{cursor:pointer}
+
+/* ── Galleria foto ── */
+.card-gallery{position:relative;height:190px;overflow:hidden;background:#e8e8e4;user-select:none}
+.gallery-track{display:flex;height:100%;transition:transform .28s ease}
+.gallery-slide{flex:0 0 100%;height:100%;overflow:hidden}
+.gallery-slide img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.gallery-overlay{position:absolute;bottom:9px;left:9px;display:flex;gap:5px;pointer-events:none;z-index:2}
 .cp-badge{background:rgba(0,0,0,.62);color:#fff;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-.card-photo.no-photo{display:flex;align-items:center;justify-content:center;height:90px}
-.card-photo.no-photo::after{content:'🏠';font-size:32px;opacity:.25}
+/* frecce navigazione */
+.gal-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;width:30px;height:30px;border-radius:50%;font-size:14px;line-height:1;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.gal-btn:hover{background:rgba(0,0,0,.7)}
+.gal-prev{left:8px}.gal-next{right:8px}
+/* pallini */
+.gallery-dots{position:absolute;bottom:8px;right:9px;display:flex;gap:4px;z-index:2}
+.gal-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;transition:background .15s}
+.gal-dot.active{background:#fff}
+/* placeholder senza foto */
+.card-no-photo{height:90px;background:#eeecea;display:flex;align-items:center;justify-content:center;font-size:28px;opacity:.35;pointer-events:none}
 
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:.65rem;flex-wrap:wrap}
 .card-addr{font-size:15px;font-weight:700;color:#1a1a1a;display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.3}
@@ -277,6 +289,34 @@ const API = (window.location.protocol === 'file:' || window.location.port === '5
 let allData = [];
 let showPriv = true, showNoescl = true, showAg = false;
 
+/* ========== GALLERIA FOTO ========== */
+const _galIdx = {};   // { cardId: currentIndex }
+
+function galNav(id, dir, total, e) {
+  e.stopPropagation();
+  if (!_galIdx[id]) _galIdx[id] = 0;
+  _galIdx[id] = (_galIdx[id] + dir + total) % total;
+  _galApply(id, _galIdx[id], total);
+}
+
+function galDot(id, idx, total, e) {
+  e.stopPropagation();
+  _galIdx[id] = idx;
+  _galApply(id, idx, total);
+}
+
+function _galApply(id, idx, total) {
+  const g = document.getElementById('gal-' + id);
+  if (!g) return;
+  g.querySelector('.gallery-track').style.transform = `translateX(-${idx * 100}%)`;
+  g.querySelectorAll('.gal-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+function openAnnuncio(url, e) {
+  if (e.target.closest('button,.gal-btn,.gal-dot')) return;
+  if (url) window.open(url, '_blank', 'noopener');
+}
+
 /* ========== INIT ========== */
 async function init() {
   await loadStats();
@@ -436,28 +476,58 @@ function cardHTML(d) {
       <div class="ibox-text ibox-text-p">${d.ai_insight || '\u2014'}</div>
     </div>`;
 
-  const footer = isP ? `
-    <button class="cf-btn cf-green" onclick="showScript('whatsapp',${id})">&#128172; WhatsApp</button>
-    <button class="cf-btn cf-outline" onclick="showScript('telefono',${id})">&#128222; Script chiamata</button>
-    <button class="cf-btn cf-blue" onclick="showScript('esclusiva',${id})">+ Proponi esclusiva</button>`
-  : `
-    <button class="cf-btn cf-amber" onclick="showScript('conquista',${id})">&#127919; Conquista esclusiva</button>
-    <button class="cf-btn cf-outline" onclick="showScript('telefono',${id})">&#128222; Script chiamata</button>
-    <button class="cf-btn cf-blue" onclick="showValuta(${id})">&#128161; Valuta</button>`;
+  // ── Galleria foto ──────────────────────────────────────────────────
+  const fotos = Array.isArray(d.foto_urls) && d.foto_urls.length
+    ? d.foto_urls
+    : (d.foto_url ? [d.foto_url] : []);
+  const n = fotos.length;
 
-  const fotoHtml = d.foto_url
-    ? `<div class="card-photo">
-        <img src="${d.foto_url}" alt="${d.tipo} ${d.zona}" loading="lazy"
-          onerror="this.closest('.card-photo').classList.add('no-photo');this.remove()">
-        <div class="card-photo-overlay">
-          <span class="cp-badge">${d.tipo}</span>
-          <span class="cp-badge">${d.zona}</span>
-        </div>
-      </div>`
+  let galHtml;
+  if (n === 0) {
+    galHtml = `<div class="card-no-photo">🏠</div>`;
+  } else {
+    const slides = fotos.map(url =>
+      `<div class="gallery-slide">
+         <img src="${url}" loading="lazy"
+           onerror="this.style.display='none';this.parentElement.style.background='#eeecea'">
+       </div>`
+    ).join('');
+    const nav = n > 1 ? `
+      <button class="gal-btn gal-prev" onclick="galNav(${id},-1,${n},event)">&#8249;</button>
+      <button class="gal-btn gal-next" onclick="galNav(${id},1,${n},event)">&#8250;</button>
+      <div class="gallery-dots">${fotos.map((_,i) =>
+        `<span class="gal-dot${i===0?' active':''}" onclick="galDot(${id},${i},${n},event)"></span>`
+      ).join('')}</div>` : '';
+    galHtml = `<div class="card-gallery" id="gal-${id}">
+      <div class="gallery-track">${slides}</div>
+      <div class="gallery-overlay">
+        <span class="cp-badge">${d.tipo}</span>
+        <span class="cp-badge">${d.zona}</span>
+      </div>
+      ${nav}
+    </div>`;
+  }
+
+  // ── Footer con pulsante "Vedi annuncio" ─────────────────────────────
+  const btnVedi = d.url_originale
+    ? `<a class="cf-btn cf-outline" href="${d.url_originale}" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" style="text-align:center;text-decoration:none">
+         Vedi annuncio &#8594;</a>`
     : '';
 
-  return `<div class="lcard ${cls}">
-    ${fotoHtml}
+  const footerFull = isP ? `
+    <button class="cf-btn cf-green" onclick="event.stopPropagation();showScript('whatsapp',${id})">&#128172; WhatsApp</button>
+    <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
+    <button class="cf-btn cf-blue" onclick="event.stopPropagation();showScript('esclusiva',${id})">+ Esclusiva</button>
+    ${btnVedi}`
+  : `
+    <button class="cf-btn cf-amber" onclick="event.stopPropagation();showScript('conquista',${id})">&#127919; Conquista</button>
+    <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
+    <button class="cf-btn cf-blue" onclick="event.stopPropagation();showValuta(${id})">&#128161; Valuta</button>
+    ${btnVedi}`;
+
+  return `<div class="lcard ${cls}" onclick="openAnnuncio('${d.url_originale || ''}',event)" title="Clicca per aprire l'annuncio">
+    ${galHtml}
     <div class="lcard-inner">
       <div class="lcard-stripe" style="background:${stripe}"></div>
       <div class="lcard-body">
@@ -476,7 +546,7 @@ function cardHTML(d) {
           <div class="spec"><div class="spec-v">${d.mq && d.prezzo ? Math.round(d.prezzo/d.mq).toLocaleString('it-IT') + ' \u20ac' : '\u2014'}</div><div class="spec-l">\u20ac/m\u00b2</div></div>
         </div>
         ${intel}
-        <div class="card-footer">${footer}</div>
+        <div class="card-footer">${footerFull}</div>
       </div>
     </div>
   </div>`;
