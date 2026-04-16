@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PropAgent AI — Livorno e Pisa</title>
+<title>HouseRadar — AI for Real Estate Agents</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23185FA5'/><path d='M16 5 L4 14 L4 28 L12 28 L12 20 L20 20 L20 28 L28 28 L28 14 Z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/><circle cx='24' cy='9' r='4' fill='%235DCAA5'/><circle cx='24' cy='9' r='2' fill='white'/></svg>">
 <style>
 /* ========== RESET & BASE ========== */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -17,8 +18,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .logo-name{font-size:17px;font-weight:700;color:#1a1a1a}
 .logo-sub{font-size:11px;color:#888;margin-top:1px}
 .topbar-right{display:flex;align-items:center;gap:10px}
-.live-badge{display:flex;align-items:center;gap:6px;background:#EAF3DE;border:1px solid #97C459;border-radius:20px;padding:5px 14px;font-size:12px;color:#27500A;font-weight:600}
-.live-dot{width:7px;height:7px;border-radius:50%;background:#639922;animation:pulse-dot 1.5s infinite}
+.live-badge{display:flex;align-items:center;gap:6px;background:#E1F5EE;border:1px solid #5DCAA5;border-radius:20px;padding:5px 14px;font-size:12px;color:#0F6E56;font-weight:600}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;animation:pulse-dot 1.5s infinite}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
 .btn-refresh{padding:7px 16px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-refresh:hover{background:#0C447C}
@@ -34,7 +35,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .filter-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .fb-label{font-size:12px;color:#888;font-weight:600;white-space:nowrap}
 .fb-chip{padding:5px 13px;border-radius:20px;border:1px solid #d0d0cc;font-size:12px;cursor:pointer;background:#fff;color:#666;white-space:nowrap;transition:all .12s;user-select:none}
-.chip-privato.on{background:#EAF3DE;border-color:#639922;color:#27500A;font-weight:600}
+.chip-privato.on{background:#E1F5EE;border-color:#1D9E75;color:#0F6E56;font-weight:600}
 .chip-noescl.on{background:#FAEEDA;border-color:#EF9F27;color:#633806;font-weight:600}
 .chip-agenzia.on{background:#E6F1FB;border-color:#378ADD;color:#0C447C;font-weight:600}
 .fb-sep{width:1px;height:20px;background:#e5e5e0;margin:0 4px}
@@ -64,7 +65,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .cards{display:flex;flex-direction:column;gap:.85rem}
 .lcard{background:#fff;border-radius:12px;overflow:hidden;transition:box-shadow .15s}
 .lcard:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
-.lcard-priv{border:2px solid #97C459}
+.lcard-priv{border:2px solid #5DCAA5}
 .lcard-noescl{border:2px solid #EF9F27}
 .lcard-agenzia{border:1px solid #e5e5e0}
 .lcard-inner{display:flex}
@@ -95,12 +96,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:.65rem;flex-wrap:wrap}
 .card-addr{font-size:15px;font-weight:700;color:#1a1a1a;display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.3}
 .addr-badge{display:inline-flex;align-items:center;gap:3px;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap}
-.addr-ok{background:#EAF3DE;border:1px solid #97C459;color:#27500A}
+.addr-ok{background:#E1F5EE;border:1px solid #5DCAA5;color:#0F6E56}
 .addr-est{background:#FAEEDA;border:1px solid #FAC775;color:#633806}
 .card-zona{font-size:12px;color:#888;margin-top:3px}
 .badges{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
-.b-priv{background:#EAF3DE;color:#27500A;border:1px solid #97C459}
+.b-priv{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
 .b-noescl{background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
 .b-new{background:#E6F1FB;color:#0C447C;border:1px solid #85B7EB}
 .b-hot{background:#FCEBEB;color:#A32D2D;border:1px solid #F09595}
@@ -113,18 +114,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 
 .intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:.65rem 0}
 .ibox{border-radius:8px;padding:.65rem .9rem}
-.ibox-g{background:#EAF3DE;border:1px solid #97C459}
+.ibox-g{background:#E1F5EE;border:1px solid #5DCAA5}
 .ibox-o{background:#FAEEDA;border:1px solid #FAC775}
 .ibox-p{background:#EEEDFE;border:1px solid #AFA9EC}
 .ibox-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
-.ibox-label-g{color:#3B6D11}
+.ibox-label-g{color:#0F6E56}
 .ibox-label-o{color:#854F0B}
 .ibox-label-p{color:#3C3489}
 .ibox-text{font-size:12px;line-height:1.5}
-.ibox-text-g{color:#085041}
+.ibox-text-g{color:#0F6E56}
 .ibox-text-o{color:#633806}
 .ibox-text-p{color:#534AB7}
-.ibox-tel{margin-top:6px;font-size:13px;font-weight:700;color:#27500A}
+.ibox-tel{margin-top:6px;font-size:13px;font-weight:700;color:#0F6E56}
 
 .noescl-box{background:#FAEEDA;border:1px solid #EF9F27;border-radius:8px;padding:.65rem .9rem;margin:.65rem 0}
 .noescl-title{font-size:11px;font-weight:700;color:#412402;margin-bottom:3px}
@@ -136,8 +137,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .cf-btn{flex:1;min-width:120px;padding:8px 10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;border:none}
 .cf-outline{background:#f5f5f3;color:#1a1a1a;border:1px solid #d0d0cc}
 .cf-outline:hover{background:#ebebea}
-.cf-green{background:#EAF3DE;color:#27500A;border:1px solid #97C459}
-.cf-green:hover{background:#C0DD97}
+.cf-green{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
+.cf-green:hover{background:#A3DCC8}
 .cf-blue{background:#185FA5;color:#fff}
 .cf-blue:hover{background:#0C447C}
 .cf-amber{background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
@@ -156,8 +157,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .modal h3{font-size:16px;font-weight:700;margin-bottom:.85rem;color:#1a1a1a}
 .modal-text{font-size:13px;line-height:1.75;color:#333;white-space:pre-wrap;background:#f9f9f7;border-radius:8px;padding:1rem;border:1px solid #e5e5e0}
 .modal-actions{display:flex;gap:8px;margin-top:1rem}
-.modal-copy{flex:1;padding:9px;background:#EAF3DE;color:#27500A;border:1px solid #97C459;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.modal-copy:hover{background:#C0DD97}
+.modal-copy{flex:1;padding:9px;background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.modal-copy:hover{background:#A3DCC8}
 .modal-close{flex:1;padding:9px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 .modal-close:hover{background:#0C447C}
 
@@ -181,9 +182,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="logo">
-      <div class="logo-icon">P</div>
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 3 L3 12 L3 29 L11 29 L11 21 L21 21 L21 29 L29 29 L29 12 Z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="24" cy="8" r="5" fill="#5DCAA5"/>
+          <circle cx="24" cy="8" r="2" fill="#fff"/>
+          <path d="M27.5 4.5 Q30 2.5 32.5 4.5" stroke="#5DCAA5" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
       <div>
-        <div class="logo-name">PropAgent AI</div>
+        <div class="logo-name">HouseRadar</div>
         <div class="logo-sub">Radar annunci — privati &amp; non in esclusiva · Livorno e Pisa</div>
       </div>
     </div>
@@ -247,7 +255,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 
   <!-- STATS -->
   <div class="stats-row">
-    <div class="stat"><div class="stat-val" style="color:#3B6D11" id="st-priv">—</div><div class="stat-lbl">Annunci privati</div><div class="stat-sub" style="color:#3B6D11">contatto diretto</div></div>
+    <div class="stat"><div class="stat-val" style="color:#0F6E56" id="st-priv">—</div><div class="stat-lbl">Annunci privati</div><div class="stat-sub" style="color:#0F6E56">contatto diretto</div></div>
     <div class="stat"><div class="stat-val" style="color:#854F0B" id="st-noescl">—</div><div class="stat-lbl">Non in esclusiva</div><div class="stat-sub" style="color:#854F0B">puoi inserirli</div></div>
     <div class="stat"><div class="stat-val" id="st-addr">—</div><div class="stat-lbl">Indirizzo preciso</div><div class="stat-sub" style="color:#888">verificato</div></div>
     <div class="stat"><div class="stat-val" style="color:#A32D2D" id="st-new">—</div><div class="stat-lbl">Nuovi oggi</div><div class="stat-sub" style="color:#A32D2D">ultimi inserimenti</div></div>
@@ -257,7 +265,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
   <div class="results-header">
     <div class="results-title">Trovati <span id="cnt-tot">—</span> annunci</div>
     <div class="legend">
-      <span><span class="leg-dot" style="background:#EAF3DE;border:1px solid #97C459"></span>Privato</span>
+      <span><span class="leg-dot" style="background:#E1F5EE;border:1px solid #5DCAA5"></span>Privato</span>
       <span><span class="leg-dot" style="background:#FAEEDA;border:1px solid #EF9F27"></span>Non esclusiva</span>
     </div>
   </div>
@@ -473,7 +481,7 @@ function fmt(n) { return n ? n.toLocaleString('it-IT') + ' \u20ac' : '\u2014'; }
 
 function cardHTML(d) {
   const isP = d.fonte === 'privato', isN = d.fonte === 'noescl';
-  const stripe = isP ? '#639922' : isN ? '#EF9F27' : '#B4B2A9';
+  const stripe = isP ? '#1D9E75' : isN ? '#EF9F27' : '#B4B2A9';
   const cls = isP ? 'lcard-priv' : isN ? 'lcard-noescl' : 'lcard-agenzia';
   const agenzie = Array.isArray(d.agenzie) ? d.agenzie : (typeof d.agenzie === 'string' ? JSON.parse(d.agenzie || '[]') : []);
 
