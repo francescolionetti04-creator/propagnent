@@ -294,7 +294,7 @@ const _galIdx = {};   // { cardId: currentIndex }
 
 function galNav(id, dir, total, e) {
   e.stopPropagation();
-  if (!_galIdx[id]) _galIdx[id] = 0;
+  if (_galIdx[id] === undefined) _galIdx[id] = 0;
   _galIdx[id] = (_galIdx[id] + dir + total) % total;
   _galApply(id, _galIdx[id], total);
 }
@@ -310,6 +310,39 @@ function _galApply(id, idx, total) {
   if (!g) return;
   g.querySelector('.gallery-track').style.transform = `translateX(-${idx * 100}%)`;
   g.querySelectorAll('.gal-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+/* Auto-advance alla prima foto orizzontale (evita planimetrie/ritratti come prima foto).
+   Carica le immagini in background e, se images[0] è verticale, salta alla prima
+   orizzontale (naturalWidth > naturalHeight) senza aspettare l'utente. */
+function _galInit(id, total) {
+  if (total <= 1) return;
+  const gEl = document.getElementById('gal-' + id);
+  if (!gEl) return;
+  const imgs = Array.from(gEl.querySelectorAll('.gallery-slide img'));
+
+  const tryJump = () => {
+    // Non toccare se l'utente ha già navigato manualmente
+    if (_galIdx[id] !== undefined && _galIdx[id] !== 0) return;
+    const first = imgs[0];
+    if (!first.naturalWidth) return;              // img[0] non ancora caricata
+    if (first.naturalWidth >= first.naturalHeight) return; // già orizzontale, ok
+    // img[0] è verticale (planimetria/porta) → cerca la prima orizzontale
+    for (let i = 1; i < imgs.length; i++) {
+      const img = imgs[i];
+      if (img.naturalWidth && img.naturalWidth >= img.naturalHeight) {
+        _galIdx[id] = i;
+        _galApply(id, i, total);
+        return;
+      }
+    }
+  };
+
+  // Ascolta il caricamento di ciascuna immagine (lazy load)
+  imgs.forEach(img => {
+    if (img.complete && img.naturalWidth) tryJump();
+    else img.addEventListener('load', tryJump, { once: true });
+  });
 }
 
 function openAnnuncio(url, e) {
@@ -426,6 +459,13 @@ function render() {
   }
   empty.style.display = 'none';
   cards.innerHTML = data.map(cardHTML).join('');
+  // Dopo il render, auto-orienta ogni galleria sulla prima foto orizzontale
+  requestAnimationFrame(() => {
+    data.forEach(d => {
+      const total = Array.isArray(d.foto_urls) ? d.foto_urls.length : (d.foto_url ? 1 : 0);
+      if (total > 1) _galInit(d.id, total);
+    });
+  });
 }
 
 /* ========== CARD HTML ========== */
