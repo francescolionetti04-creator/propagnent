@@ -187,6 +187,11 @@ def init_db():
     # Rimuove eventuali annunci di esempio (Verona/Garda) rimasti da versioni precedenti
     cur.execute("DELETE FROM annunci WHERE url_originale LIKE 'https://esempio.it%'")
 
+    # Backfill portale per record inseriti prima della migrazione
+    cur.execute("UPDATE annunci SET portale='subito.it'      WHERE url_originale LIKE '%subito.it%'      AND portale IS NULL")
+    cur.execute("UPDATE annunci SET portale='idealista.it'   WHERE url_originale LIKE '%idealista.it%'   AND portale IS NULL")
+    cur.execute("UPDATE annunci SET portale='immobiliare.it' WHERE url_originale LIKE '%immobiliare.it%' AND portale IS NULL")
+
     conn.commit()
     conn.close()
 
