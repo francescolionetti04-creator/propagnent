@@ -1,6 +1,8 @@
 """
 HouseRadar — Immobiliare.it scraper
-Usa requests + BeautifulSoup per estrarre il JSON inline nelle pagine React.
+Usa curl_cffi (Chrome TLS impersonation) + BeautifulSoup per estrarre il JSON
+inline nelle pagine React. curl_cffi bypassa i blocchi 403 sugli IP cloud
+allo stesso modo di subito_api.py.
 
 Strategia:
 - La pagina è server-side rendered: il JSON è già nell'HTML dentro uno <script>
@@ -20,7 +22,7 @@ import random
 import sqlite3
 from datetime import datetime
 
-import requests
+from curl_cffi import requests as cffi_requests
 from bs4 import BeautifulSoup
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend", "propagnent.db")
@@ -391,21 +393,22 @@ def salva_annunci(annunci_raw: list) -> int:
 
 def scrapa_immobiliare() -> int:
     """
-    Scrapa Immobiliare.it per Livorno e Pisa usando requests + BeautifulSoup.
+    Scrapa Immobiliare.it per Livorno e Pisa usando curl_cffi + BeautifulSoup.
+    curl_cffi impersona Chrome a livello TLS (JA3/JA4) bypassando i 403 su IP cloud.
     Estrae il JSON inline dalla pagina React (Next.js SSR).
     """
     print(f"\n{'='*50}")
     print(f"Immobiliare.it scraper — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    print(f"Zone: Livorno e Pisa | Metodo: requests + BeautifulSoup (JSON inline)")
+    print(f"Zone: Livorno e Pisa | Metodo: curl_cffi Chrome120 + BeautifulSoup")
     print(f"{'='*50}\n")
 
-    session = requests.Session()
+    session = cffi_requests.Session(impersonate="chrome120")
     session.headers.update(HEADERS)
 
     # Warm-up sulla homepage
     try:
-        session.get("https://www.immobiliare.it/", timeout=15)
-        print("Warm-up homepage OK")
+        r = session.get("https://www.immobiliare.it/", timeout=15)
+        print(f"Warm-up homepage OK — status {r.status_code} | cookie: {len(session.cookies)}")
         time.sleep(random.uniform(1.5, 3.0))
     except Exception as e:
         print(f"Warm-up fallito (non critico): {e}")
