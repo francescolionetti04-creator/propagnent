@@ -47,9 +47,11 @@ def _popola_db_in_background():
     try:
         from scraper import esegui_scraper
         from subito_api import scrapa_subito
+        from immobiliare_scraper import scrapa_immobiliare
         print("[Startup] DB vuoto — avvio scraping automatico...")
         esegui_scraper()
         scrapa_subito()
+        scrapa_immobiliare()
         print("[Startup] Scraping completato.")
     except Exception as e:
         print(f"[Startup] Errore scraping: {e}")
@@ -91,8 +93,10 @@ async def avvia_scraper():
             sys.path.insert(0, SCRAPER_DIR)
             from scraper import esegui_scraper
             from subito_api import scrapa_subito
+            from immobiliare_scraper import scrapa_immobiliare
             await asyncio.to_thread(esegui_scraper)
             await asyncio.to_thread(scrapa_subito)
+            await asyncio.to_thread(scrapa_immobiliare)
         except Exception as e:
             print(f"[Scraper] Errore: {e}")
         finally:
