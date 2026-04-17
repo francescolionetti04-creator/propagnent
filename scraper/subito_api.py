@@ -205,8 +205,8 @@ def salva_annunci(annunci_raw: list) -> int:
                 indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                 prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                 intel_privato, intel_warning, ai_insight,
-                is_nuovo, data_inserimento, url_originale, foto_url
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                is_nuovo, data_inserimento, url_originale, foto_url, portale
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             a.get("indirizzo"), a.get("indirizzo_preciso", False),
             a.get("zona"), a.get("tipo", "Appartamento"),
@@ -219,7 +219,7 @@ def salva_annunci(annunci_raw: list) -> int:
             intel["intel_privato"], intel["intel_warning"], intel["ai_insight"],
             a.get("is_nuovo", True),
             ora.isoformat(), url,
-            a.get("foto_url"),
+            a.get("foto_url"), "subito.it"
         ))
         nuovi += 1
 

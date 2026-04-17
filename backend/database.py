@@ -169,15 +169,20 @@ def init_db():
             is_nuovo BOOLEAN DEFAULT FALSE,
             data_inserimento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             url_originale TEXT UNIQUE,
-            foto_url TEXT
+            foto_url TEXT,
+            portale TEXT
         )
     """)
 
-    # Migrazione: aggiunge foto_url se il DB è già esistente senza quella colonna
-    try:
-        cur.execute("ALTER TABLE annunci ADD COLUMN foto_url TEXT")
-    except Exception:
-        pass  # colonna già presente
+    # Migrazioni: aggiunge colonne se il DB è già esistente senza di esse
+    for col_def in [
+        "ALTER TABLE annunci ADD COLUMN foto_url TEXT",
+        "ALTER TABLE annunci ADD COLUMN portale TEXT",
+    ]:
+        try:
+            cur.execute(col_def)
+        except Exception:
+            pass  # colonna già presente
 
     # Rimuove eventuali annunci di esempio (Verona/Garda) rimasti da versioni precedenti
     cur.execute("DELETE FROM annunci WHERE url_originale LIKE 'https://esempio.it%'")

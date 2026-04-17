@@ -312,8 +312,8 @@ def salva_nel_db(annunci_raw: list) -> int:
                 indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                 prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                 intel_privato, intel_warning, ai_insight,
-                is_nuovo, data_inserimento, url_originale
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                is_nuovo, data_inserimento, url_originale, portale
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             indirizzo, preciso, zona, tipo,
             a.get("mq"), a.get("camere"), a.get("prezzo"),
@@ -322,7 +322,7 @@ def salva_nel_db(annunci_raw: list) -> int:
             ins if fonte == "privato" else None,
             None,
             intel["intel_privato"], intel["intel_warning"], intel["ai_insight"],
-            True, ora.isoformat(), url
+            True, ora.isoformat(), url, "idealista.it"
         ))
         nuovi += 1
 

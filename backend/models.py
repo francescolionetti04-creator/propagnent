@@ -26,6 +26,7 @@ class Annuncio:
     url_originale: Optional[str]
     foto_url: Optional[str]       # prima foto (backward compat)
     foto_urls: List[str]          # tutte le foto (galleria)
+    portale: Optional[str]        # "subito.it" / "idealista.it" / "immobiliare.it"
 
     @staticmethod
     def from_row(row: dict) -> "Annuncio":
@@ -69,6 +70,7 @@ class Annuncio:
             url_originale=row.get("url_originale"),
             foto_url=foto_url,
             foto_urls=foto_urls,
+            portale=row.get("portale"),
         )
 
     def to_dict(self) -> dict:
@@ -94,4 +96,5 @@ class Annuncio:
             "url_originale": self.url_originale,
             "foto_url": self.foto_url,
             "foto_urls": self.foto_urls,
+            "portale": self.portale,
         }
