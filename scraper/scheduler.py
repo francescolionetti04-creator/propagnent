@@ -10,12 +10,12 @@ def job():
     print(f"Completato: Idealista={result['idealista']} | Subito={result['subito']} | Totale={result['totale']}\n")
 
 if __name__ == "__main__":
-    print("PropAgent AI — Scheduler avviato")
+    print("HouseRadar — Scheduler avviato")
     print("Zone: Livorno e Pisa | Fonti: Idealista.it + Subito.it")
-    print("Frequenza: ogni 2 ore\n")
+    print("Frequenza: ogni 30 minuti\n")
 
     job()
-    schedule.every(2).hours.do(job)
+    schedule.every(30).minutes.do(job)
 
     while True:
         schedule.run_pending()

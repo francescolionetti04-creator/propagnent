@@ -1,6 +1,7 @@
 """Entry-point unico per Render e per avvio locale."""
 import sys
 import os
+import threading
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 # Aggiunge backend/ e scraper/ al path Python
@@ -9,6 +10,14 @@ sys.path.insert(0, os.path.join(ROOT, "scraper"))
 
 # Importa l'app FastAPI (esegue init_db all'import)
 from main import app  # noqa: E402, F401
+
+# Avvia il watcher RSS in background (controlla nuovi annunci ogni 5 min)
+try:
+    from rss_watcher import avvia_rss_watcher
+    threading.Thread(target=avvia_rss_watcher, daemon=True, name="rss-watcher").start()
+    print("[Startup] RSS Watcher avviato in background (ogni 5 min)")
+except Exception as _e:
+    print(f"[Startup] RSS Watcher non avviato: {_e}")
 
 if __name__ == "__main__":
     import uvicorn
