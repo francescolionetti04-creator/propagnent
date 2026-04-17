@@ -40,21 +40,35 @@ async def startup_event():
 
 
 def _popola_db_in_background():
-    """Lancia scraper in un thread separato se il DB è vuoto."""
+    """Lancia scraper in un thread separato se il DB è vuoto.
+    Ogni fonte è isolata: se una crasha le altre continuano comunque."""
     import time
     time.sleep(3)          # aspetta che uvicorn sia completamente su
     sys.path.insert(0, SCRAPER_DIR)
+    print("[Startup] DB vuoto — avvio scraping automatico...")
+
+    # ── Idealista ─────────────────────────────────────────────────────
+    # Disabilitato su Render: gli IP cloud vengono bloccati con 403.
+    # Riabilitare solo se si usa un proxy residenziale.
+    print("[Startup] Idealista.it — temporaneamente disabilitato su Render (IP cloud bloccato)")
+
+    # ── Subito.it ─────────────────────────────────────────────────────
     try:
-        from scraper import esegui_scraper
         from subito_api import scrapa_subito
-        from immobiliare_scraper import scrapa_immobiliare
-        print("[Startup] DB vuoto — avvio scraping automatico...")
-        esegui_scraper()
-        scrapa_subito()
-        scrapa_immobiliare()
-        print("[Startup] Scraping completato.")
+        n = scrapa_subito()
+        print(f"[Startup] Subito.it completato: {n} nuovi annunci")
     except Exception as e:
-        print(f"[Startup] Errore scraping: {e}")
+        print(f"[Startup] Subito.it errore: {e}")
+
+    # ── Immobiliare.it ────────────────────────────────────────────────
+    try:
+        from immobiliare_scraper import scrapa_immobiliare
+        n = scrapa_immobiliare()
+        print(f"[Startup] Immobiliare.it completato: {n} nuovi annunci")
+    except Exception as e:
+        print(f"[Startup] Immobiliare.it errore: {e}")
+
+    print("[Startup] Scraping completato.")
 
 
 @app.get("/annunci")
@@ -89,16 +103,19 @@ async def avvia_scraper():
     async def run():
         global scraper_running
         scraper_running = True
+        sys.path.insert(0, SCRAPER_DIR)
+        # Idealista disabilitato su Render (403 IP cloud)
+        print("[Scraper] Idealista.it — disabilitato su Render (IP cloud bloccato)")
         try:
-            sys.path.insert(0, SCRAPER_DIR)
-            from scraper import esegui_scraper
             from subito_api import scrapa_subito
-            from immobiliare_scraper import scrapa_immobiliare
-            await asyncio.to_thread(esegui_scraper)
             await asyncio.to_thread(scrapa_subito)
+        except Exception as e:
+            print(f"[Scraper] Subito.it errore: {e}")
+        try:
+            from immobiliare_scraper import scrapa_immobiliare
             await asyncio.to_thread(scrapa_immobiliare)
         except Exception as e:
-            print(f"[Scraper] Errore: {e}")
+            print(f"[Scraper] Immobiliare.it errore: {e}")
         finally:
             scraper_running = False
 

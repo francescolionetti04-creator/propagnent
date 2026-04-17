@@ -18,8 +18,19 @@ if _BACKEND not in sys.path:
     sys.path.insert(0, _BACKEND)
 
 import feedparser
+import requests as _requests
+from bs4 import BeautifulSoup as _BS4
 
 DB_PATH = os.path.join(_BACKEND, "propagnent.db")
+
+# Contatore fallimenti consecutivi per feed (evita log storm)
+_fail_count: dict = {}
+MAX_FAILS = 3  # dopo 3 fallimenti consecutivi, logga solo ogni 10 cicli
+
+_RSS_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; HouseRadar-RSSBot/1.0)",
+    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+}
 
 RSS_FEEDS = [
     {
@@ -211,32 +222,123 @@ def _item_to_annuncio(entry, zona_default: str) -> dict:
     }
 
 
+def _scarica_entries(url: str) -> list:
+    """
+    Scarica e parsa un feed RSS restituendo una lista di dict-like entry.
+    Strategia a tre livelli:
+      1. requests fetch + feedparser.parse(content)  → gestisce XML malformato
+      2. Se entries vuote e bozo: BeautifulSoup html.parser fallback
+      3. Se tutto fallisce: lista vuota (non crasha mai)
+    """
+    # ── Livello 1: fetch manuale + feedparser ─────────────────────────
+    try:
+        resp = _requests.get(url, headers=_RSS_HEADERS, timeout=15)
+        resp.raise_for_status()
+        content = resp.content
+
+        feed = feedparser.parse(content)
+        if feed.entries:
+            if feed.bozo:
+                print(f"[RSS] Feed parsato con avvisi (bozo): {type(feed.bozo_exception).__name__} — {len(feed.entries)} entry trovate comunque")
+            return feed.entries
+
+        # entries vuote: prova se è un problema di encoding
+        feed2 = feedparser.parse(resp.text)
+        if feed2.entries:
+            return feed2.entries
+
+    except Exception as e:
+        print(f"[RSS] Fetch/feedparser errore: {e}")
+        content = None
+
+    if not content:
+        return []
+
+    # ── Livello 2: BeautifulSoup fallback per XML malformato ──────────
+    print(f"[RSS] feedparser vuoto — provo BeautifulSoup fallback...")
+    try:
+        soup = _BS4(content, "html.parser")
+        entries = []
+        for item in soup.find_all("item"):
+            t = item.find("title")
+            # <link> in RSS è testo tra tag, non attributo
+            l = item.find("link")
+            g = item.find("guid")
+            d = item.find("description")
+
+            link_val = ""
+            if l:
+                link_val = (l.get_text(strip=True) or "").strip()
+            if not link_val and g:
+                link_val = g.get_text(strip=True)
+
+            title_val = t.get_text(strip=True) if t else ""
+            desc_val = d.get_text(strip=True) if d else ""
+
+            if link_val:
+                entries.append({
+                    "title": title_val,
+                    "link": link_val,
+                    "summary": desc_val,
+                })
+        if entries:
+            print(f"[RSS] BS4 fallback OK: {len(entries)} entry trovate")
+        return entries
+    except Exception as e:
+        print(f"[RSS] BS4 fallback errore: {e}")
+        return []
+
+
 def controlla_feed(feed_cfg: dict) -> int:
     """Controlla un singolo feed RSS e inserisce i nuovi annunci. Ritorna il numero di inseriti."""
     url = feed_cfg["url"]
     zona_default = feed_cfg["zona_default"]
     nuovi = 0
+    fails = _fail_count.get(url, 0)
+
+    # Se il feed ha già fallito molte volte, logga solo ogni 10 cicli
+    if fails >= MAX_FAILS and fails % 10 != 0:
+        _fail_count[url] = fails + 1
+        return 0
 
     try:
-        feed = feedparser.parse(url)
-        if feed.bozo and not feed.entries:
-            print(f"[RSS] Errore parsing feed {url}: {feed.bozo_exception}")
+        entries = _scarica_entries(url)
+
+        if not entries:
+            _fail_count[url] = fails + 1
+            if fails < MAX_FAILS or fails % 10 == 0:
+                print(f"[RSS] Nessuna entry da {url} (fallimenti consecutivi: {fails + 1})")
             return 0
 
-        for entry in feed.entries:
-            link = entry.get("link", "")
+        # Feed OK: azzera contatore fallimenti
+        _fail_count[url] = 0
+
+        for entry in entries:
+            # Compatibilità sia con feedparser Entry che con dict plain
+            if isinstance(entry, dict):
+                link = entry.get("link", "")
+                title = entry.get("title", "")
+                summary = entry.get("summary", "")
+            else:
+                link = entry.get("link", "")
+                title = entry.get("title", "")
+                summary = entry.get("summary", "")
+
             if not link:
                 continue
             if _url_esiste(link):
-                continue  # già nel DB
+                continue
 
-            annuncio = _item_to_annuncio(entry, zona_default)
+            # Crea un oggetto dict-compatibile per _item_to_annuncio
+            entry_dict = {"title": title, "link": link, "summary": summary}
+            annuncio = _item_to_annuncio(entry_dict, zona_default)
             if _inserisci_annuncio(annuncio):
                 nuovi += 1
                 print(f"[RSS] Nuovo annuncio: {annuncio['indirizzo'][:60]} — {annuncio['prezzo']} €")
 
     except Exception as e:
-        print(f"[RSS] Errore fetch feed {url}: {e}")
+        _fail_count[url] = fails + 1
+        print(f"[RSS] Errore ciclo feed {url}: {e}")
 
     return nuovi
 
