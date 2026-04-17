@@ -54,21 +54,23 @@ def _popola_db_in_background():
 
     # ── Subito.it ─────────────────────────────────────────────────────
     try:
+        print("[Scraping] Avvio Subito.it...")
         from subito_api import scrapa_subito
         n = scrapa_subito()
-        print(f"[Startup] Subito.it completato: {n} nuovi annunci")
+        print(f"[Scraping] Subito.it completato — {n} nuovi annunci")
     except Exception as e:
-        print(f"[Startup] Subito.it errore: {e}")
+        print(f"[Scraping] Subito.it ERRORE: {e}")
 
     # ── Immobiliare.it ────────────────────────────────────────────────
     try:
+        print("[Scraping] Avvio Immobiliare.it...")
         from immobiliare_scraper import scrapa_immobiliare
         n = scrapa_immobiliare()
-        print(f"[Startup] Immobiliare.it completato: {n} nuovi annunci")
+        print(f"[Scraping] Immobiliare.it completato — {n} nuovi annunci")
     except Exception as e:
-        print(f"[Startup] Immobiliare.it errore: {e}")
+        print(f"[Scraping] Immobiliare.it ERRORE: {e}")
 
-    print("[Startup] Scraping completato.")
+    print("[Scraping] Ciclo completato.")
 
 
 @app.get("/annunci")
@@ -126,6 +128,46 @@ async def avvia_scraper():
 @app.get("/scraper/status")
 def scraper_status():
     return JSONResponse(content={"running": scraper_running})
+
+
+@app.get("/debug/stats")
+def debug_stats():
+    """Statistiche dettagliate per portale e tipo — utile per verificare lo stato del DB."""
+    conn = __import__("sqlite3").connect(
+        __import__("os").path.join(__import__("os").path.dirname(__file__), "propagnent.db")
+    )
+    conn.row_factory = __import__("sqlite3").Row
+    cur = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) FROM annunci")
+    totale = cur.fetchone()[0]
+
+    cur.execute("""
+        SELECT COALESCE(portale, 'sconosciuto') as p, COUNT(*) as n
+        FROM annunci GROUP BY p ORDER BY n DESC
+    """)
+    per_portale = {r["p"]: r["n"] for r in cur.fetchall()}
+
+    cur.execute("""
+        SELECT COALESCE(fonte, 'sconosciuto') as f, COUNT(*) as n
+        FROM annunci GROUP BY f ORDER BY n DESC
+    """)
+    per_tipo = {r["f"]: r["n"] for r in cur.fetchall()}
+
+    cur.execute("SELECT COUNT(*) FROM annunci WHERE is_nuovo=1")
+    nuovi = cur.fetchone()[0]
+
+    cur.execute("SELECT MAX(data_inserimento) FROM annunci")
+    ultimo_inserimento = cur.fetchone()[0]
+
+    conn.close()
+    return JSONResponse(content={
+        "totale": totale,
+        "nuovi_oggi": nuovi,
+        "ultimo_inserimento": ultimo_inserimento,
+        "per_portale": per_portale,
+        "per_tipo": per_tipo,
+    })
 
 
 # ── Serve frontend ──────────────────────────────────────────────────────────
