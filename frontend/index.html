@@ -175,6 +175,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 /* ========== EMPTY STATE ========== */
 .empty{text-align:center;padding:3rem;color:#888;font-size:14px}
 
+/* ========== TABS ========== */
+.tabs{display:flex;gap:6px;margin-bottom:1.1rem}
+.tab-btn{padding:8px 20px;border-radius:8px;border:1px solid #d0d0cc;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#666;transition:all .12s}
+.tab-btn.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.tab-btn:not(.active):hover{background:#f5f5f3}
+
+/* ========== MATCH CLIENTE ========== */
+.match-panel{display:none}
+.mf-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1.1rem}
+.mf-title{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:1rem}
+.mf-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-bottom:.85rem}
+.mf-field{display:flex;flex-direction:column;gap:5px}
+.mf-lbl{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.mf-select{padding:9px 12px;border:1px solid #d0d0cc;border-radius:8px;font-size:13px;color:#1a1a1a;background:#fff;outline:none}
+.mf-select:focus{border-color:#185FA5}
+.sl-wrap{display:flex;flex-direction:column;gap:6px}
+.sl-head{display:flex;justify-content:space-between;align-items:center}
+.sl-val{font-size:13px;font-weight:700;color:#185FA5;min-width:80px;text-align:right}
+input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
+.extras-row{display:flex;flex-wrap:wrap;gap:8px;margin:.65rem 0 1rem}
+.ecb{background:#f5f5f3;border:1px solid #d0d0cc;border-radius:20px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .12s;user-select:none}
+.ecb.on{background:#E1F5EE;border-color:#5DCAA5;color:#0F6E56}
+.btn-match{width:100%;padding:11px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:background .12s}
+.btn-match:hover{background:#0C447C}
+.btn-match:disabled{background:#888;cursor:not-allowed}
+
+/* Score Cards */
+.m-hdr{font-size:13px;color:#888;margin-bottom:.85rem}
+.m-hdr span{font-weight:700;color:#1a1a1a}
+.scard{background:#fff;border:1px solid #e5e5e0;border-radius:12px;overflow:hidden;margin-bottom:.85rem;cursor:pointer;transition:box-shadow .15s}
+.scard:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
+.scard-inner{display:flex}
+.sc-col{width:90px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem .6rem;gap:6px}
+.sc-ring{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
+.sr-g{background:linear-gradient(135deg,#1D9E75,#0F6E56)}
+.sr-o{background:linear-gradient(135deg,#EF9F27,#C07A10)}
+.sr-r{background:linear-gradient(135deg,#D94F4F,#A83232)}
+.sc-lbl{font-size:9px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.06em;line-height:1.3;max-width:72px}
+.slbl-g{color:#0F6E56}
+.slbl-o{color:#7A4A0A}
+.slbl-r{color:#8B1C1C}
+.scard-body{flex:1;padding:.9rem 1.1rem;min-width:0}
+.sc-addr{font-size:14px;font-weight:700;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.sc-meta{font-size:11px;color:#888;margin-bottom:.6rem}
+.dim-bars{display:flex;flex-direction:column;gap:5px;margin-bottom:.5rem}
+.d-row{display:flex;align-items:center;gap:7px}
+.d-lbl{font-size:10px;color:#aaa;width:58px;text-align:right;flex-shrink:0}
+.d-bg{flex:1;height:5px;background:#f0f0ec;border-radius:3px;overflow:hidden}
+.d-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.d-pct{font-size:10px;color:#aaa;width:26px;text-align:right;flex-shrink:0}
+.etags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:.5rem}
+.etag{padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700}
+.etag-y{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
+.etag-n{background:#FCEBEB;color:#A32D2D;border:1px solid #F09595}
+
 /* ========== RESPONSIVE ========== */
 @media(max-width:640px){
   .stats-row{grid-template-columns:1fr 1fr}
@@ -182,6 +237,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
   .card-footer{flex-direction:column}
   .cf-btn{min-width:unset}
   .topbar{flex-direction:column;align-items:flex-start}
+  .mf-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -214,8 +270,106 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
     </div>
   </div>
 
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-annunci" onclick="switchTab('annunci')">📋 Annunci</button>
+    <button class="tab-btn" id="tab-match" onclick="switchTab('match')">🎯 Match Cliente</button>
+  </div>
+
+  <!-- MATCH PANEL -->
+  <div class="match-panel" id="match-panel">
+    <div class="mf-card">
+      <div class="mf-title">🎯 Profilo cliente — trova gli annunci più compatibili</div>
+      <div class="mf-grid">
+
+        <div class="mf-field">
+          <span class="mf-lbl">Zona desiderata</span>
+          <select class="mf-select" id="m-zona">
+            <option value="">Tutte le zone</option>
+            <option>Livorno Città</option>
+            <option>Costa Livornese</option>
+            <option>Val di Cornia</option>
+            <option>Isola d'Elba</option>
+            <option>Hinterland Livorno</option>
+            <option>Pisa Città</option>
+            <option>Valdera</option>
+            <option>Valdicecina</option>
+            <option>Litorale Pisano</option>
+          </select>
+        </div>
+
+        <div class="mf-field">
+          <span class="mf-lbl">Tipo immobile</span>
+          <select class="mf-select" id="m-tipo">
+            <option value="">Tutti</option>
+            <option>Appartamento</option>
+            <option>Villa</option>
+            <option>Bilocale</option>
+            <option>Attico</option>
+            <option>Rustico</option>
+            <option>Monolocale</option>
+          </select>
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Budget massimo</span>
+            <span class="sl-val" id="sv-budget">€ 350.000</span>
+          </div>
+          <input type="range" id="m-budget" min="50000" max="1000000" step="10000" value="350000"
+            oninput="updSlider('sv-budget',this.value,'budget')">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Superficie desiderata</span>
+            <span class="sl-val" id="sv-mq">110 m²</span>
+          </div>
+          <input type="range" id="m-mq" min="30" max="300" step="5" value="110"
+            oninput="updSlider('sv-mq',this.value,'mq')">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Numero camere</span>
+            <span class="sl-val" id="sv-camere">3</span>
+          </div>
+          <input type="range" id="m-camere" min="1" max="6" step="1" value="3"
+            oninput="updSlider('sv-camere',this.value,'camere')">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Bagni minimi <span style="color:#bbb;font-weight:400;text-transform:none">(testo)</span></span>
+            <span class="sl-val" id="sv-bagni">1</span>
+          </div>
+          <input type="range" id="m-bagni" min="1" max="4" step="1" value="1"
+            oninput="updSlider('sv-bagni',this.value,'bagni')">
+        </div>
+
+      </div>
+
+      <span class="mf-lbl">Extra richiesti</span>
+      <div class="extras-row">
+        <span class="ecb" id="ecb-terrazzo" onclick="toggleExtra('terrazzo')">🌿 Terrazzo</span>
+        <span class="ecb" id="ecb-garage"   onclick="toggleExtra('garage')">🚗 Garage/Box</span>
+        <span class="ecb" id="ecb-ascensore" onclick="toggleExtra('ascensore')">🔝 Ascensore</span>
+        <span class="ecb" id="ecb-giardino" onclick="toggleExtra('giardino')">🌳 Giardino</span>
+      </div>
+
+      <button class="btn-match" id="btn-match" onclick="cercaMatch()">🔍 Trova Match</button>
+    </div>
+
+    <div id="m-spinner" class="spinner" style="display:none">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <br><br>Calcolo compatibilità in corso...
+    </div>
+    <div class="m-hdr" id="m-hdr" style="display:none">Trovati <span id="m-cnt">—</span> immobili compatibili · ordinati per score</div>
+    <div id="m-results"></div>
+  </div>
+
   <!-- SEARCH -->
-  <div class="search-panel">
+  <div class="search-panel" id="annunci-search">
     <div class="search-row">
       <input type="text" id="q" placeholder="Filtra per zona, tipo, indirizzo..." oninput="render()" />
       <button class="btn-search" onclick="render()">Cerca</button>
@@ -725,6 +879,152 @@ function copyModal() {
 
 function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
+}
+
+/* ========== TABS ========== */
+function switchTab(tab) {
+  const isM = tab === 'match';
+  document.getElementById('tab-annunci').classList.toggle('active', !isM);
+  document.getElementById('tab-match').classList.toggle('active', isM);
+  document.getElementById('match-panel').style.display = isM ? 'block' : 'none';
+  // Sezioni "annunci"
+  ['annunci-search', 'alert-banner', 'spinner', 'empty', 'cards'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isM ? 'none' : '';
+  });
+  document.querySelector('.stats-row').style.display   = isM ? 'none' : '';
+  document.querySelector('.results-header').style.display = isM ? 'none' : '';
+}
+
+/* ========== MATCH CLIENTE ========== */
+const _extras = new Set();
+
+function updSlider(valId, val, type) {
+  const el = document.getElementById(valId);
+  if (!el) return;
+  if (type === 'budget') el.textContent = '€ ' + Number(val).toLocaleString('it-IT');
+  else if (type === 'mq') el.textContent = val + ' m²';
+  else el.textContent = val;
+}
+
+function toggleExtra(key) {
+  const el = document.getElementById('ecb-' + key);
+  if (!el) return;
+  if (_extras.has(key)) { _extras.delete(key); el.classList.remove('on'); }
+  else                   { _extras.add(key);    el.classList.add('on'); }
+}
+
+async function cercaMatch() {
+  const btn = document.getElementById('btn-match');
+  btn.disabled = true; btn.textContent = '⏳ Calcolo...';
+  document.getElementById('m-spinner').style.display = 'block';
+  document.getElementById('m-hdr').style.display = 'none';
+  document.getElementById('m-results').innerHTML = '';
+
+  const params = new URLSearchParams({
+    zona:      document.getElementById('m-zona').value,
+    tipo:      document.getElementById('m-tipo').value,
+    mq:        document.getElementById('m-mq').value,
+    budget:    document.getElementById('m-budget').value,
+    camere:    document.getElementById('m-camere').value,
+    bagni:     document.getElementById('m-bagni').value,
+    terrazzo:  _extras.has('terrazzo')  ? 1 : 0,
+    garage:    _extras.has('garage')    ? 1 : 0,
+    ascensore: _extras.has('ascensore') ? 1 : 0,
+    giardino:  _extras.has('giardino')  ? 1 : 0,
+  });
+  // Rimuovi param vuoti (zona/tipo non selezionati)
+  [...params.keys()].forEach(k => { if (params.get(k) === '') params.delete(k); });
+
+  try {
+    const r = await fetch(`${API}/match?${params}`);
+    const data = await r.json();
+    document.getElementById('m-spinner').style.display = 'none';
+    document.getElementById('m-cnt').textContent = data.length;
+    document.getElementById('m-hdr').style.display = 'block';
+    document.getElementById('m-results').innerHTML = data.map(matchCardHTML).join('');
+  } catch(e) {
+    document.getElementById('m-spinner').style.display = 'none';
+    document.getElementById('m-results').innerHTML = '<div class="empty">Errore connessione al server.</div>';
+  }
+  btn.disabled = false; btn.textContent = '🔍 Trova Match';
+}
+
+/* ── Match card renderer ─────────────────────────────────────────────────── */
+const _PORTALE_MAP = {
+  'subito.it':      { cls: 'pb-subito',      label: '● subito.it' },
+  'idealista.it':   { cls: 'pb-idealista',   label: '● idealista.it' },
+  'immobiliare.it': { cls: 'pb-immobiliare', label: '● immobiliare.it' },
+};
+const _DIM_CFG = [
+  { k:'prezzo',     lbl:'Prezzo',  color:'#185FA5' },
+  { k:'superficie', lbl:'Sup.',    color:'#1D9E75' },
+  { k:'zona',       lbl:'Zona',    color:'#7B5EA7' },
+  { k:'camere',     lbl:'Camere',  color:'#EF9F27' },
+  { k:'extra',      lbl:'Extra',   color:'#D94F4F' },
+];
+const _EXTRA_NAMES = {
+  terrazzo:'🌿 Terrazzo', garage:'🚗 Garage',
+  ascensore:'🔝 Ascensore', giardino:'🌳 Giardino', bagni:'🚿 Bagni',
+};
+
+function matchCardHTML(d) {
+  const s = d.score;
+  const ringCls = s >= 85 ? 'sr-g' : s >= 65 ? 'sr-o' : 'sr-r';
+  const lblCls  = s >= 85 ? 'slbl-g' : s >= 65 ? 'slbl-o' : 'slbl-r';
+  const lblTxt  = s >= 90 ? 'Match perfetto ✦'
+                : s >= 80 ? 'Match ottimo'
+                : s >= 65 ? 'Buon match'
+                : s >= 50 ? 'Match parziale'
+                :           'Match basso';
+
+  const sd = d.score_dettaglio || {};
+  const bars = _DIM_CFG.map(({ k, lbl, color }) => {
+    const v = Math.round(sd[k] || 0);
+    return `<div class="d-row">
+      <span class="d-lbl">${lbl}</span>
+      <div class="d-bg"><div class="d-fill" style="width:${v}%;background:${color}"></div></div>
+      <span class="d-pct">${v}%</span>
+    </div>`;
+  }).join('');
+
+  const ed = d.extra_detail || {};
+  const etags = Object.entries(ed)
+    .filter(([, v]) => v !== null)
+    .map(([k, v]) => `<span class="etag ${v ? 'etag-y' : 'etag-n'}">${_EXTRA_NAMES[k] || k} ${v ? '✓' : '✗'}</span>`)
+    .join('');
+
+  const isP = d.fonte === 'privato', isN = d.fonte === 'noescl';
+  const srcB = isP ? '<span class="badge b-priv">Privato</span>'
+    : isN ? '<span class="badge b-noescl">&#9888; Non esclusiva</span>'
+    : '<span class="badge" style="background:#f0f0ec;color:#888;border:1px solid #d0d0cc">Agenzia</span>';
+
+  const pm = d.portale ? (_PORTALE_MAP[d.portale] || { cls:'pb-altro', label:d.portale }) : null;
+  const portaleBadge = pm ? `<span class="portale-badge ${pm.cls}">${pm.label}</span>` : '';
+
+  const btnVedi = d.url_originale
+    ? `<a class="cf-btn cf-outline" href="${d.url_originale}" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" style="text-decoration:none;text-align:center;flex:none;padding:6px 14px;min-width:unset;font-size:12px">Vedi →</a>`
+    : '';
+
+  const url = d.url_originale || '';
+  return `<div class="scard" onclick="if(!event.target.closest('a,button')&&'${url}') window.open('${url}','_blank','noopener')">
+    <div class="scard-inner">
+      <div class="sc-col">
+        <div class="sc-ring ${ringCls}">${s}</div>
+        <div class="sc-lbl ${lblCls}">${lblTxt}</div>
+      </div>
+      <div class="scard-body">
+        <div class="sc-addr">${d.indirizzo}</div>
+        <div class="sc-meta">${d.zona || ''} · ${d.tipo || ''} · ${d.mq ? d.mq + ' m²' : '—'} · ${fmt(d.prezzo)}</div>
+        <div class="dim-bars">${bars}</div>
+        ${etags ? `<div class="etags">${etags}</div>` : ''}
+        <div class="card-footer" style="margin-top:.5rem;padding-top:.5rem;align-items:center">
+          ${srcB}${portaleBadge ? ' ' + portaleBadge : ''}<span style="flex:1"></span>${btnVedi}
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 
 /* ========== START ========== */

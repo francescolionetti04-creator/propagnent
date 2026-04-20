@@ -130,6 +130,121 @@ def scraper_status():
     return JSONResponse(content={"running": scraper_running})
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# MATCH AI COMPRATORI
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _calcola_score(ann: dict, zona=None, mq=None, budget=None, camere=None, bagni=None,
+                   terrazzo=0, garage=0, ascensore=0, giardino=0) -> dict:
+    """Calcola un punteggio 10-99 di compatibilità fra un annuncio e un profilo cliente."""
+
+    # ── Prezzo 30% ────────────────────────────────────────────────────
+    if budget and ann.get("prezzo"):
+        p, b = ann["prezzo"], budget
+        s_p = (80 + 20 * (1 - p / b)) if p <= b else max(0.0, 80 - ((p - b) / b) * 200)
+    else:
+        s_p = 60.0
+    s_prezzo = round(min(100, max(0, s_p)), 1)
+
+    # ── Superficie 25% ────────────────────────────────────────────────
+    if mq and ann.get("mq"):
+        s_mq = max(0.0, 100 - abs(ann["mq"] - mq) / mq * 250)
+    else:
+        s_mq = 60.0
+    s_superficie = round(min(100, max(0, s_mq)), 1)
+
+    # ── Zona 20% ─────────────────────────────────────────────────────
+    if zona and ann.get("zona"):
+        s_z = 100.0 if ann["zona"] == zona else 0.0
+    else:
+        s_z = 70.0
+    s_zona = s_z
+
+    # ── Camere 15% ───────────────────────────────────────────────────
+    if camere and ann.get("camere"):
+        diff = abs(ann["camere"] - camere)
+        s_c = 100.0 if diff == 0 else 60.0 if diff == 1 else 20.0 if diff == 2 else 0.0
+    else:
+        s_c = 60.0
+    s_camere = s_c
+
+    # ── Extra 10% ────────────────────────────────────────────────────
+    testo = " ".join(filter(None, [
+        ann.get("indirizzo", ""),
+        ann.get("intel_privato") or "",
+        ann.get("intel_warning") or "",
+        ann.get("ai_insight") or "",
+    ])).lower()
+
+    kw_map = {
+        "terrazzo":  ["terrazzo", "terrazza", "balcone"],
+        "garage":    ["garage", "box auto", "posto auto", "box"],
+        "ascensore": ["ascensore"],
+        "giardino":  ["giardino"],
+        "bagni":     ["doppi servizi", "2 bagni", "3 bagni", "bagno + wc"],
+    }
+    extra_richiesti = {
+        "terrazzo":  bool(terrazzo),
+        "garage":    bool(garage),
+        "ascensore": bool(ascensore),
+        "giardino":  bool(giardino),
+        "bagni":     bool(bagni and bagni > 1),
+    }
+    extra_detail: dict = {}
+    n_req = n_found = 0
+    for k, richiesto in extra_richiesti.items():
+        if richiesto:
+            trovato = any(w in testo for w in kw_map[k])
+            extra_detail[k] = trovato
+            n_req += 1
+            if trovato:
+                n_found += 1
+        else:
+            extra_detail[k] = None  # non richiesto → non mostrato
+    s_extra = round((n_found / n_req * 100) if n_req > 0 else 70.0, 1)
+
+    # ── Score finale pesato ───────────────────────────────────────────
+    dettaglio = {
+        "prezzo":     s_prezzo,
+        "superficie": s_superficie,
+        "zona":       s_zona,
+        "camere":     s_camere,
+        "extra":      s_extra,
+    }
+    pesi = {"prezzo": 0.30, "superficie": 0.25, "zona": 0.20, "camere": 0.15, "extra": 0.10}
+    finale = max(10, min(99, round(sum(dettaglio[k] * pesi[k] for k in pesi))))
+
+    return {"score": finale, "dettaglio": dettaglio, "extra_detail": extra_detail}
+
+
+@app.get("/match")
+def match_compratore(
+    zona:      Optional[str] = Query(None),
+    tipo:      Optional[str] = Query(None),
+    mq:        Optional[int] = Query(None),
+    budget:    Optional[int] = Query(None),
+    camere:    Optional[int] = Query(None),
+    bagni:     Optional[int] = Query(None),
+    terrazzo:  int = Query(0),
+    garage:    int = Query(0),
+    ascensore: int = Query(0),
+    giardino:  int = Query(0),
+):
+    rows = get_annunci(tipo=tipo)
+    results = []
+    for row in rows:
+        ann = Annuncio.from_row(row).to_dict()
+        s = _calcola_score(ann, zona=zona, mq=mq, budget=budget, camere=camere, bagni=bagni,
+                           terrazzo=terrazzo, garage=garage, ascensore=ascensore, giardino=giardino)
+        ann["score"] = s["score"]
+        ann["score_dettaglio"] = s["dettaglio"]
+        ann["extra_detail"] = s["extra_detail"]
+        results.append(ann)
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return JSONResponse(content=results[:50])
+
+
 @app.get("/debug/stats")
 def debug_stats():
     """Statistiche dettagliate per portale e tipo — utile per verificare lo stato del DB."""
