@@ -172,6 +172,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .modal-close{flex:1;padding:9px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 .modal-close:hover{background:#0C447C}
 
+/* ========== OMI BADGE ========== */
+.omi-bar{font-size:11px;padding:3px 9px;border-radius:6px;margin:.45rem 0 0;display:inline-flex;align-items:center;gap:5px;font-weight:600}
+.omi-under{background:#E1F5EE;color:#0F6E56}
+.omi-ok   {background:#f0f0ec;color:#555}
+.omi-over {background:#FCEBEB;color:#A32D2D}
+
 /* ========== EMPTY STATE ========== */
 .empty{text-align:center;padding:3rem;color:#888;font-size:14px}
 
@@ -463,6 +469,7 @@ const API = (window.location.protocol === 'file:' || window.location.port === '5
   : '';
 let allData = [];
 let showPriv = true, showNoescl = true, showAg = false;
+let omiData = {};  // {zona: {min, max, anno, semestre}}
 
 /* ========== GALLERIA FOTO ========== */
 const _galIdx = {};   // { cardId: currentIndex }
@@ -530,6 +537,37 @@ async function init() {
   await loadStats();
   await loadAlert();
   await loadAnnunci();
+  loadOMI();  // non-blocking: aggiorna i badge quando arriva
+}
+
+async function loadOMI() {
+  try {
+    const r = await fetch(`${API}/api/omi`);
+    omiData = await r.json();
+    // Re-render silenzioso se le card sono già visibili
+    if (allData.length > 0) render();
+  } catch(e) { /* OMI opzionale, non blocca */ }
+}
+
+/* ── Calcola badge OMI per una card ─────────────────────────────────────── */
+function getOmiLabel(d) {
+  if (!d.prezzo || !d.mq || !omiData) return '';
+  const o = omiData[d.zona];
+  if (!o || !o.min) return '';
+  const ppm = Math.round(d.prezzo / d.mq);
+  // Ville/rustici tendono sopra del 20% rispetto alle abitazioni civili
+  const fattore = (d.tipo === 'Villa' || d.tipo === 'Rustico') ? 1.2 : 1.0;
+  const minAdj = Math.round(o.min * fattore);
+  const maxAdj = Math.round(o.max * fattore);
+  const range = `€\u202f${minAdj.toLocaleString('it-IT')}\u2013${maxAdj.toLocaleString('it-IT')}/m\u00b2`;
+  const anno = o.anno ? ` · OMI ${o.anno}` : '';
+  if (ppm < minAdj * 0.90) {
+    return `<div class="omi-bar omi-under">🔥 Sotto mercato ${range}${anno}</div>`;
+  } else if (ppm > maxAdj * 1.10) {
+    return `<div class="omi-bar omi-over">⚠ Sopra mercato ${range}${anno}</div>`;
+  } else {
+    return `<div class="omi-bar omi-ok">✓ Nel range ${range}${anno}</div>`;
+  }
 }
 
 /* ========== API CALLS ========== */
@@ -773,6 +811,7 @@ function cardHTML(d) {
           <div class="spec"><div class="spec-v">${d.giorni_online === 0 ? 'oggi' : d.giorni_online + ' gg'}</div><div class="spec-l">online</div></div>
           <div class="spec"><div class="spec-v">${d.mq && d.prezzo ? Math.round(d.prezzo/d.mq).toLocaleString('it-IT') + ' \u20ac' : '\u2014'}</div><div class="spec-l">\u20ac/m\u00b2</div></div>
         </div>
+        ${getOmiLabel(d)}
         ${intel}
         <div class="card-footer">${footerFull}</div>
       </div>

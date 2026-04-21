@@ -9,7 +9,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from database import init_db, get_annunci, get_stats, get_alert
+from database import init_db, get_annunci, get_stats, get_alert, get_omi_zone_map
 from models import Annuncio
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
@@ -24,8 +24,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inizializza il database all'avvio
+# Inizializza il database all'avvio (crea tabelle + migrazioni)
 init_db()
+
+# Carica dati OMI al boot (seed se DB vuoto, ~0.1s)
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scraper"))
+    from omi_import import importa_omi
+    importa_omi()
+except Exception as _omi_err:
+    print(f"[OMI] Errore import avvio: {_omi_err}")
 
 scraper_running = False
 
@@ -243,6 +251,15 @@ def match_compratore(
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return JSONResponse(content=results[:50])
+
+
+@app.get("/api/omi")
+def api_omi():
+    """
+    Restituisce la mappa zone HouseRadar → range OMI €/m² (2024 S2).
+    Usata dal frontend per mostrare il badge prezzo vs mercato nelle card.
+    """
+    return JSONResponse(content=get_omi_zone_map())
 
 
 @app.get("/debug/stats")

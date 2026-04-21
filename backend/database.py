@@ -192,8 +192,105 @@ def init_db():
     cur.execute("UPDATE annunci SET portale='idealista.it'   WHERE url_originale LIKE '%idealista.it%'   AND portale IS NULL")
     cur.execute("UPDATE annunci SET portale='immobiliare.it' WHERE url_originale LIKE '%immobiliare.it%' AND portale IS NULL")
 
+    # Tabella OMI Quotazioni Immobiliari (Agenzia delle Entrate)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS omi_quotazioni (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            anno INTEGER,
+            semestre INTEGER,
+            comune TEXT,
+            provincia TEXT,
+            zona_omi TEXT,
+            tipo_immobile TEXT,
+            stato TEXT,
+            prezzo_min REAL,
+            prezzo_max REAL,
+            updated_at TEXT
+        )
+    """)
+
     conn.commit()
     conn.close()
+
+
+def get_omi_zone_map() -> dict:
+    """
+    Restituisce una mappa {zona_houseradar: {min, max, anno, semestre}}
+    calcolata aggregando le quotazioni OMI per stato='normale', tipo='Abitazioni civili'.
+    """
+    # Mappa dalle nostre zone ai comuni OMI (con peso fascia preferita)
+    ZONE_COMUNE = {
+        "Livorno Città":     ("Livorno",             ["Semicentrale", "Centrale"]),
+        "Costa Livornese":   ("Cecina",              ["Centrale", "Semicentrale"]),
+        "Val di Cornia":     ("Piombino",            ["Centrale"]),
+        "Isola d'Elba":      ("Portoferraio",        ["Centrale"]),
+        "Hinterland Livorno":("Collesalvetti",       ["Periferica", "Semicentrale"]),
+        "Pisa Città":        ("Pisa",                ["Semicentrale", "Centrale"]),
+        "Valdera":           ("Pontedera",           ["Centrale"]),
+        "Valdicecina":       ("Volterra",            ["Centrale"]),
+        "Litorale Pisano":   ("Marina di Pisa",      ["Periferica", "Semicentrale"]),
+        "Valdarno Pisano":   ("San Miniato",         ["Centrale"]),
+    }
+    conn = get_conn()
+    cur = conn.cursor()
+    result = {}
+    for zona_hr, (comune, fasce_pref) in ZONE_COMUNE.items():
+        # Prova le fasce in ordine di preferenza
+        row = None
+        for fascia in fasce_pref:
+            cur.execute("""
+                SELECT AVG(prezzo_min), AVG(prezzo_max), MAX(anno), MAX(semestre)
+                FROM omi_quotazioni
+                WHERE lower(comune) = lower(?)
+                  AND zona_omi = ?
+                  AND stato = 'normale'
+                  AND lower(tipo_immobile) LIKE '%abitazioni%'
+            """, (comune, fascia))
+            row = cur.fetchone()
+            if row and row[0]:
+                break
+        if row and row[0]:
+            result[zona_hr] = {
+                "min":      round(row[0]),
+                "max":      round(row[1]),
+                "anno":     row[2],
+                "semestre": row[3],
+                "comune":   comune,
+            }
+    conn.close()
+    return result
+
+
+def upsert_omi(righe: list) -> int:
+    """Inserisce o aggiorna le quotazioni OMI. Ritorna il numero di righe inserite."""
+    conn = get_conn()
+    cur = conn.cursor()
+    n = 0
+    now = __import__("datetime").datetime.now().isoformat()
+    for r in righe:
+        cur.execute("""
+            INSERT INTO omi_quotazioni
+              (anno, semestre, comune, provincia, zona_omi, tipo_immobile, stato,
+               prezzo_min, prezzo_max, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, (
+            r["anno"], r["semestre"], r["comune"], r["provincia"],
+            r["zona_omi"], r["tipo_immobile"], r["stato"],
+            r["prezzo_min"], r["prezzo_max"], now
+        ))
+        n += 1
+    conn.commit()
+    conn.close()
+    return n
+
+
+def omi_ha_dati() -> bool:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM omi_quotazioni")
+    c = cur.fetchone()[0]
+    conn.close()
+    return c > 0
 
 
 def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
