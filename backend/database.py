@@ -217,26 +217,32 @@ def get_omi_zone_map() -> dict:
     """
     Restituisce una mappa {zona_houseradar: {min, max, anno, semestre}}
     calcolata aggregando le quotazioni OMI per stato='normale', tipo='Abitazioni civili'.
+
+    Logica di fallback a 3 livelli:
+      1. Fascia preferita per il comune (es. Semicentrale)
+      2. Qualsiasi fascia per il comune
+      3. Media provinciale (LI o PI)
     """
-    # Mappa dalle nostre zone ai comuni OMI (con peso fascia preferita)
     ZONE_COMUNE = {
-        "Livorno Città":     ("Livorno",             ["Semicentrale", "Centrale"]),
-        "Costa Livornese":   ("Cecina",              ["Centrale", "Semicentrale"]),
-        "Val di Cornia":     ("Piombino",            ["Centrale"]),
-        "Isola d'Elba":      ("Portoferraio",        ["Centrale"]),
-        "Hinterland Livorno":("Collesalvetti",       ["Periferica", "Semicentrale"]),
-        "Pisa Città":        ("Pisa",                ["Semicentrale", "Centrale"]),
-        "Valdera":           ("Pontedera",           ["Centrale"]),
-        "Valdicecina":       ("Volterra",            ["Centrale"]),
-        "Litorale Pisano":   ("Marina di Pisa",      ["Periferica", "Semicentrale"]),
-        "Valdarno Pisano":   ("San Miniato",         ["Centrale"]),
+        "Livorno Città":      ("Livorno",         "LI", ["Semicentrale", "Centrale"]),
+        "Costa Livornese":    ("Cecina",           "LI", ["Centrale", "Semicentrale"]),
+        "Val di Cornia":      ("Piombino",         "LI", ["Centrale"]),
+        "Isola d'Elba":       ("Portoferraio",     "LI", ["Centrale"]),
+        "Hinterland Livorno": ("Collesalvetti",    "LI", ["Periferica", "Semicentrale"]),
+        "Pisa Città":         ("Pisa",             "PI", ["Semicentrale", "Centrale"]),
+        "Valdera":            ("Pontedera",        "PI", ["Centrale"]),
+        "Valdicecina":        ("Volterra",         "PI", ["Centrale"]),
+        "Litorale Pisano":    ("Marina di Pisa",   "PI", ["Periferica", "Semicentrale"]),
+        "Valdarno Pisano":    ("San Miniato",      "PI", ["Centrale"]),
     }
     conn = get_conn()
     cur = conn.cursor()
     result = {}
-    for zona_hr, (comune, fasce_pref) in ZONE_COMUNE.items():
-        # Prova le fasce in ordine di preferenza
+    for zona_hr, (comune, provincia, fasce_pref) in ZONE_COMUNE.items():
         row = None
+        fonte = None
+
+        # Livello 1: fascia preferita per il comune
         for fascia in fasce_pref:
             cur.execute("""
                 SELECT AVG(prezzo_min), AVG(prezzo_max), MAX(anno), MAX(semestre)
@@ -248,7 +254,35 @@ def get_omi_zone_map() -> dict:
             """, (comune, fascia))
             row = cur.fetchone()
             if row and row[0]:
+                fonte = "comune+fascia"
                 break
+
+        # Livello 2: qualsiasi fascia per lo stesso comune
+        if not (row and row[0]):
+            cur.execute("""
+                SELECT AVG(prezzo_min), AVG(prezzo_max), MAX(anno), MAX(semestre)
+                FROM omi_quotazioni
+                WHERE lower(comune) = lower(?)
+                  AND stato = 'normale'
+                  AND lower(tipo_immobile) LIKE '%abitazioni%'
+            """, (comune,))
+            row = cur.fetchone()
+            if row and row[0]:
+                fonte = "comune"
+
+        # Livello 3: media provinciale
+        if not (row and row[0]):
+            cur.execute("""
+                SELECT AVG(prezzo_min), AVG(prezzo_max), MAX(anno), MAX(semestre)
+                FROM omi_quotazioni
+                WHERE upper(provincia) = upper(?)
+                  AND stato = 'normale'
+                  AND lower(tipo_immobile) LIKE '%abitazioni%'
+            """, (provincia,))
+            row = cur.fetchone()
+            if row and row[0]:
+                fonte = f"provincia {provincia}"
+
         if row and row[0]:
             result[zona_hr] = {
                 "min":      round(row[0]),
@@ -256,6 +290,7 @@ def get_omi_zone_map() -> dict:
                 "anno":     row[2],
                 "semestre": row[3],
                 "comune":   comune,
+                "_fonte":   fonte,  # debug: da dove viene la quotazione
             }
     conn.close()
     return result
@@ -291,6 +326,27 @@ def omi_ha_dati() -> bool:
     c = cur.fetchone()[0]
     conn.close()
     return c > 0
+
+
+def omi_e_aggiornato(max_giorni: int = 180) -> bool:
+    """
+    Ritorna True se i dati OMI sono presenti E l'ultimo aggiornamento
+    risale a meno di max_giorni giorni fa (default 180 = ~1 semestre).
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT MAX(updated_at) FROM omi_quotazioni")
+    row = cur.fetchone()
+    conn.close()
+    if not row or not row[0]:
+        return False
+    from datetime import datetime
+    try:
+        last = datetime.fromisoformat(row[0])
+        delta = (datetime.now() - last).days
+        return delta < max_giorni
+    except Exception:
+        return False
 
 
 def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
@@ -375,6 +431,69 @@ def get_alert():
     testo = f"<strong>{len(rows)} nuov{'o' if len(rows)==1 else 'i'} annunc{'io' if len(rows)==1 else 'i'} nelle ultime 2 ore</strong> — {' e '.join(parti)}. Controlla subito prima degli altri agenti."
 
     return {"ha_alert": True, "testo": testo, "annunci": rows}
+
+
+def upsert_sync_annunci(annunci: list) -> dict:
+    """
+    Upsert annunci ricevuti via /api/sync (es. da Idealista locale).
+    - INSERT se url_originale non esiste
+    - UPDATE prezzo/mq/camere/giorni_online/foto_url se già presente
+    Ritorna {"inseriti": N, "aggiornati": N, "totale": N}.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    inseriti = aggiornati = 0
+    now = __import__("datetime").datetime.now().isoformat()
+
+    for a in annunci:
+        url = a.get("url_originale") or a.get("url", "")
+        if not url:
+            continue
+
+        cur.execute("SELECT id FROM annunci WHERE url_originale = ?", (url,))
+        row = cur.fetchone()
+
+        if row:
+            cur.execute("""
+                UPDATE annunci SET
+                    prezzo        = COALESCE(?, prezzo),
+                    mq            = COALESCE(?, mq),
+                    camere        = COALESCE(?, camere),
+                    giorni_online = COALESCE(?, giorni_online),
+                    foto_url      = COALESCE(?, foto_url)
+                WHERE url_originale = ?
+            """, (a.get("prezzo"), a.get("mq"), a.get("camere"),
+                  a.get("giorni_online"), a.get("foto_url"), url))
+            aggiornati += 1
+        else:
+            cur.execute("""
+                INSERT INTO annunci (
+                    indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
+                    prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
+                    intel_privato, intel_warning, ai_insight,
+                    is_nuovo, data_inserimento, url_originale, foto_url, portale
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+                a.get("indirizzo"), a.get("indirizzo_preciso", False),
+                a.get("zona"), a.get("tipo", "Appartamento"),
+                a.get("mq"), a.get("camere"), a.get("prezzo"),
+                a.get("giorni_online", 0),
+                a.get("fonte", "agenzia"),
+                a.get("agenzie", "[]"),
+                a.get("proprietario"),
+                a.get("telefono"),
+                a.get("intel_privato"), a.get("intel_warning"), a.get("ai_insight"),
+                a.get("is_nuovo", True),
+                a.get("data_inserimento", now),
+                url,
+                a.get("foto_url"),
+                a.get("portale", "idealista.it"),
+            ))
+            inseriti += 1
+
+    conn.commit()
+    conn.close()
+    return {"inseriti": inseriti, "aggiornati": aggiornati, "totale": inseriti + aggiornati}
 
 
 def insert_annuncio(a: dict):

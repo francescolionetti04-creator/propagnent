@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,7 +9,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from database import init_db, get_annunci, get_stats, get_alert, get_omi_zone_map
+from database import init_db, get_annunci, get_stats, get_alert, get_omi_zone_map, upsert_sync_annunci
 from models import Annuncio
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
@@ -251,6 +251,34 @@ def match_compratore(
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return JSONResponse(content=results[:50])
+
+
+@app.post("/api/sync")
+async def sync_annunci(request: Request):
+    """
+    Endpoint protetto per sincronizzare annunci da scraper locali (es. Idealista).
+    Richiede header: X-Sync-Token: <SYNC_TOKEN>
+    Body: JSON array di annunci nel formato del DB.
+    """
+    token = request.headers.get("X-Sync-Token", "")
+    expected = os.environ.get("SYNC_TOKEN", "")
+    if not expected:
+        return JSONResponse(status_code=503, content={"error": "SYNC_TOKEN non configurato sul server."})
+    if token != expected:
+        return JSONResponse(status_code=401, content={"error": "Token non valido."})
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Body JSON non valido."})
+
+    if not isinstance(body, list):
+        return JSONResponse(status_code=400, content={"error": "Atteso un array JSON di annunci."})
+
+    result = upsert_sync_annunci(body)
+    print(f"[Sync] Ricevuti {len(body)} annunci — "
+          f"inseriti={result['inseriti']} aggiornati={result['aggiornati']}")
+    return JSONResponse(content=result)
 
 
 @app.get("/api/omi")
