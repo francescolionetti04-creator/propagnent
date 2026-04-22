@@ -250,7 +250,7 @@ def match_compratore(
         results.append(ann)
 
     results.sort(key=lambda x: x["score"], reverse=True)
-    return JSONResponse(content=results[:50])
+    return JSONResponse(content=results)
 
 
 @app.post("/api/sync")
