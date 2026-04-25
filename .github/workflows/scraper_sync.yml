@@ -1,0 +1,40 @@
+name: Scraper Sync
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # ogni 30 minuti
+  workflow_dispatch:           # avvio manuale dalla UI GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20        # kill se un singolo run supera i 20 min
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Immobiliare.it ─────────────────────────────────────────────
+      - name: Sync Immobiliare.it
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          HOUSERADAR_URL: ${{ secrets.HOUSERADAR_URL }}
+        run: python3 scraper/immobiliare_sync.py
+        continue-on-error: true   # non blocca Idealista se crasha
+
+      # ── Idealista.it ───────────────────────────────────────────────
+      - name: Sync Idealista
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          HOUSERADAR_URL: ${{ secrets.HOUSERADAR_URL }}
+        run: python3 scraper/idealista_sync.py
+        continue-on-error: true
