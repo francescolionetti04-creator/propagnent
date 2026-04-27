@@ -193,6 +193,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .tab-btn.active{background:#185FA5;color:#fff;border-color:#185FA5}
 .tab-btn:not(.active):hover{background:#f5f5f3}
 
+/* ========== VALUTAZIONE RAPIDA ========== */
+.val-panel{display:none}
+.val-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1.1rem}
+.val-title{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:.25rem}
+.val-sub{font-size:12px;color:#888;margin-bottom:1rem}
+.val-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-bottom:1rem}
+.val-field{display:flex;flex-direction:column;gap:5px}
+.val-lbl{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.val-input{padding:9px 12px;border:1px solid #d0d0cc;border-radius:8px;font-size:13px;color:#1a1a1a;background:#fff;outline:none}
+.val-input:focus{border-color:#185FA5}
+.btn-pdf{width:100%;padding:11px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:background .12s}
+.btn-pdf:hover{background:#0F6E56}
+@media(max-width:640px){.val-grid{grid-template-columns:1fr}}
+
 /* ========== MATCH CLIENTE ========== */
 .match-panel{display:none}
 .mf-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1.1rem}
@@ -286,6 +300,7 @@ input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
   <div class="tabs">
     <button class="tab-btn active" id="tab-annunci" onclick="switchTab('annunci')">📋 Annunci</button>
     <button class="tab-btn" id="tab-match" onclick="switchTab('match')">🎯 Match Cliente</button>
+    <button class="tab-btn" id="tab-valuta" onclick="switchTab('valuta')">📊 Valutazione</button>
   </div>
 
   <!-- MATCH PANEL -->
@@ -424,6 +439,102 @@ input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
     </div>
     <div class="m-hdr" id="m-hdr" style="display:none">Trovati <span id="m-cnt">—</span> immobili compatibili · ordinati per score</div>
     <div id="m-results"></div>
+  </div>
+
+  <!-- VALUTAZIONE RAPIDA PANEL -->
+  <div class="val-panel" id="val-panel">
+    <div class="val-card">
+      <div class="val-title">📊 Valutazione Rapida — Genera Report PDF</div>
+      <div class="val-sub">Inserisci i dati dell'immobile per ottenere una valutazione professionale con dati OMI e comparabili di mercato.</div>
+      <div class="val-grid">
+
+        <div class="val-field" style="grid-column:1/-1">
+          <span class="val-lbl">Indirizzo completo</span>
+          <input class="val-input" id="v-indirizzo" type="text" placeholder="es. Via Roma 15, Livorno" />
+        </div>
+
+        <div class="val-field">
+          <span class="val-lbl">Tipo immobile</span>
+          <select class="val-input" id="v-tipo">
+            <option>Appartamento</option>
+            <option>Villa</option>
+            <option>Bilocale</option>
+            <option>Attico</option>
+            <option>Rustico</option>
+            <option>Monolocale</option>
+          </select>
+        </div>
+
+        <div class="val-field">
+          <span class="val-lbl">Superficie (m²)</span>
+          <input class="val-input" id="v-mq" type="number" placeholder="es. 90" min="10" max="1000" />
+        </div>
+
+        <div class="val-field" style="grid-column:1/-1">
+          <span class="val-lbl">Zona</span>
+          <select class="val-input" id="v-zona">
+            <option value="">Seleziona zona...</option>
+            <optgroup label="Provincia di Livorno">
+              <option value="Livorno Città">Livorno</option>
+              <option value="Hinterland Livorno">Collesalvetti</option>
+              <option value="Costa Livornese">Rosignano Marittimo</option>
+              <option value="Costa Livornese">Cecina</option>
+              <option value="Costa Livornese">Castagneto Carducci</option>
+              <option value="Costa Livornese">Bibbona</option>
+              <option value="Val di Cornia">Campiglia Marittima</option>
+              <option value="Val di Cornia">Piombino</option>
+              <option value="Val di Cornia">Suvereto</option>
+              <option value="Val di Cornia">Sassetta</option>
+              <option value="Val di Cornia">Monteverdi Marittimo</option>
+              <option value="Isola d'Elba">Portoferraio</option>
+              <option value="Isola d'Elba">Campo nell'Elba</option>
+              <option value="Isola d'Elba">Marciana</option>
+              <option value="Isola d'Elba">Marciana Marina</option>
+              <option value="Isola d'Elba">Capoliveri</option>
+              <option value="Isola d'Elba">Porto Azzurro</option>
+              <option value="Isola d'Elba">Rio</option>
+              <option value="Isola d'Elba">Capraia Isola</option>
+            </optgroup>
+            <optgroup label="Provincia di Pisa">
+              <option value="Pisa Città">Pisa</option>
+              <option value="Pisa Città">Cascina</option>
+              <option value="Litorale Pisano">San Giuliano Terme</option>
+              <option value="Litorale Pisano">Vecchiano</option>
+              <option value="Pisa Città">Calci</option>
+              <option value="Valdera">Vicopisano</option>
+              <option value="Valdera">Buti</option>
+              <option value="Valdera">Calcinaia</option>
+              <option value="Valdera">Pontedera</option>
+              <option value="Valdera">Ponsacco</option>
+              <option value="Valdera">Casciana Terme Lari</option>
+              <option value="Valdera">Palaia</option>
+              <option value="Valdicecina">Lajatico</option>
+              <option value="Valdera">Terricciola</option>
+              <option value="Valdera">Chianni</option>
+              <option value="Valdera">Peccioli</option>
+              <option value="Valdicecina">Volterra</option>
+              <option value="Valdicecina">Pomarance</option>
+              <option value="Valdicecina">Montecatini Val di Cecina</option>
+              <option value="Valdicecina">Castelnuovo Val di Cecina</option>
+              <option value="Valdarno Pisano">Santa Maria a Monte</option>
+              <option value="Valdarno Pisano">Montopoli in Val d'Arno</option>
+              <option value="Valdarno Pisano">San Miniato</option>
+              <option value="Valdarno Pisano">Fucecchio (parte)</option>
+              <option value="Valdarno Pisano">Bientina</option>
+              <option value="Valdera">Capannoli</option>
+              <option value="Valdera">Santo Pietro Belvedere</option>
+              <option value="Litorale Pisano">Fauglia</option>
+              <option value="Litorale Pisano">Crespina Lorenzana</option>
+              <option value="Valdicecina">Riparbella</option>
+              <option value="Valdicecina">Montescudaio</option>
+              <option value="Valdicecina">Guardistallo</option>
+            </optgroup>
+          </select>
+        </div>
+
+      </div>
+      <button class="btn-pdf" onclick="generaReportForm()">📄 Genera Report PDF</button>
+    </div>
   </div>
 
   <!-- SEARCH -->
@@ -890,6 +1001,10 @@ function cardHTML(d) {
          Vedi annuncio &#8594;</a>`
     : '';
 
+  // ── Bottone Report PDF ───────────────────────────────────────────────
+  const btnReport = `<button class="cf-btn" style="background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5"
+      onclick="event.stopPropagation();apriReport(${id})">📄 Report</button>`;
+
   // ── Portale badge ────────────────────────────────────────────────────
   const portaleMap = {
     'subito.it':       { cls: 'pb-subito',       label: '● subito.it' },
@@ -905,13 +1020,13 @@ function cardHTML(d) {
     <button class="cf-btn cf-green" onclick="event.stopPropagation();showScript('whatsapp',${id})">&#128172; WhatsApp</button>
     <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showScript('esclusiva',${id})">+ Esclusiva</button>
-    ${btnVedi}
+    ${btnVedi}${btnReport}
     <span style="flex:1"></span>${portaleBadge}`
   : `
     <button class="cf-btn cf-amber" onclick="event.stopPropagation();showScript('conquista',${id})">&#127919; Conquista</button>
     <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showValuta(${id})">&#128161; Valuta</button>
-    ${btnVedi}
+    ${btnVedi}${btnReport}
     <span style="flex:1"></span>${portaleBadge}`;
 
   return `<div class="lcard ${cls}" onclick="openAnnuncio('${d.url_originale || ''}',event)" title="Clicca per aprire l'annuncio">
@@ -1044,17 +1159,54 @@ function closeModal() {
 
 /* ========== TABS ========== */
 function switchTab(tab) {
+  const isA = tab === 'annunci';
   const isM = tab === 'match';
-  document.getElementById('tab-annunci').classList.toggle('active', !isM);
+  const isV = tab === 'valuta';
+  document.getElementById('tab-annunci').classList.toggle('active', isA);
   document.getElementById('tab-match').classList.toggle('active', isM);
+  document.getElementById('tab-valuta').classList.toggle('active', isV);
   document.getElementById('match-panel').style.display = isM ? 'block' : 'none';
-  // Sezioni "annunci"
+  document.getElementById('val-panel').style.display   = isV ? 'block' : 'none';
+  // Sezioni visibili solo nel tab Annunci
   ['annunci-search', 'alert-banner', 'spinner', 'empty', 'cards'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = isM ? 'none' : '';
+    if (el) el.style.display = isA ? '' : 'none';
   });
-  document.querySelector('.stats-row').style.display   = isM ? 'none' : '';
-  document.querySelector('.results-header').style.display = isM ? 'none' : '';
+  document.querySelector('.stats-row').style.display      = isA ? '' : 'none';
+  document.querySelector('.results-header').style.display = isA ? '' : 'none';
+}
+
+/* ── Report PDF da card annuncio ──────────────────────────────────────────── */
+function apriReport(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+  const p = new URLSearchParams();
+  if (d.indirizzo) p.set('indirizzo', d.indirizzo);
+  if (d.tipo)      p.set('tipo', d.tipo);
+  if (d.mq)        p.set('mq', String(d.mq));
+  if (d.zona)      p.set('zona', d.zona);
+  const a = document.createElement('a');
+  a.href = `${API}/api/report-pdf?${p}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
+}
+
+/* ── Report PDF da form Valutazione rapida ────────────────────────────────── */
+function generaReportForm() {
+  const indirizzo = document.getElementById('v-indirizzo').value.trim();
+  const tipo      = document.getElementById('v-tipo').value;
+  const mq        = document.getElementById('v-mq').value.trim();
+  const zona      = document.getElementById('v-zona').value;
+  if (!zona) { alert('Seleziona la zona per continuare.'); return; }
+  const p = new URLSearchParams();
+  if (indirizzo) p.set('indirizzo', indirizzo);
+  p.set('tipo', tipo);
+  if (mq)  p.set('mq', mq);
+  p.set('zona', zona);
+  const a = document.createElement('a');
+  a.href = `${API}/api/report-pdf?${p}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
 }
 
 /* ========== MATCH CLIENTE ========== */

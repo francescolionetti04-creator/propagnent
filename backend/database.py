@@ -349,6 +349,37 @@ def omi_e_aggiornato(max_giorni: int = 180) -> bool:
         return False
 
 
+def get_comparabili(zona: str, tipo: str, mq=None, limit: int = 5) -> list:
+    """
+    Restituisce gli annunci più recenti della stessa zona e tipo,
+    con superficie entro ±30% rispetto a mq (se fornito).
+    Usato per la sezione "Comparabili" del report PDF.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    if mq:
+        mq_min = int(mq * 0.70)
+        mq_max = int(mq * 1.30)
+        cur.execute("""
+            SELECT * FROM annunci
+            WHERE zona = ? AND tipo = ?
+              AND mq BETWEEN ? AND ?
+              AND prezzo IS NOT NULL
+            ORDER BY data_inserimento DESC
+            LIMIT ?
+        """, (zona, tipo, mq_min, mq_max, limit))
+    else:
+        cur.execute("""
+            SELECT * FROM annunci
+            WHERE zona = ? AND tipo = ? AND prezzo IS NOT NULL
+            ORDER BY data_inserimento DESC
+            LIMIT ?
+        """, (zona, tipo, limit))
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+
 def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
     conn = get_conn()
     cur = conn.cursor()

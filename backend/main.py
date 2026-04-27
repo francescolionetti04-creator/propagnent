@@ -2,14 +2,17 @@ import asyncio
 import threading
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from typing import Optional
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from database import init_db, get_annunci, get_stats, get_alert, get_omi_zone_map, upsert_sync_annunci
+from database import (
+    init_db, get_annunci, get_stats, get_alert,
+    get_omi_zone_map, upsert_sync_annunci, get_comparabili,
+)
 from models import Annuncio
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
@@ -279,6 +282,46 @@ async def sync_annunci(request: Request):
     print(f"[Sync] Ricevuti {len(body)} annunci — "
           f"inseriti={result['inseriti']} aggiornati={result['aggiornati']}")
     return JSONResponse(content=result)
+
+
+@app.get("/api/report-pdf")
+def report_pdf(
+    indirizzo: Optional[str] = Query(""),
+    tipo:      Optional[str] = Query("Appartamento"),
+    mq:        Optional[int] = Query(None),
+    zona:      Optional[str] = Query(""),
+):
+    """
+    Genera un PDF professionale di valutazione immobiliare con:
+    - Stima valore basata su dati OMI (mq × €/m² min/max)
+    - Tabella comparabili (ultimi 5 annunci simili nel DB)
+    """
+    from pdf_report import genera_report
+
+    omi_map     = get_omi_zone_map()
+    omi         = omi_map.get(zona or "") if zona else None
+    comparabili = get_comparabili(zona=zona or "", tipo=tipo or "Appartamento", mq=mq)
+
+    pdf_bytes = genera_report(
+        indirizzo   = indirizzo or "",
+        tipo        = tipo or "Appartamento",
+        mq          = mq,
+        zona        = zona or "",
+        omi         = omi,
+        comparabili = comparabili,
+    )
+
+    safe_name = (indirizzo or "valutazione")[:40].replace(" ", "_").replace("/", "-")
+    filename  = f"HouseRadar_{safe_name}.pdf"
+
+    return Response(
+        content     = pdf_bytes,
+        media_type  = "application/pdf",
+        headers     = {
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "Cache-Control":       "no-store",
+        },
+    )
 
 
 @app.get("/api/omi")
