@@ -1,8 +1,12 @@
 import sqlite3
 import json
 import os
+import re
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "propagnent.db")
+
+# True se DATABASE_URL è presente nell'ambiente (Render PostgreSQL)
+IS_PG = bool(os.environ.get("DATABASE_URL"))
 
 # Mantenuta solo per retrocompatibilità — non inserita più nel DB
 _ANNUNCI_ESEMPIO_LEGACY = [
@@ -35,120 +39,86 @@ _ANNUNCI_ESEMPIO_LEGACY = [
         "is_nuovo": False,
         "url_originale": "https://esempio.it/annuncio/2"
     },
-    {
-        "indirizzo": "Corso Porta Nuova 18, 37122 Verona",
-        "indirizzo_preciso": True,
-        "zona": "Verona Centro",
-        "tipo": "Appartamento",
-        "mq": 72, "camere": 2, "prezzo": 210000, "giorni_online": 3,
-        "fonte": "privato", "agenzie": "[]",
-        "proprietario": "Giulia T.", "telefono": "333 ●●● ●●19",
-        "intel_privato": "Annuncio su Subito.it — canale non presidiato dagli agenti.",
-        "intel_warning": "Zona con alta rotazione — ideale per investitore o prima casa.",
-        "ai_insight": "Privato su Subito.it, raramente monitorato. Contatto immediato consigliato.",
-        "is_nuovo": True,
-        "url_originale": "https://esempio.it/annuncio/3"
-    },
-    {
-        "indirizzo": "Loc. Castelrotto, Via Bure 3, 37029 San Pietro in Cariano VR",
-        "indirizzo_preciso": True,
-        "zona": "Valpolicella",
-        "tipo": "Rustico",
-        "mq": 280, "camere": 4, "prezzo": 390000, "giorni_online": 47,
-        "fonte": "noescl",
-        "agenzie": '["Tecnocasa Verona Ovest", "Gabetti San Pietro", "Agenzia Valpo Case"]',
-        "proprietario": None, "telefono": None,
-        "intel_privato": None,
-        "intel_warning": "3 agenzie lo trattano. Proprietario aperto a mandati esclusivi.",
-        "ai_insight": "Con 3 agenzie il proprietario è insoddisfatto. Momento ideale per esclusiva.",
-        "is_nuovo": False,
-        "url_originale": "https://esempio.it/annuncio/4"
-    },
-    {
-        "indirizzo": "Via Mirabello 11, 37011 Bardolino VR",
-        "indirizzo_preciso": True,
-        "zona": "Bardolino",
-        "tipo": "Bilocale",
-        "mq": 58, "camere": 2, "prezzo": 268000, "giorni_online": 1,
-        "fonte": "privato", "agenzie": "[]",
-        "proprietario": "Fam. Bertolini", "telefono": "348 ●●● ●●77",
-        "intel_privato": "Annuncio su Facebook Marketplace. Bilocale con terrazza vista lago.",
-        "intel_warning": "Facebook Marketplace non monitorato dai portali standard — vantaggio competitivo.",
-        "ai_insight": "Fonte non convenzionale. Pochissimi agenti monitorano questo canale.",
-        "is_nuovo": True,
-        "url_originale": "https://esempio.it/annuncio/5"
-    },
-    {
-        "indirizzo": "Via Roma 33, 37038 Soave VR",
-        "indirizzo_preciso": True,
-        "zona": "Soave",
-        "tipo": "Appartamento",
-        "mq": 88, "camere": 3, "prezzo": 195000, "giorni_online": 22,
-        "fonte": "noescl",
-        "agenzie": '["Immobiliare Soave Srl", "Re/Max Verona Est"]',
-        "proprietario": None, "telefono": None,
-        "intel_privato": None,
-        "intel_warning": "Su Idealista con 2 agenzie. Re/Max attivo da soli 5 giorni — probabile senza esclusiva.",
-        "ai_insight": "Verifica se il mandato Re/Max è in esclusiva. Se no, hai spazio per subentrare.",
-        "is_nuovo": False,
-        "url_originale": "https://esempio.it/annuncio/6"
-    },
-    {
-        "indirizzo": "Via Oberdan 7 (int. stimato), 37121 Verona",
-        "indirizzo_preciso": False,
-        "zona": "Verona Centro",
-        "tipo": "Attico",
-        "mq": 130, "camere": 4, "prezzo": 620000, "giorni_online": 9,
-        "fonte": "privato", "agenzie": "[]",
-        "proprietario": "Non indicato", "telefono": "Solo form online",
-        "intel_privato": "Indirizzo stimato da AI — annuncio indica zona Veronetta con vista Arena.",
-        "intel_warning": "Numero non visibile — contatto solo via form. Risposta media: 4 ore.",
-        "ai_insight": "Indirizzo stimato con alta probabilità. Attico con vista Arena — valore elevato.",
-        "is_nuovo": False,
-        "url_originale": "https://esempio.it/annuncio/7"
-    },
-    {
-        "indirizzo": "Via del Porto 2, 37010 Peschiera del Garda VR",
-        "indirizzo_preciso": True,
-        "zona": "Garda",
-        "tipo": "Villa",
-        "mq": 420, "camere": 6, "prezzo": 1150000, "giorni_online": 34,
-        "fonte": "noescl",
-        "agenzie": '["Coldwell Banker Garda", "Studio 37 Immobiliare"]',
-        "proprietario": None, "telefono": None,
-        "intel_privato": None,
-        "intel_warning": "Prezzo calato da 1.280.000 a 1.150.000 in 30 giorni. Nessuna agenzia ha esclusiva confermata.",
-        "ai_insight": "Calo del 10% con due agenzie non esclusive: il proprietario vuole chiudere.",
-        "is_nuovo": False,
-        "url_originale": "https://esempio.it/annuncio/8"
-    },
-    {
-        "indirizzo": "Via Carducci 5, 37121 Verona",
-        "indirizzo_preciso": True,
-        "zona": "Verona Centro",
-        "tipo": "Appartamento",
-        "mq": 105, "camere": 3, "prezzo": 340000, "giorni_online": 5,
-        "fonte": "privato", "agenzie": "[]",
-        "proprietario": "Andrea M.", "telefono": "338 ●●● ●●03",
-        "intel_privato": "Solo su Subito.it con prezzo trattabile. Ristrutturato 2023, foto professionali.",
-        "intel_warning": "Zona Veronetta riqualificata — domanda in crescita del 14% anno su anno.",
-        "ai_insight": "Privato preparato con immobile di qualità. Agire rapidamente è fondamentale.",
-        "is_nuovo": False,
-        "url_originale": "https://esempio.it/annuncio/9"
-    }
 ]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers DB-agnostici
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _sql(q: str) -> str:
+    """
+    Traduce SQL SQLite → PostgreSQL quando IS_PG=True.
+    Trasformazioni:
+      - ? → %s  (parametri)
+      - BOOLEAN → SMALLINT  (evita confronti boolean/integer)
+      - INTEGER PRIMARY KEY AUTOINCREMENT → SERIAL PRIMARY KEY
+      - TIMESTAMP [DEFAULT CURRENT_TIMESTAMP] → TEXT
+      - INSERT OR IGNORE INTO → INSERT INTO … ON CONFLICT DO NOTHING
+      - % letterale in stringhe quoted → %% (escape psycopg2)
+    """
+    if not IS_PG:
+        return q
+
+    # Escape % letterale all'interno di stringhe quotate (es. LIKE '%val%')
+    q = re.sub(r"'([^']*)'",
+               lambda m: "'" + m.group(1).replace('%', '%%') + "'",
+               q)
+    # Placeholder parametri
+    q = q.replace('?', '%s')
+    # Tipi
+    q = re.sub(r'\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b',
+               'SERIAL PRIMARY KEY', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bBOOLEAN\b', 'SMALLINT', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bTIMESTAMP\s+DEFAULT\s+CURRENT_TIMESTAMP\b',
+               'TEXT', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bTIMESTAMP\b', 'TEXT', q, flags=re.IGNORECASE)
+    # INSERT OR IGNORE → ON CONFLICT DO NOTHING
+    if re.search(r'INSERT\s+OR\s+IGNORE\s+INTO', q, re.IGNORECASE):
+        q = re.sub(r'INSERT\s+OR\s+IGNORE\s+INTO', 'INSERT INTO',
+                   q, flags=re.IGNORECASE)
+        q = q.rstrip().rstrip(';') + ' ON CONFLICT DO NOTHING'
+    return q
+
+
 def get_conn():
+    """Restituisce una connessione al DB (PostgreSQL o SQLite)."""
+    if IS_PG:
+        import psycopg2
+        return psycopg2.connect(os.environ["DATABASE_URL"])
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
+def _cur(conn):
+    """
+    Cursore con accesso per nome colonna, compatibile con entrambi i DB.
+    psycopg2 DictCursor: row['col'] e row[0] entrambi funzionano.
+    sqlite3 cursor: idem grazie a row_factory = sqlite3.Row.
+    """
+    if IS_PG:
+        import psycopg2.extras
+        return conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    return conn.cursor()
+
+
+def _to_dict(row) -> dict:
+    """Converte una riga cursore in un dict Python puro."""
+    if IS_PG:
+        return {k: row[k] for k in row.keys()}
+    return dict(row)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Schema e migrazioni
+# ─────────────────────────────────────────────────────────────────────────────
+
 def init_db():
     conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
+    cur = _cur(conn)
+
+    cur.execute(_sql("""
         CREATE TABLE IF NOT EXISTS annunci (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             indirizzo TEXT NOT NULL,
@@ -172,28 +142,45 @@ def init_db():
             foto_url TEXT,
             portale TEXT
         )
-    """)
+    """))
 
-    # Migrazioni: aggiunge colonne se il DB è già esistente senza di esse
-    for col_def in [
-        "ALTER TABLE annunci ADD COLUMN foto_url TEXT",
-        "ALTER TABLE annunci ADD COLUMN portale TEXT",
-    ]:
-        try:
+    # Migrazioni: aggiunge colonne mancanti
+    if IS_PG:
+        for col_def in [
+            "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS foto_url TEXT",
+            "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS portale TEXT",
+        ]:
             cur.execute(col_def)
-        except Exception:
-            pass  # colonna già presente
+    else:
+        for col_def in [
+            "ALTER TABLE annunci ADD COLUMN foto_url TEXT",
+            "ALTER TABLE annunci ADD COLUMN portale TEXT",
+        ]:
+            try:
+                cur.execute(col_def)
+            except Exception:
+                pass  # colonna già presente
 
-    # Rimuove eventuali annunci di esempio (Verona/Garda) rimasti da versioni precedenti
-    cur.execute("DELETE FROM annunci WHERE url_originale LIKE 'https://esempio.it%'")
+    # Rimuove annunci di esempio (Verona/Garda) da versioni precedenti
+    cur.execute(_sql(
+        "DELETE FROM annunci WHERE url_originale LIKE 'https://esempio.it%%'"
+        if IS_PG else
+        "DELETE FROM annunci WHERE url_originale LIKE 'https://esempio.it%'"
+    ))
 
-    # Backfill portale per record inseriti prima della migrazione
-    cur.execute("UPDATE annunci SET portale='subito.it'      WHERE url_originale LIKE '%subito.it%'      AND portale IS NULL")
-    cur.execute("UPDATE annunci SET portale='idealista.it'   WHERE url_originale LIKE '%idealista.it%'   AND portale IS NULL")
-    cur.execute("UPDATE annunci SET portale='immobiliare.it' WHERE url_originale LIKE '%immobiliare.it%' AND portale IS NULL")
+    # Backfill portale per record privi di esso
+    for stmt in [
+        "UPDATE annunci SET portale='subito.it'      WHERE portale IS NULL AND url_originale LIKE '%%subito.it%%'" if IS_PG else
+        "UPDATE annunci SET portale='subito.it'      WHERE portale IS NULL AND url_originale LIKE '%subito.it%'",
+        "UPDATE annunci SET portale='idealista.it'   WHERE portale IS NULL AND url_originale LIKE '%%idealista.it%%'" if IS_PG else
+        "UPDATE annunci SET portale='idealista.it'   WHERE portale IS NULL AND url_originale LIKE '%idealista.it%'",
+        "UPDATE annunci SET portale='immobiliare.it' WHERE portale IS NULL AND url_originale LIKE '%%immobiliare.it%%'" if IS_PG else
+        "UPDATE annunci SET portale='immobiliare.it' WHERE portale IS NULL AND url_originale LIKE '%immobiliare.it%'",
+    ]:
+        cur.execute(stmt)
 
-    # Tabella OMI Quotazioni Immobiliari (Agenzia delle Entrate)
-    cur.execute("""
+    # Tabella OMI
+    cur.execute(_sql("""
         CREATE TABLE IF NOT EXISTS omi_quotazioni (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             anno INTEGER,
@@ -207,21 +194,20 @@ def init_db():
             prezzo_max REAL,
             updated_at TEXT
         )
-    """)
+    """))
 
     conn.commit()
     conn.close()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# OMI
+# ─────────────────────────────────────────────────────────────────────────────
+
 def get_omi_zone_map() -> dict:
     """
-    Restituisce una mappa {zona_houseradar: {min, max, anno, semestre}}
-    calcolata aggregando le quotazioni OMI per stato='normale', tipo='Abitazioni civili'.
-
-    Logica di fallback a 3 livelli:
-      1. Fascia preferita per il comune (es. Semicentrale)
-      2. Qualsiasi fascia per il comune
-      3. Media provinciale (LI o PI)
+    Restituisce una mappa {zona_houseradar: {min, max, anno, semestre, comune}}
+    con fallback a 3 livelli: fascia preferita → qualsiasi fascia → media provinciale.
     """
     ZONE_COMUNE = {
         "Livorno Città":      ("Livorno",         "LI", ["Semicentrale", "Centrale"]),
@@ -236,22 +222,23 @@ def get_omi_zone_map() -> dict:
         "Valdarno Pisano":    ("San Miniato",      "PI", ["Centrale"]),
     }
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
     result = {}
+
     for zona_hr, (comune, provincia, fasce_pref) in ZONE_COMUNE.items():
         row = None
         fonte = None
 
         # Livello 1: fascia preferita per il comune
         for fascia in fasce_pref:
-            cur.execute("""
+            cur.execute(_sql("""
                 SELECT AVG(prezzo_min), AVG(prezzo_max), MAX(anno), MAX(semestre)
                 FROM omi_quotazioni
                 WHERE lower(comune) = lower(?)
                   AND zona_omi = ?
                   AND stato = 'normale'
                   AND lower(tipo_immobile) LIKE '%abitazioni%'
-            """, (comune, fascia))
+            """), (comune, fascia))
             row = cur.fetchone()
             if row and row[0]:
                 fonte = "comune+fascia"
@@ -259,26 +246,26 @@ def get_omi_zone_map() -> dict:
 
         # Livello 2: qualsiasi fascia per lo stesso comune
         if not (row and row[0]):
-            cur.execute("""
+            cur.execute(_sql("""
                 SELECT AVG(prezzo_min), AVG(prezzo_max), MAX(anno), MAX(semestre)
                 FROM omi_quotazioni
                 WHERE lower(comune) = lower(?)
                   AND stato = 'normale'
                   AND lower(tipo_immobile) LIKE '%abitazioni%'
-            """, (comune,))
+            """), (comune,))
             row = cur.fetchone()
             if row and row[0]:
                 fonte = "comune"
 
         # Livello 3: media provinciale
         if not (row and row[0]):
-            cur.execute("""
+            cur.execute(_sql("""
                 SELECT AVG(prezzo_min), AVG(prezzo_max), MAX(anno), MAX(semestre)
                 FROM omi_quotazioni
                 WHERE upper(provincia) = upper(?)
                   AND stato = 'normale'
                   AND lower(tipo_immobile) LIKE '%abitazioni%'
-            """, (provincia,))
+            """), (provincia,))
             row = cur.fetchone()
             if row and row[0]:
                 fonte = f"provincia {provincia}"
@@ -290,8 +277,9 @@ def get_omi_zone_map() -> dict:
                 "anno":     row[2],
                 "semestre": row[3],
                 "comune":   comune,
-                "_fonte":   fonte,  # debug: da dove viene la quotazione
+                "_fonte":   fonte,
             }
+
     conn.close()
     return result
 
@@ -299,16 +287,16 @@ def get_omi_zone_map() -> dict:
 def upsert_omi(righe: list) -> int:
     """Inserisce o aggiorna le quotazioni OMI. Ritorna il numero di righe inserite."""
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
     n = 0
     now = __import__("datetime").datetime.now().isoformat()
     for r in righe:
-        cur.execute("""
+        cur.execute(_sql("""
             INSERT INTO omi_quotazioni
               (anno, semestre, comune, provincia, zona_omi, tipo_immobile, stato,
                prezzo_min, prezzo_max, updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?)
-        """, (
+        """), (
             r["anno"], r["semestre"], r["comune"], r["provincia"],
             r["zona_omi"], r["tipo_immobile"], r["stato"],
             r["prezzo_min"], r["prezzo_max"], now
@@ -321,7 +309,7 @@ def upsert_omi(righe: list) -> int:
 
 def omi_ha_dati() -> bool:
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
     cur.execute("SELECT COUNT(*) FROM omi_quotazioni")
     c = cur.fetchone()[0]
     conn.close()
@@ -329,12 +317,9 @@ def omi_ha_dati() -> bool:
 
 
 def omi_e_aggiornato(max_giorni: int = 180) -> bool:
-    """
-    Ritorna True se i dati OMI sono presenti E l'ultimo aggiornamento
-    risale a meno di max_giorni giorni fa (default 180 = ~1 semestre).
-    """
+    """Ritorna True se i dati OMI sono presenti e aggiornati entro max_giorni."""
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
     cur.execute("SELECT MAX(updated_at) FROM omi_quotazioni")
     row = cur.fetchone()
     conn.close()
@@ -343,46 +328,48 @@ def omi_e_aggiornato(max_giorni: int = 180) -> bool:
     from datetime import datetime
     try:
         last = datetime.fromisoformat(row[0])
-        delta = (datetime.now() - last).days
-        return delta < max_giorni
+        return (datetime.now() - last).days < max_giorni
     except Exception:
         return False
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Annunci
+# ─────────────────────────────────────────────────────────────────────────────
+
 def get_comparabili(zona: str, tipo: str, mq=None, limit: int = 5) -> list:
     """
-    Restituisce gli annunci più recenti della stessa zona e tipo,
-    con superficie entro ±30% rispetto a mq (se fornito).
-    Usato per la sezione "Comparabili" del report PDF.
+    Annunci recenti della stessa zona/tipo con superficie ±30% rispetto a mq.
+    Usato per la sezione Comparabili del report PDF.
     """
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
     if mq:
         mq_min = int(mq * 0.70)
         mq_max = int(mq * 1.30)
-        cur.execute("""
+        cur.execute(_sql("""
             SELECT * FROM annunci
             WHERE zona = ? AND tipo = ?
               AND mq BETWEEN ? AND ?
               AND prezzo IS NOT NULL
             ORDER BY data_inserimento DESC
             LIMIT ?
-        """, (zona, tipo, mq_min, mq_max, limit))
+        """), (zona, tipo, mq_min, mq_max, limit))
     else:
-        cur.execute("""
+        cur.execute(_sql("""
             SELECT * FROM annunci
             WHERE zona = ? AND tipo = ? AND prezzo IS NOT NULL
             ORDER BY data_inserimento DESC
             LIMIT ?
-        """, (zona, tipo, limit))
-    rows = [dict(r) for r in cur.fetchall()]
+        """), (zona, tipo, limit))
+    rows = [_to_dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
 
 
 def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
 
     query = "SELECT * FROM annunci WHERE 1=1"
     params = []
@@ -401,33 +388,35 @@ def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
         params.append(prezzo_max)
 
     sort_map = {
-        "new": "giorni_online ASC",
-        "priv": "CASE WHEN fonte='privato' THEN 0 ELSE 1 END ASC, giorni_online ASC",
-        "noescl": "CASE WHEN fonte='noescl' THEN 0 ELSE 1 END ASC, giorni_online ASC",
+        "new":        "giorni_online ASC",
+        "priv":       "CASE WHEN fonte='privato' THEN 0 ELSE 1 END ASC, giorni_online ASC",
+        "noescl":     "CASE WHEN fonte='noescl' THEN 0 ELSE 1 END ASC, giorni_online ASC",
         "prezzo-asc": "prezzo ASC",
-        "giorni": "giorni_online DESC",
+        "giorni":     "giorni_online DESC",
     }
     query += f" ORDER BY {sort_map.get(sort, 'giorni_online ASC')}"
 
-    cur.execute(query, params)
-    rows = [dict(r) for r in cur.fetchall()]
+    cur.execute(_sql(query), params)
+    rows = [_to_dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
 
 
 def get_stats():
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
+
     cur.execute("SELECT COUNT(*) FROM annunci")
     totale = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM annunci WHERE fonte='privato'")
     privati = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM annunci WHERE fonte='noescl'")
     noescl = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM annunci WHERE is_nuovo=1")
+    cur.execute(_sql("SELECT COUNT(*) FROM annunci WHERE is_nuovo=1"))
     nuovi_oggi = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM annunci WHERE indirizzo_preciso=1")
+    cur.execute(_sql("SELECT COUNT(*) FROM annunci WHERE indirizzo_preciso=1"))
     indirizzi_precisi = cur.fetchone()[0]
+
     conn.close()
     return {
         "totale": totale,
@@ -440,39 +429,42 @@ def get_stats():
 
 def get_alert():
     conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM annunci WHERE is_nuovo=1 ORDER BY giorni_online ASC")
-    rows = [dict(r) for r in cur.fetchall()]
+    cur = _cur(conn)
+    cur.execute(_sql(
+        "SELECT * FROM annunci WHERE is_nuovo=1 ORDER BY giorni_online ASC"
+    ))
+    rows = [_to_dict(r) for r in cur.fetchall()]
     conn.close()
 
     if not rows:
         return {"ha_alert": False, "testo": "", "annunci": []}
 
     privati_new = [r for r in rows if r["fonte"] == "privato"]
-    noescl_new = [r for r in rows if r["fonte"] == "noescl"]
+    noescl_new  = [r for r in rows if r["fonte"] == "noescl"]
 
     parti = []
     if privati_new:
-        zone = ", ".join(set(r["zona"] for r in privati_new))
+        zone = ", ".join(set(r["zona"] for r in privati_new if r.get("zona")))
         parti.append(f"<strong>{len(privati_new)} privat{'o' if len(privati_new)==1 else 'i'}</strong> ({zone})")
     if noescl_new:
-        zone = ", ".join(set(r["zona"] for r in noescl_new))
+        zone = ", ".join(set(r["zona"] for r in noescl_new if r.get("zona")))
         parti.append(f"<strong>{len(noescl_new)} non in esclusiva</strong> ({zone})")
 
-    testo = f"<strong>{len(rows)} nuov{'o' if len(rows)==1 else 'i'} annunc{'io' if len(rows)==1 else 'i'} nelle ultime 2 ore</strong> — {' e '.join(parti)}. Controlla subito prima degli altri agenti."
-
+    testo = (
+        f"<strong>{len(rows)} nuov{'o' if len(rows)==1 else 'i'} "
+        f"annunc{'io' if len(rows)==1 else 'i'} nelle ultime 2 ore</strong>"
+        f" — {' e '.join(parti)}. Controlla subito prima degli altri agenti."
+    )
     return {"ha_alert": True, "testo": testo, "annunci": rows}
 
 
 def upsert_sync_annunci(annunci: list) -> dict:
     """
-    Upsert annunci ricevuti via /api/sync (es. da Idealista locale).
-    - INSERT se url_originale non esiste
-    - UPDATE prezzo/mq/camere/giorni_online/foto_url se già presente
+    Upsert annunci via /api/sync (es. da Idealista locale).
     Ritorna {"inseriti": N, "aggiornati": N, "totale": N}.
     """
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
     inseriti = aggiornati = 0
     now = __import__("datetime").datetime.now().isoformat()
 
@@ -481,11 +473,13 @@ def upsert_sync_annunci(annunci: list) -> dict:
         if not url:
             continue
 
-        cur.execute("SELECT id FROM annunci WHERE url_originale = ?", (url,))
+        cur.execute(_sql(
+            "SELECT id FROM annunci WHERE url_originale = ?"
+        ), (url,))
         row = cur.fetchone()
 
         if row:
-            cur.execute("""
+            cur.execute(_sql("""
                 UPDATE annunci SET
                     prezzo        = COALESCE(?, prezzo),
                     mq            = COALESCE(?, mq),
@@ -493,18 +487,18 @@ def upsert_sync_annunci(annunci: list) -> dict:
                     giorni_online = COALESCE(?, giorni_online),
                     foto_url      = COALESCE(?, foto_url)
                 WHERE url_originale = ?
-            """, (a.get("prezzo"), a.get("mq"), a.get("camere"),
-                  a.get("giorni_online"), a.get("foto_url"), url))
+            """), (a.get("prezzo"), a.get("mq"), a.get("camere"),
+                   a.get("giorni_online"), a.get("foto_url"), url))
             aggiornati += 1
         else:
-            cur.execute("""
+            cur.execute(_sql("""
                 INSERT INTO annunci (
                     indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                     prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                     intel_privato, intel_warning, ai_insight,
                     is_nuovo, data_inserimento, url_originale, foto_url, portale
                 ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, (
+            """), (
                 a.get("indirizzo"), a.get("indirizzo_preciso", False),
                 a.get("zona"), a.get("tipo", "Appartamento"),
                 a.get("mq"), a.get("camere"), a.get("prezzo"),
@@ -529,15 +523,17 @@ def upsert_sync_annunci(annunci: list) -> dict:
 
 def insert_annuncio(a: dict):
     conn = get_conn()
-    cur = conn.cursor()
+    cur = _cur(conn)
+    now = __import__("datetime").datetime.now().isoformat()
     try:
-        cur.execute("""
+        cur.execute(_sql("""
             INSERT OR IGNORE INTO annunci
             (indirizzo, indirizzo_preciso, zona, tipo, mq, camere, prezzo,
              giorni_online, fonte, agenzie, proprietario, telefono,
-             intel_privato, intel_warning, ai_insight, is_nuovo, url_originale)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (
+             intel_privato, intel_warning, ai_insight,
+             is_nuovo, url_originale, data_inserimento)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """), (
             a.get("indirizzo"), a.get("indirizzo_preciso", True),
             a.get("zona"), a.get("tipo"),
             a.get("mq"), a.get("camere"), a.get("prezzo"),
@@ -545,7 +541,7 @@ def insert_annuncio(a: dict):
             json.dumps(a.get("agenzie", [])) if isinstance(a.get("agenzie"), list) else a.get("agenzie", "[]"),
             a.get("proprietario"), a.get("telefono"),
             a.get("intel_privato"), a.get("intel_warning"), a.get("ai_insight"),
-            a.get("is_nuovo", False), a.get("url_originale")
+            a.get("is_nuovo", False), a.get("url_originale"), now,
         ))
         conn.commit()
         inserted = cur.rowcount > 0

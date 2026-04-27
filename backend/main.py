@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from database import (
     init_db, get_annunci, get_stats, get_alert,
     get_omi_zone_map, upsert_sync_annunci, get_comparabili,
+    get_conn, _cur, _sql,
 )
 from models import Annuncio
 
@@ -336,11 +337,8 @@ def api_omi():
 @app.get("/debug/stats")
 def debug_stats():
     """Statistiche dettagliate per portale e tipo — utile per verificare lo stato del DB."""
-    conn = __import__("sqlite3").connect(
-        __import__("os").path.join(__import__("os").path.dirname(__file__), "propagnent.db")
-    )
-    conn.row_factory = __import__("sqlite3").Row
-    cur = conn.cursor()
+    conn = get_conn()
+    cur = _cur(conn)
 
     cur.execute("SELECT COUNT(*) FROM annunci")
     totale = cur.fetchone()[0]
@@ -357,7 +355,7 @@ def debug_stats():
     """)
     per_tipo = {r["f"]: r["n"] for r in cur.fetchall()}
 
-    cur.execute("SELECT COUNT(*) FROM annunci WHERE is_nuovo=1")
+    cur.execute(_sql("SELECT COUNT(*) FROM annunci WHERE is_nuovo=1"))
     nuovi = cur.fetchone()[0]
 
     cur.execute("SELECT MAX(data_inserimento) FROM annunci")
@@ -367,7 +365,7 @@ def debug_stats():
     return JSONResponse(content={
         "totale": totale,
         "nuovi_oggi": nuovi,
-        "ultimo_inserimento": ultimo_inserimento,
+        "ultimo_inserimento": str(ultimo_inserimento) if ultimo_inserimento else None,
         "per_portale": per_portale,
         "per_tipo": per_tipo,
     })
