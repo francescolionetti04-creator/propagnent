@@ -81,6 +81,11 @@ def _sql(q: str) -> str:
     q = re.sub(r'\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b',
                'SERIAL PRIMARY KEY', q, flags=re.IGNORECASE)
     q = re.sub(r'\bBOOLEAN\b', 'SMALLINT', q, flags=re.IGNORECASE)
+    # DEFAULT booleani → interi (dopo BOOLEAN→SMALLINT la colonna è SMALLINT)
+    q = q.replace('DEFAULT TRUE',  'DEFAULT 1')
+    q = q.replace('DEFAULT FALSE', 'DEFAULT 0')
+    q = q.replace('DEFAULT true',  'DEFAULT 1')
+    q = q.replace('DEFAULT false', 'DEFAULT 0')
     q = re.sub(r'\bTIMESTAMP\s+DEFAULT\s+CURRENT_TIMESTAMP\b',
                'TEXT', q, flags=re.IGNORECASE)
     q = re.sub(r'\bTIMESTAMP\b', 'TEXT', q, flags=re.IGNORECASE)
