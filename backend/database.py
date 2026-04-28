@@ -5,8 +5,19 @@ import re
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "propagnent.db")
 
-# True se DATABASE_URL è presente nell'ambiente (Render PostgreSQL)
-IS_PG = bool(os.environ.get("DATABASE_URL"))
+# Import condizionale: psycopg2 opzionale (non disponibile in ambienti SQLite-only)
+try:
+    import psycopg2
+    import psycopg2.extras
+    HAS_PG = True
+except ImportError:
+    HAS_PG = False
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+IS_PG = bool(DATABASE_URL) and HAS_PG
+
+print(f"[DB] Modalità: {'PostgreSQL' if IS_PG else 'SQLite'}"
+      + (f" (psycopg2 non installato — fallback SQLite)" if DATABASE_URL and not HAS_PG else ""))
 
 # Mantenuta solo per retrocompatibilità — non inserita più nel DB
 _ANNUNCI_ESEMPIO_LEGACY = [
@@ -84,8 +95,7 @@ def _sql(q: str) -> str:
 def get_conn():
     """Restituisce una connessione al DB (PostgreSQL o SQLite)."""
     if IS_PG:
-        import psycopg2
-        return psycopg2.connect(os.environ["DATABASE_URL"])
+        return psycopg2.connect(DATABASE_URL)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -98,7 +108,6 @@ def _cur(conn):
     sqlite3 cursor: idem grazie a row_factory = sqlite3.Row.
     """
     if IS_PG:
-        import psycopg2.extras
         return conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     return conn.cursor()
 
