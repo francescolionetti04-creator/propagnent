@@ -256,6 +256,14 @@ input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
 .etag-y{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
 .etag-n{background:#FCEBEB;color:#A32D2D;border:1px solid #F09595}
 
+/* ========== CALENDAR BTN ========== */
+.cf-cal{background:#F0EBF8;color:#6B3FA0;border:1px solid #B89DD6}
+.cf-cal:hover{background:#E0D5F5}
+
+/* ========== WHATSAPP SHARE ========== */
+.btn-wa-share{padding:7px 16px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-wa-share:hover{background:#1EB558}
+
 /* ========== RESPONSIVE ========== */
 @media(max-width:640px){
   .stats-row{grid-template-columns:1fr 1fr}
@@ -651,6 +659,7 @@ input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
   <!-- RESULTS -->
   <div class="results-header">
     <div class="results-title">Trovati <span id="cnt-tot">—</span> annunci</div>
+    <button class="btn-wa-share" onclick="condividiProfilo()">📤 Condividi profilo su WhatsApp</button>
     <div class="legend">
       <span><span class="leg-dot" style="background:#E1F5EE;border:1px solid #5DCAA5"></span>Privato</span>
       <span><span class="leg-dot" style="background:#FAEEDA;border:1px solid #EF9F27"></span>Non esclusiva</span>
@@ -1005,6 +1014,10 @@ function cardHTML(d) {
   const btnReport = `<button class="cf-btn" style="background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5"
       onclick="event.stopPropagation();apriReport(${id})">📄 Report</button>`;
 
+  // ── Bottone Google Calendar ──────────────────────────────────────────
+  const btnCal = `<button class="cf-btn cf-cal"
+      onclick="event.stopPropagation();apriCalendar(${id})" title="Aggiungi al calendario">📅 Agenda</button>`;
+
   // ── Portale badge ────────────────────────────────────────────────────
   const portaleMap = {
     'subito.it':       { cls: 'pb-subito',       label: '● subito.it' },
@@ -1020,13 +1033,13 @@ function cardHTML(d) {
     <button class="cf-btn cf-green" onclick="event.stopPropagation();showScript('whatsapp',${id})">&#128172; WhatsApp</button>
     <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showScript('esclusiva',${id})">+ Esclusiva</button>
-    ${btnVedi}${btnReport}
+    ${btnVedi}${btnReport}${btnCal}
     <span style="flex:1"></span>${portaleBadge}`
   : `
     <button class="cf-btn cf-amber" onclick="event.stopPropagation();showScript('conquista',${id})">&#127919; Conquista</button>
     <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showValuta(${id})">&#128161; Valuta</button>
-    ${btnVedi}${btnReport}
+    ${btnVedi}${btnReport}${btnCal}
     <span style="flex:1"></span>${portaleBadge}`;
 
   return `<div class="lcard ${cls}" onclick="openAnnuncio('${d.url_originale || ''}',event)" title="Clicca per aprire l'annuncio">
@@ -1209,6 +1222,58 @@ function generaReportForm() {
   a.click();
 }
 
+/* ── Google Calendar — aggiungi promemoria chiamata ──────────────────────── */
+function apriCalendar(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+
+  // Domani 9:00 – 9:30 in ora locale (no Z = Google Calendar usa il timezone del browser)
+  const fmtCal = dt => {
+    const p = n => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}${p(dt.getMonth()+1)}${p(dt.getDate())}T${p(dt.getHours())}${p(dt.getMinutes())}00`;
+  };
+  const start = new Date();
+  start.setDate(start.getDate() + 1);
+  start.setHours(9, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(9, 30, 0, 0);
+
+  const portale = d.portale || 'portale web';
+  const prezzo  = d.prezzo ? d.prezzo.toLocaleString('it-IT') : '—';
+  const mq      = d.mq ? d.mq + 'mq' : '—';
+  const zona    = d.zona || d.indirizzo;
+  const tipo    = (d.tipo || 'immobile').toLowerCase();
+
+  const script =
+    `Buongiorno, ho visto il suo annuncio su ${portale} per ${tipo} ` +
+    `in ${zona} di ${mq} a ${prezzo}€. ` +
+    `Sono [nome agente], agente immobiliare. ` +
+    `Sarebbe disponibile per un appuntamento di valutazione gratuita?`;
+
+  const params = new URLSearchParams({
+    action:  'TEMPLATE',
+    text:    `Chiamata — ${d.tipo || ''} ${d.indirizzo}`.trim(),
+    details: script,
+    dates:   `${fmtCal(start)}/${fmtCal(end)}`,
+  });
+
+  const a = document.createElement('a');
+  a.href = `https://calendar.google.com/calendar/render?${params}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
+}
+
+/* ── Condividi profilo agente su WhatsApp ─────────────────────────────────── */
+function condividiProfilo() {
+  const baseUrl = window.location.origin;
+  const text = `Ciao! Sono Gianluca Celli, agente immobiliare a Livorno e Pisa. ` +
+               `Guarda i miei annunci su HouseRadar: ${baseUrl}/profilo`;
+  const a = document.createElement('a');
+  a.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
+}
+
 /* ========== MATCH CLIENTE ========== */
 const _extras = new Set();
 
@@ -1333,7 +1398,10 @@ function matchCardHTML(d) {
         <div class="dim-bars">${bars}</div>
         ${etags ? `<div class="etags">${etags}</div>` : ''}
         <div class="card-footer" style="margin-top:.5rem;padding-top:.5rem;align-items:center">
-          ${srcB}${portaleBadge ? ' ' + portaleBadge : ''}<span style="flex:1"></span>${btnVedi}
+          ${srcB}${portaleBadge ? ' ' + portaleBadge : ''}<span style="flex:1"></span>
+          <button class="cf-btn cf-cal" style="flex:none;padding:6px 12px;min-width:unset;font-size:12px"
+            onclick="event.stopPropagation();apriCalendar(${d.id})" title="Aggiungi al calendario">📅 Agenda</button>
+          ${btnVedi}
         </div>
       </div>
     </div>

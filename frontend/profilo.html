@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Gianluca Celli — Agente Immobiliare · Livorno e Pisa</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23185FA5'/><path d='M16 5 L4 14 L4 28 L12 28 L12 20 L20 20 L20 28 L28 28 L28 14 Z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/><circle cx='24' cy='9' r='4' fill='%235DCAA5'/><circle cx='24' cy='9' r='2' fill='white'/></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+.wrap{max-width:640px;margin:0 auto;padding:2rem 1.25rem}
+
+/* Header brand */
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:2rem}
+.brand-icon{width:40px;height:40px;background:#185FA5;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;flex-shrink:0}
+.brand-name{font-size:16px;font-weight:700;color:#1a1a1a}
+.brand-sub{font-size:11px;color:#888;margin-top:1px}
+
+/* Profile card */
+.profile-card{background:#fff;border:1px solid #e5e5e0;border-radius:16px;overflow:hidden;margin-bottom:1.25rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.profile-header{background:linear-gradient(135deg,#185FA5 0%,#0C447C 100%);padding:2rem 1.5rem;color:#fff}
+.avatar{width:72px;height:72px;border-radius:50%;background:#5DCAA5;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;margin-bottom:1rem;border:3px solid rgba(255,255,255,.3)}
+.agent-name{font-size:22px;font-weight:700;margin-bottom:4px}
+.agent-title{font-size:14px;opacity:.85;margin-bottom:6px}
+.agent-zone{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600}
+
+.profile-body{padding:1.5rem}
+
+/* Stats strip */
+.stats-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e5e5e0;border:1px solid #e5e5e0;border-radius:10px;overflow:hidden;margin-bottom:1.25rem}
+.pstat{background:#fff;padding:.75rem .5rem;text-align:center}
+.pstat-val{font-size:22px;font-weight:700;color:#185FA5}
+.pstat-lbl{font-size:11px;color:#888;margin-top:2px}
+
+/* Description */
+.desc-box{background:#EDF4FC;border:1px solid #B5D4F4;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem}
+.desc-text{font-size:14px;color:#0C447C;line-height:1.65;font-weight:500}
+
+/* CTA buttons */
+.cta-row{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap}
+.btn-call{flex:1;min-width:140px;padding:14px 20px;background:#185FA5;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .12s}
+.btn-call:hover{background:#0C447C}
+.btn-wa{flex:1;min-width:140px;padding:14px 20px;background:#25D366;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .12s}
+.btn-wa:hover{background:#1EB558}
+
+/* Listings link */
+.listings-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+.listings-title{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem}
+.listings-link{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1rem;background:#f5f5f3;border:1px solid #e5e5e0;border-radius:8px;text-decoration:none;color:#1a1a1a;font-weight:600;font-size:14px;transition:background .12s}
+.listings-link:hover{background:#ebebea}
+.listings-arrow{font-size:18px;color:#185FA5}
+
+/* Valuation CTA */
+.valuta-card{background:#E1F5EE;border:1px solid #5DCAA5;border-radius:12px;padding:1.25rem;text-align:center}
+.valuta-title{font-size:15px;font-weight:700;color:#0F6E56;margin-bottom:.5rem}
+.valuta-text{font-size:13px;color:#0F6E56;line-height:1.5;margin-bottom:1rem}
+.btn-valuta{display:inline-block;padding:12px 28px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:background .12s}
+.btn-valuta:hover{background:#0F6E56}
+
+/* Footer */
+.page-footer{text-align:center;font-size:12px;color:#aaa;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e5e5e0}
+.page-footer a{color:#185FA5;text-decoration:none}
+
+/* Mobile */
+@media(max-width:480px){
+  .wrap{padding:1.25rem .85rem}
+  .cta-row{flex-direction:column}
+  .btn-call,.btn-wa{min-width:unset}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Brand -->
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 32 32" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 3 L3 12 L3 29 L11 29 L11 21 L21 21 L21 29 L29 29 L29 12 Z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="24" cy="8" r="5" fill="#5DCAA5"/><circle cx="24" cy="8" r="2" fill="#fff"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">HouseRadar</div>
+      <div class="brand-sub">Piattaforma immobiliare · Livorno e Pisa</div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="profile-card">
+    <div class="profile-header">
+      <div class="avatar">GC</div>
+      <div class="agent-name">Gianluca Celli</div>
+      <div class="agent-title">Agente Immobiliare Certificato</div>
+      <div class="agent-zone">📍 Livorno &amp; Pisa</div>
+    </div>
+    <div class="profile-body">
+
+      <!-- Stats -->
+      <div class="stats-strip">
+        <div class="pstat">
+          <div class="pstat-val" id="stat-annunci">—</div>
+          <div class="pstat-lbl">Annunci attivi</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-val" id="stat-privati">—</div>
+          <div class="pstat-lbl">Privati seguiti</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-val">2</div>
+          <div class="pstat-lbl">Province coperte</div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="desc-box">
+        <div class="desc-text">
+          Cerchi casa a Livorno o Pisa? Contattami per una
+          <strong>valutazione gratuita del tuo immobile</strong>.
+          Specializzato nel mercato locale con accesso ai migliori
+          annunci — privati e non in esclusiva — prima che diventino
+          di dominio pubblico.
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-row">
+        <!-- AGGIORNA: inserisci il tuo numero di telefono -->
+        <a class="btn-call" href="tel:+39XXXXXXXXXX">
+          📞 Chiama
+        </a>
+        <!-- AGGIORNA: inserisci il tuo numero WhatsApp (formato internazionale, es. 39347XXXXXXX) -->
+        <a class="btn-wa" href="https://wa.me/39XXXXXXXXXX?text=Ciao%20Gianluca%2C%20ho%20visto%20il%20tuo%20profilo%20su%20HouseRadar.%20Vorrei%20informazioni." target="_blank" rel="noopener">
+          💬 WhatsApp
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Listings link -->
+  <div class="listings-card">
+    <div class="listings-title">Annunci attivi</div>
+    <a class="listings-link" href="/" rel="noopener">
+      <span>🏡 Visualizza tutti gli annunci su HouseRadar</span>
+      <span class="listings-arrow">›</span>
+    </a>
+  </div>
+
+  <!-- Valutation CTA -->
+  <div class="valuta-card">
+    <div class="valuta-title">Vuoi sapere quanto vale il tuo immobile?</div>
+    <div class="valuta-text">
+      Ottieni una stima gratuita basata sui dati ufficiali OMI
+      dell'Agenzia delle Entrate in pochi secondi.
+    </div>
+    <a class="btn-valuta" href="/" onclick="setTimeout(()=>{const b=document.getElementById('tab-valuta');if(b)b.click()},200)">
+      📊 Valutazione gratuita
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <div class="page-footer">
+    Powered by <a href="/">HouseRadar</a> · Dati aggiornati in tempo reale
+  </div>
+
+</div>
+
+<script>
+// Carica statistiche dinamiche dal DB
+const API = window.location.origin;
+(async () => {
+  try {
+    const r = await fetch(`${API}/stats`);
+    const d = await r.json();
+    document.getElementById('stat-annunci').textContent = d.totale ?? '—';
+    document.getElementById('stat-privati').textContent = d.privati ?? '—';
+  } catch(e) { /* stats opzionale */ }
+})();
+</script>
+</body>
+</html>

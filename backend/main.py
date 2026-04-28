@@ -373,6 +373,20 @@ def debug_stats():
 
 # ── Serve frontend ──────────────────────────────────────────────────────────
 # IMPORTANTE: le route API vanno definite PRIMA del mount statico
+
+@app.get("/profilo")
+def profilo():
+    """Pagina pubblica del profilo agente — accessibile senza login."""
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "profilo.html"),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
+
 @app.get("/")
 def root():
     return FileResponse(
