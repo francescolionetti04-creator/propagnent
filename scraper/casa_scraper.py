@@ -1,26 +1,31 @@
 """
 HouseRadar — Casa.it scraper
 =============================
-Strategia: prova prima curl_cffi (Chrome120 TLS impersonation),
-fallback Playwright se 403/Cloudflare.
-URL: https://www.casa.it/vendita/case/livorno-provincia e /pisa-provincia
+Selettori verificati dal vivo (gennaio 2026):
+- Card listing:   .csaSrpcard
+- Link annuncio:  a[href*="/immobili/"]   →  /immobili/{ID}/
+- Box dati:       .csaSrpcard__det__cont   ("€ 900.000 400 m² 6 locali 3 bagni")
+- Prezzo:         .csaSrpcard__det__feats__text.first  (€\s*([\d\.]+))
+- Regex sul testo:
+    €\s*([\d\.]+)        prezzo
+    (\d+)\s*m²            mq
+    (\d+)\s*locali        camere
+    (\d+)\s*bagni         bagni
 
-Schema dati uguale a idealista_scraper:
-  url, titolo, prezzo, mq, camere, inserzionista, foto_url, provincia_hint
+Strategia: prima curl_cffi (Chrome120 TLS), fallback Playwright se 403.
+Il JSON-LD @graph contiene name/url/locality ma NON i prezzi → DOM resta autoritativo.
 """
 
 import os
 import sys
 import re
 import json
-import sqlite3
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _scraper_common import (
     HEADERS_CHROME, log, random_pause,
-    estrai_prezzo, estrai_mq, estrai_camere,
     salva_annunci_db,
 )
 
@@ -29,19 +34,18 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 PORTALE = "casa.it"
 PREFIX  = "Casa"
 
-URLS = [
-    ("https://www.casa.it/vendita/case/livorno-provincia?pag=1", "Livorno"),
-    ("https://www.casa.it/vendita/case/livorno-provincia?pag=2", "Livorno"),
-    ("https://www.casa.it/vendita/case/livorno-provincia?pag=3", "Livorno"),
-    ("https://www.casa.it/vendita/case/pisa-provincia?pag=1", "Pisa"),
-    ("https://www.casa.it/vendita/case/pisa-provincia?pag=2", "Pisa"),
-    ("https://www.casa.it/vendita/case/pisa-provincia?pag=3", "Pisa"),
-]
+URLS = []
+for prov in ("livorno-provincia", "pisa-provincia"):
+    for page in (1, 2, 3):
+        URLS.append((
+            f"https://www.casa.it/vendita/residenziale/{prov}/?page={page}",
+            "Livorno" if "livorno" in prov else "Pisa",
+        ))
 
 
 # ─── Fetch (curl_cffi → Playwright fallback) ────────────────────────────────
 
-def fetch_curl_cffi(url: str) -> str:
+def _fetch_curl(url: str) -> str:
     from curl_cffi import requests as cffi
     r = cffi.get(url, headers=HEADERS_CHROME, impersonate="chrome120", timeout=30)
     if r.status_code != 200:
@@ -49,17 +53,13 @@ def fetch_curl_cffi(url: str) -> str:
     return r.text
 
 
-def fetch_playwright(url: str) -> str:
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        raise RuntimeError("playwright non installato")
+def _fetch_playwright(url: str) -> str:
+    from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context(
             user_agent=HEADERS_CHROME["User-Agent"],
-            locale="it-IT",
-            viewport={"width": 1280, "height": 900},
+            locale="it-IT", viewport={"width": 1280, "height": 900},
         )
         page = ctx.new_page()
         page.goto(url, wait_until="domcontentloaded", timeout=45000)
@@ -71,135 +71,130 @@ def fetch_playwright(url: str) -> str:
 
 def fetch_html(url: str) -> str:
     try:
-        return fetch_curl_cffi(url)
+        return _fetch_curl(url)
     except Exception as e:
         log(f"curl_cffi fallito ({e}) — fallback Playwright", prefix=PREFIX)
-        return fetch_playwright(url)
+        return _fetch_playwright(url)
 
 
 # ─── Parser ──────────────────────────────────────────────────────────────────
 
+_RE_PREZZO = re.compile(r"€\s*([\d\.]+)")
+_RE_MQ     = re.compile(r"(\d+)\s*m²")
+_RE_LOCALI = re.compile(r"(\d+)\s*locali", re.IGNORECASE)
+_RE_BAGNI  = re.compile(r"(\d+)\s*bagn", re.IGNORECASE)
+
+
+def _parse_prezzo(testo: str):
+    m = _RE_PREZZO.search(testo or "")
+    if not m:
+        return None
+    try:
+        return int(m.group(1).replace(".", ""))
+    except Exception:
+        return None
+
+
+def _build_jsonld_index(soup) -> dict:
+    """
+    Estrae da @graph i blocchi SingleFamilyResidence|Apartment|House e li
+    indicizza per URL → {name, locality, numberOfRooms}.
+    """
+    idx = {}
+    for tag in soup.find_all("script", type="application/ld+json"):
+        try:
+            blob = json.loads(tag.string or "{}")
+        except Exception:
+            continue
+        graph = blob.get("@graph") if isinstance(blob, dict) else None
+        items = graph or (blob if isinstance(blob, list) else [blob])
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            t = it.get("@type")
+            if t in ("SingleFamilyResidence", "Apartment", "House", "Residence"):
+                url = it.get("url") or ""
+                if url:
+                    idx[url.rstrip("/")] = {
+                        "name":     it.get("name") or "",
+                        "locality": (it.get("address") or {}).get("addressLocality") or "",
+                        "rooms":    it.get("numberOfRooms"),
+                    }
+    return idx
+
+
 def parse_pagina(html: str, provincia_hint: str) -> list:
-    """
-    Casa.it pubblica un grosso blob JSON dentro window.__INITIAL_STATE__
-    o tag data-listings; in caso di assenza fallback su BS4 generico.
-    """
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return []
+
+    soup = BeautifulSoup(html, "html.parser")
+    jsonld = _build_jsonld_index(soup)
     annunci = []
 
-    # 1) JSON inline
-    m = re.search(r'window\.__INITIAL_STATE__\s*=\s*(\{.*?\});', html, re.S)
-    if m:
-        try:
-            data = json.loads(m.group(1))
-            for it in _walk_listings(data):
-                annunci.append(_normalize_jsonld(it, provincia_hint))
-        except Exception as e:
-            log(f"JSON parse: {e}", prefix=PREFIX)
+    for card in soup.select(".csaSrpcard"):
+        link = card.select_one('a[href*="/immobili/"]')
+        if not link:
+            continue
+        href = link.get("href", "")
+        if href.startswith("/"):
+            href = "https://www.casa.it" + href
+        # Normalizza per dedup
+        m_id = re.search(r"/immobili/(\d+)", href)
+        if m_id:
+            href = f"https://www.casa.it/immobili/{m_id.group(1)}/"
 
-    # 2) JSON-LD <script type="application/ld+json">
-    if not annunci:
-        try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html, "html.parser")
-            for tag in soup.find_all("script", type="application/ld+json"):
-                try:
-                    blob = json.loads(tag.string or "{}")
-                    items = blob if isinstance(blob, list) else [blob]
-                    for it in items:
-                        if not isinstance(it, dict):
-                            continue
-                        if it.get("@type") in ("Apartment", "House", "Residence", "Product", "Offer"):
-                            annunci.append(_normalize_jsonld(it, provincia_hint))
-                except Exception:
-                    continue
-        except Exception:
-            pass
+        # Box dati raggruppato (preferito)
+        det = card.select_one(".csaSrpcard__det__cont")
+        det_text = det.get_text(" ", strip=True) if det else card.get_text(" ", strip=True)
 
-    # 3) Fallback HTML cards
-    if not annunci:
-        try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html, "html.parser")
-            for card in soup.select('[data-listing-id], article.listing, div.srp-card, li.entry'):
-                a_tag = card.find("a", href=True)
-                titolo_el = card.find(["h2", "h3", "h4"])
-                prezzo_el = card.find(string=re.compile(r"€"))
-                if not a_tag or not titolo_el:
-                    continue
-                href = a_tag["href"]
-                if href.startswith("/"):
-                    href = "https://www.casa.it" + href
-                txt = card.get_text(" ", strip=True)
-                annunci.append({
-                    "url": href,
-                    "titolo": titolo_el.get_text(strip=True),
-                    "prezzo": estrai_prezzo(prezzo_el or ""),
-                    "mq": estrai_mq(txt),
-                    "camere": estrai_camere(txt),
-                    "inserzionista": "",
-                    "foto_url": (card.find("img") or {}).get("src") if card.find("img") else None,
-                    "provincia_hint": provincia_hint,
-                })
-        except Exception as e:
-            log(f"BS4 fallback errore: {e}", prefix=PREFIX)
+        # Prezzo: preferisci il selettore dedicato
+        prezzo_el = card.select_one(".csaSrpcard__det__feats__text.first")
+        prezzo = _parse_prezzo(prezzo_el.get_text() if prezzo_el else det_text)
 
-    return annunci
+        m_mq = _RE_MQ.search(det_text)
+        mq = int(m_mq.group(1)) if m_mq else None
+        m_loc = _RE_LOCALI.search(det_text)
+        camere = int(m_loc.group(1)) if m_loc else None
 
+        # Titolo: preferisci JSON-LD (più pulito), altrimenti h2/h3 della card
+        titolo = ""
+        meta = jsonld.get(href.rstrip("/"))
+        if meta and meta.get("name"):
+            titolo = meta["name"]
+            if meta.get("locality") and meta["locality"] not in titolo:
+                titolo = f"{titolo} — {meta['locality']}"
+        else:
+            t_el = card.select_one("h2, h3, .csaSrpcard__det__title")
+            titolo = (t_el.get_text(strip=True) if t_el else "")[:160]
+        if not titolo:
+            titolo = det_text[:120]
 
-def _walk_listings(obj):
-    """Cerca array di annunci in un dict potenzialmente nidificato."""
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            if k in ("listings", "results", "items", "ads", "properties") and isinstance(v, list):
-                for it in v:
-                    if isinstance(it, dict):
-                        yield it
-            else:
-                yield from _walk_listings(v)
-    elif isinstance(obj, list):
-        for it in obj:
-            yield from _walk_listings(it)
+        img = card.select_one("img")
+        foto = (img.get("src") or img.get("data-src")) if img else None
 
+        annunci.append({
+            "url": href,
+            "titolo": titolo,
+            "prezzo": prezzo,
+            "mq": mq,
+            "camere": camere,
+            "inserzionista": "",
+            "foto_url": foto,
+            "provincia_hint": provincia_hint,
+        })
 
-def _normalize_jsonld(it: dict, hint: str) -> dict:
-    titolo = it.get("name") or it.get("title") or it.get("titolo") or ""
-    url = (it.get("url") or it.get("permalink") or it.get("link")
-           or (it.get("offers") or {}).get("url") or "")
-    if url and url.startswith("/"):
-        url = "https://www.casa.it" + url
-    prezzo = (it.get("price")
-              or (it.get("offers") or {}).get("price")
-              or it.get("priceValue"))
-    try:
-        prezzo = int(float(prezzo)) if prezzo else None
-    except Exception:
-        prezzo = estrai_prezzo(str(prezzo))
-    mq = (it.get("floorSize") or {}).get("value") if isinstance(it.get("floorSize"), dict) else it.get("mq")
-    try:
-        mq = int(mq) if mq else None
-    except Exception:
-        mq = None
-    foto = it.get("image")
-    if isinstance(foto, list):
-        foto = foto[0] if foto else None
-    if isinstance(foto, dict):
-        foto = foto.get("url")
-    inserz = ""
-    if isinstance(it.get("seller"), dict):
-        inserz = it["seller"].get("name", "")
-    return {
-        "url": url,
-        "titolo": titolo,
-        "prezzo": prezzo,
-        "mq": mq,
-        "camere": estrai_camere(titolo),
-        "inserzionista": inserz,
-        "foto_url": foto,
-        "provincia_hint": hint,
-    }
+    # Dedup
+    seen = set()
+    deduped = []
+    for a in annunci:
+        if a["url"] in seen:
+            continue
+        seen.add(a["url"])
+        deduped.append(a)
+    return deduped
 
-
-# ─── Entry point ──────────────────────────────────────────────────────────────
 
 def scrapa_casa() -> int:
     log(f"Avvio scraping {PORTALE} — {datetime.now().strftime('%d/%m/%Y %H:%M')}", prefix=PREFIX)
@@ -208,15 +203,15 @@ def scrapa_casa() -> int:
         log(f"Pagina: {url}", prefix=PREFIX)
         try:
             html = fetch_html(url)
-            annunci = parse_pagina(html, provincia)
-            log(f"  Trovati: {len(annunci)} annunci", prefix=PREFIX)
-            tutti.extend(annunci)
+            ann = parse_pagina(html, provincia)
+            log(f"  Trovati: {len(ann)} annunci", prefix=PREFIX)
+            tutti.extend(ann)
         except Exception as e:
             log(f"  Errore: {e}", prefix=PREFIX)
-        random_pause(2, 6)
+        random_pause(3, 7)
     log(f"Totale raccolti: {len(tutti)}", prefix=PREFIX)
     nuovi = salva_annunci_db(tutti, DB_PATH, PORTALE)
-    log(f"Nuovi inseriti nel DB: {nuovi}", prefix=PREFIX)
+    log(f"Nuovi inseriti: {nuovi}", prefix=PREFIX)
     return nuovi
 
 

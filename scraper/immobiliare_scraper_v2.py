@@ -1,3 +1,4 @@
+# TODO: serve playwright-stealth o user-data-dir persistente per Cloudflare bypass
 """
 HouseRadar — Immobiliare.it scraper v2 (Playwright)
 ====================================================

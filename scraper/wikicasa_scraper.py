@@ -1,22 +1,23 @@
 """
 HouseRadar — Wikicasa.it scraper
 =================================
-Strategia: curl_cffi (Chrome120 TLS impersonation). Wikicasa raramente
-applica protezioni avanzate.
-URL: https://www.wikicasa.it/case-in-vendita/livorno-provincia (e pisa-provincia)
+Selettori verificati dal vivo (gennaio 2026):
+- Card listing: .uikit-card.insertion
+- Link annuncio: a[href*="/annuncio/"]   →  https://www.wikicasa.it/annuncio/{ID}
+- Prezzo:  €\s*([\d\.]+)
+- MQ:      (\d+)\s*m[²2]
+- Locali:  (\d+)\s*locali
 """
 
 import os
 import sys
 import re
-import json
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _scraper_common import (
     HEADERS_CHROME, log, random_pause,
-    estrai_prezzo, estrai_mq, estrai_camere,
     salva_annunci_db,
 )
 
@@ -25,14 +26,13 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 PORTALE = "wikicasa.it"
 PREFIX  = "Wikicasa"
 
-URLS = [
-    ("https://www.wikicasa.it/case-in-vendita/livorno-provincia?page=1", "Livorno"),
-    ("https://www.wikicasa.it/case-in-vendita/livorno-provincia?page=2", "Livorno"),
-    ("https://www.wikicasa.it/case-in-vendita/livorno-provincia?page=3", "Livorno"),
-    ("https://www.wikicasa.it/case-in-vendita/pisa-provincia?page=1", "Pisa"),
-    ("https://www.wikicasa.it/case-in-vendita/pisa-provincia?page=2", "Pisa"),
-    ("https://www.wikicasa.it/case-in-vendita/pisa-provincia?page=3", "Pisa"),
-]
+URLS = []
+for citta in ("livorno", "pisa"):
+    for page in (1, 2, 3):
+        URLS.append((
+            f"https://www.wikicasa.it/vendita-case/{citta}/?page={page}",
+            citta.capitalize(),
+        ))
 
 
 def fetch_html(url: str) -> str:
@@ -43,8 +43,38 @@ def fetch_html(url: str) -> str:
     return r.text
 
 
+# ─── Parser ──────────────────────────────────────────────────────────────────
+
+_RE_PREZZO  = re.compile(r"€\s*([\d\.]+)")
+_RE_MQ      = re.compile(r"(\d+)\s*m[²2]")
+_RE_LOCALI  = re.compile(r"(\d+)\s*locali", re.IGNORECASE)
+_RE_TITOLO  = re.compile(
+    r"\b(Appartamento|Bilocale|Trilocale|Quadrilocale|Monolocale|Villa|Attico|Loft|Rustico|Casa)\b[^\n]{0,120}",
+    re.IGNORECASE,
+)
+
+
+def _parse_prezzo(testo: str):
+    m = _RE_PREZZO.search(testo or "")
+    if not m:
+        return None
+    try:
+        return int(m.group(1).replace(".", ""))
+    except Exception:
+        return None
+
+
+def _parse_mq(testo: str):
+    m = _RE_MQ.search(testo or "")
+    return int(m.group(1)) if m else None
+
+
+def _parse_locali(testo: str):
+    m = _RE_LOCALI.search(testo or "")
+    return int(m.group(1)) if m else None
+
+
 def parse_pagina(html: str, provincia_hint: str) -> list:
-    annunci = []
     try:
         from bs4 import BeautifulSoup
     except ImportError:
@@ -52,86 +82,57 @@ def parse_pagina(html: str, provincia_hint: str) -> list:
         return []
 
     soup = BeautifulSoup(html, "html.parser")
+    annunci = []
 
-    # 1) JSON-LD ItemList di annunci
-    for tag in soup.find_all("script", type="application/ld+json"):
-        try:
-            blob = json.loads(tag.string or "{}")
-        except Exception:
+    for card in soup.select(".uikit-card.insertion"):
+        link = card.select_one('a[href*="/annuncio/"]')
+        if not link:
             continue
-        items = blob if isinstance(blob, list) else [blob]
-        for it in items:
-            if not isinstance(it, dict):
-                continue
-            if it.get("@type") == "ItemList":
-                for el in it.get("itemListElement", []) or []:
-                    obj = el.get("item") if isinstance(el, dict) else None
-                    if isinstance(obj, dict):
-                        annunci.append(_from_jsonld(obj, provincia_hint))
-            elif it.get("@type") in ("Apartment", "House", "Product", "Residence"):
-                annunci.append(_from_jsonld(it, provincia_hint))
+        href = link.get("href", "")
+        if href.startswith("/"):
+            href = "https://www.wikicasa.it" + href
+        # Normalizza eliminando query string varia
+        m_id = re.search(r"/annuncio/(\d+)", href)
+        if m_id:
+            href = f"https://www.wikicasa.it/annuncio/{m_id.group(1)}"
 
-    # 2) Fallback DOM
-    if not annunci:
-        for card in soup.select('article.listing-item, div.search-results-list-item, li.result-item'):
-            a = card.find("a", href=True)
-            if not a:
-                continue
-            href = a["href"]
-            if href.startswith("/"):
-                href = "https://www.wikicasa.it" + href
-            titolo_el = card.find(["h2", "h3"])
-            txt = card.get_text(" ", strip=True)
-            img = card.find("img")
-            annunci.append({
-                "url": href,
-                "titolo": titolo_el.get_text(strip=True) if titolo_el else (a.get("title") or "")[:120],
-                "prezzo": estrai_prezzo(txt),
-                "mq": estrai_mq(txt),
-                "camere": estrai_camere(txt),
-                "inserzionista": "",
-                "foto_url": img.get("src") if img else None,
-                "provincia_hint": provincia_hint,
-            })
+        text = card.get_text(" ", strip=True)
 
-    return [a for a in annunci if a.get("url") and a.get("titolo")]
+        # Titolo (h2/h3 se presente, altrimenti regex sul testo)
+        titolo_el = card.select_one("h2, h3")
+        if titolo_el and titolo_el.get_text(strip=True):
+            titolo = titolo_el.get_text(strip=True)
+        else:
+            m_t = _RE_TITOLO.search(text)
+            titolo = m_t.group(0).strip() if m_t else text[:120]
 
+        prezzo = _parse_prezzo(text)
+        mq     = _parse_mq(text)
+        camere = _parse_locali(text)
 
-def _from_jsonld(it: dict, hint: str) -> dict:
-    titolo = it.get("name") or it.get("title") or ""
-    url = it.get("url") or ""
-    if url.startswith("/"):
-        url = "https://www.wikicasa.it" + url
-    prezzo = (it.get("price")
-              or (it.get("offers") or {}).get("price"))
-    try:
-        prezzo = int(float(prezzo)) if prezzo else None
-    except Exception:
-        prezzo = estrai_prezzo(str(prezzo or ""))
-    mq = None
-    if isinstance(it.get("floorSize"), dict):
-        try:
-            mq = int(it["floorSize"].get("value", 0)) or None
-        except Exception:
-            pass
-    foto = it.get("image")
-    if isinstance(foto, list):
-        foto = foto[0] if foto else None
-    if isinstance(foto, dict):
-        foto = foto.get("url")
-    inserz = ""
-    if isinstance(it.get("seller"), dict):
-        inserz = it["seller"].get("name", "")
-    return {
-        "url": url,
-        "titolo": titolo,
-        "prezzo": prezzo,
-        "mq": mq,
-        "camere": estrai_camere(titolo),
-        "inserzionista": inserz,
-        "foto_url": foto,
-        "provincia_hint": hint,
-    }
+        img = card.select_one("img")
+        foto = img.get("src") or img.get("data-src") if img else None
+
+        annunci.append({
+            "url": href,
+            "titolo": titolo,
+            "prezzo": prezzo,
+            "mq": mq,
+            "camere": camere,
+            "inserzionista": "",
+            "foto_url": foto,
+            "provincia_hint": provincia_hint,
+        })
+
+    # Dedup per URL
+    seen = set()
+    deduped = []
+    for a in annunci:
+        if a["url"] in seen:
+            continue
+        seen.add(a["url"])
+        deduped.append(a)
+    return deduped
 
 
 def scrapa_wikicasa() -> int:
@@ -146,7 +147,7 @@ def scrapa_wikicasa() -> int:
             tutti.extend(ann)
         except Exception as e:
             log(f"  Errore: {e}", prefix=PREFIX)
-        random_pause(2, 6)
+        random_pause(3, 7)
     log(f"Totale raccolti: {len(tutti)}", prefix=PREFIX)
     nuovi = salva_annunci_db(tutti, DB_PATH, PORTALE)
     log(f"Nuovi inseriti: {nuovi}", prefix=PREFIX)
