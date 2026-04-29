@@ -224,6 +224,18 @@ def salva_annunci(annunci_raw: list) -> int:
         nuovi += 1
 
     conn.commit()
+
+    # Rimozione annunci scaduti: elimina dal DB gli URL subito.it non più presenti
+    if len(seen_urls) > 5:
+        cur.execute("SELECT url_originale FROM annunci WHERE portale = 'subito.it'")
+        urls_in_db = {row[0] for row in cur.fetchall()}
+        urls_scaduti = urls_in_db - seen_urls
+        if urls_scaduti:
+            cur.executemany("DELETE FROM annunci WHERE url_originale = ?",
+                            [(u,) for u in urls_scaduti])
+            conn.commit()
+            print(f"[Subito] Rimossi {len(urls_scaduti)} annunci scaduti da subito.it")
+
     conn.close()
     return nuovi
 

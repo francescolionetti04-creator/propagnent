@@ -25,7 +25,7 @@ _BACKEND = os.path.join(_ROOT, "backend")
 if _BACKEND not in sys.path:
     sys.path.insert(0, _BACKEND)
 
-from database import upsert_omi, omi_ha_dati
+from database import upsert_omi, omi_ha_dati, omi_e_aggiornato
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dataset seed — OMI 2024 Semestre 2, comuni Toscana (dati reali Ag. Entrate)
@@ -207,12 +207,17 @@ def _scarica_e_parsa() -> list:
 def importa_omi(forza: bool = False) -> int:
     """
     Importa le quotazioni OMI nel DB.
-    Se forza=False e i dati sono già presenti, non fa nulla.
+    - Se forza=False e i dati sono aggiornati (< 180 giorni), non fa nulla.
+    - Se i dati ci sono ma hanno > 180 giorni, ri-importa (aggiornamento semestrale).
     Ritorna il numero di righe inserite.
     """
-    if not forza and omi_ha_dati():
-        print("[OMI] Dati già presenti nel DB — skip import")
+    if not forza and omi_e_aggiornato(180):
+        print("[OMI] Dati OMI aggiornati (< 180 giorni) — skip import")
         return 0
+
+    aggiornamento = omi_ha_dati()  # True se è un re-import, False se è il primo
+    if aggiornamento and not forza:
+        print("[OMI] Dati OMI scaduti (> 180 giorni) — avvio aggiornamento semestrale...")
 
     print("[OMI] Avvio import quotazioni OMI...")
 
@@ -227,7 +232,10 @@ def importa_omi(forza: bool = False) -> int:
         fonte = "seed dataset (2024 S2)"
 
     n = upsert_omi(righe)
-    print(f"[OMI] Importate {n} righe ({fonte})")
+    if aggiornamento and not forza:
+        print(f"[OMI] Aggiornamento semestrale completato — {n} righe ({fonte})")
+    else:
+        print(f"[OMI] Importate {n} righe ({fonte})")
     # Riepilogo per comune
     from collections import Counter
     c = Counter(r["comune"] for r in righe)

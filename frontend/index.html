@@ -47,6 +47,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .chip-subito.on    {background:#FEF0EC;border-color:#F4A47E;color:#C94D1A;font-weight:600}
 .chip-idealista.on {background:#F0EBF8;border-color:#B89DD6;color:#6B3FA0;font-weight:600}
 .chip-imm.on       {background:#E8F4FD;border-color:#7EC3E8;color:#0D5E8A;font-weight:600}
+.chip-casa.on      {background:#E6F8EE;border-color:#7DCB9E;color:#1D5E3A;font-weight:600}
+.chip-wiki.on      {background:#FEF7E0;border-color:#E6C757;color:#7A5C0E;font-weight:600}
+.chip-tec.on       {background:#FBEFE0;border-color:#F0A85B;color:#8C4A12;font-weight:600}
 .fb-sep{width:1px;height:20px;background:#e5e5e0;margin:0 4px}
 .fb-select{font-size:12px;padding:5px 10px;border:1px solid #d0d0cc;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer}
 
@@ -147,6 +150,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .pb-subito{background:#FEF0EC;color:#C94D1A;border-color:#F4A47E}
 .pb-idealista{background:#F0EBF8;color:#6B3FA0;border-color:#B89DD6}
 .pb-immobiliare{background:#E8F4FD;color:#0D5E8A;border-color:#7EC3E8}
+.pb-casa{background:#E6F8EE;color:#1D5E3A;border-color:#7DCB9E}
+.pb-wikicasa{background:#FEF7E0;color:#7A5C0E;border-color:#E6C757}
+.pb-tecnocasa{background:#FBEFE0;color:#8C4A12;border-color:#F0A85B}
 .pb-altro{background:#F0F0EC;color:#666;border-color:#CCC}
 
 .card-footer{display:flex;gap:6px;margin-top:.85rem;padding-top:.85rem;border-top:1px solid #f0f0ec;flex-wrap:wrap;align-items:center}
@@ -558,9 +564,12 @@ input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
       <span class="fb-chip chip-agenzia" id="f-ag" onclick="toggleF('ag')">Agenzie</span>
       <div class="fb-sep"></div>
       <span class="fb-label">Portale:</span>
-      <span class="fb-chip chip-subito on"    id="f-sub" onclick="togglePortale('sub')">🔴 subito.it</span>
-      <span class="fb-chip chip-idealista on" id="f-ide" onclick="togglePortale('ide')">🟣 idealista.it</span>
-      <span class="fb-chip chip-imm on"       id="f-imm" onclick="togglePortale('imm')">🔵 immobiliare.it</span>
+      <span class="fb-chip chip-subito on"    id="f-sub"  onclick="togglePortale('sub')">🔴 subito.it</span>
+      <span class="fb-chip chip-idealista on" id="f-ide"  onclick="togglePortale('ide')">🟣 idealista.it</span>
+      <span class="fb-chip chip-imm on"       id="f-imm"  onclick="togglePortale('imm')">🔵 immobiliare.it</span>
+      <span class="fb-chip chip-casa on"      id="f-casa" onclick="togglePortale('casa')">🟢 casa.it</span>
+      <span class="fb-chip chip-wiki on"      id="f-wiki" onclick="togglePortale('wiki')">🟡 wikicasa.it</span>
+      <span class="fb-chip chip-tec on"       id="f-tec"  onclick="togglePortale('tec')">🟠 tecnocasa.it</span>
       <div class="fb-sep"></div>
       <span class="fb-label">Ordina:</span>
       <select class="fb-select" id="f-sort" onchange="render()">
@@ -693,6 +702,7 @@ const API = (window.location.protocol === 'file:' || window.location.port === '5
 let allData = [];
 let showPriv = true, showNoescl = true, showAg = false;
 let showSubito = true, showIdealista = true, showImm = true;
+let showCasa = true, showWiki = true, showTec = true;
 let omiData = {};  // {zona: {min, max, anno, semestre}}
 
 /* ========== GALLERIA FOTO ========== */
@@ -863,9 +873,12 @@ function toggleF(f) {
 }
 
 function togglePortale(p) {
-  if (p === 'sub') { showSubito    = !showSubito;    document.getElementById('f-sub').classList.toggle('on', showSubito); }
-  if (p === 'ide') { showIdealista = !showIdealista; document.getElementById('f-ide').classList.toggle('on', showIdealista); }
-  if (p === 'imm') { showImm       = !showImm;       document.getElementById('f-imm').classList.toggle('on', showImm); }
+  if (p === 'sub')  { showSubito    = !showSubito;    document.getElementById('f-sub').classList.toggle('on', showSubito); }
+  if (p === 'ide')  { showIdealista = !showIdealista; document.getElementById('f-ide').classList.toggle('on', showIdealista); }
+  if (p === 'imm')  { showImm       = !showImm;       document.getElementById('f-imm').classList.toggle('on', showImm); }
+  if (p === 'casa') { showCasa      = !showCasa;      document.getElementById('f-casa').classList.toggle('on', showCasa); }
+  if (p === 'wiki') { showWiki      = !showWiki;      document.getElementById('f-wiki').classList.toggle('on', showWiki); }
+  if (p === 'tec')  { showTec       = !showTec;       document.getElementById('f-tec').classList.toggle('on', showTec); }
   render();
 }
 
@@ -883,6 +896,9 @@ function render() {
     if (d.portale === 'subito.it'      && !showSubito)    return false;
     if (d.portale === 'idealista.it'   && !showIdealista) return false;
     if (d.portale === 'immobiliare.it' && !showImm)       return false;
+    if (d.portale === 'casa.it'        && !showCasa)      return false;
+    if (d.portale === 'wikicasa.it'    && !showWiki)      return false;
+    if (d.portale === 'tecnocasa.it'   && !showTec)       return false;
     if (tipo && d.tipo !== tipo) return false;
     if (zona) {
       const zL = zona.toLowerCase();
@@ -1023,6 +1039,9 @@ function cardHTML(d) {
     'subito.it':       { cls: 'pb-subito',       label: '● subito.it' },
     'idealista.it':    { cls: 'pb-idealista',    label: '● idealista.it' },
     'immobiliare.it':  { cls: 'pb-immobiliare',  label: '● immobiliare.it' },
+    'casa.it':         { cls: 'pb-casa',         label: '● casa.it' },
+    'wikicasa.it':     { cls: 'pb-wikicasa',     label: '● wikicasa.it' },
+    'tecnocasa.it':    { cls: 'pb-tecnocasa',    label: '● tecnocasa.it' },
   };
   const pm = d.portale ? (portaleMap[d.portale] || { cls: 'pb-altro', label: d.portale }) : null;
   const portaleBadge = pm
@@ -1333,6 +1352,9 @@ const _PORTALE_MAP = {
   'subito.it':      { cls: 'pb-subito',      label: '● subito.it' },
   'idealista.it':   { cls: 'pb-idealista',   label: '● idealista.it' },
   'immobiliare.it': { cls: 'pb-immobiliare', label: '● immobiliare.it' },
+  'casa.it':        { cls: 'pb-casa',        label: '● casa.it' },
+  'wikicasa.it':    { cls: 'pb-wikicasa',    label: '● wikicasa.it' },
+  'tecnocasa.it':   { cls: 'pb-tecnocasa',   label: '● tecnocasa.it' },
 };
 const _DIM_CFG = [
   { k:'prezzo',     lbl:'Prezzo',  color:'#185FA5' },
