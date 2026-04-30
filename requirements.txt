@@ -8,3 +8,6 @@ aiofiles>=23.0.0
 feedparser>=6.0.0
 requests>=2.31.0
 beautifulsoup4>=4.12.0
+lxml>=5.0.0
+playwright>=1.40.0
+playwright-stealth>=1.0.6

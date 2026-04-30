@@ -1,28 +1,32 @@
-# TODO: serve playwright-stealth o user-data-dir persistente per Cloudflare bypass
+# Cloudflare bypass attivo via playwright-stealth + warm-up + challenge wait
 """
-HouseRadar — Immobiliare.it scraper v2 (Playwright)
-====================================================
-Versione alternativa allo scraper curl_cffi: usa Chromium headless via
-Playwright per superare Cloudflare quando l'IP del runner viene bloccato.
+HouseRadar — Immobiliare.it scraper v2 (Playwright Stealth)
+============================================================
+Cloudflare blocca curl_cffi e Playwright vanilla → uso playwright-stealth.
 
-Richiede:
-    pip install playwright
-    playwright install chromium
+URL: https://www.immobiliare.it/vendita-case/{provincia}/?pag=N
 
-URL: https://www.immobiliare.it/vendita-case/livorno/  e /pisa/
+Selettori (verificati nel browser):
+- Card:    li[class*="in-listingCard"]  oppure  [data-cy="listing-item-card"]
+- Prezzo:  [class*="in-listingCardPrice"]  →  €\\s*([\\d\\.]+)
+- Titolo:  a[class*="in-listingCardTitle"]
+- URL:     a[href*="/annunci/"]
+
+Strategia anti-Cloudflare identica a casa_scraper.py.
 """
 
 import os
 import sys
 import re
 import json
+import asyncio
+import random
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _scraper_common import (
-    HEADERS_CHROME, log, random_pause,
-    estrai_prezzo, estrai_mq, estrai_camere,
+    log, PROVINCE_TOSCANA,
     salva_annunci_db,
 )
 
@@ -30,60 +34,44 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "..", "backend", "propagnent.db")
 PORTALE = "immobiliare.it"
 PREFIX  = "Imm-v2"
+MAX_PAGES = 50
 
-URLS = [
-    ("https://www.immobiliare.it/vendita-case/livorno/?pag=1", "Livorno"),
-    ("https://www.immobiliare.it/vendita-case/livorno/?pag=2", "Livorno"),
-    ("https://www.immobiliare.it/vendita-case/livorno/?pag=3", "Livorno"),
-    ("https://www.immobiliare.it/vendita-case/pisa/?pag=1", "Pisa"),
-    ("https://www.immobiliare.it/vendita-case/pisa/?pag=2", "Pisa"),
-    ("https://www.immobiliare.it/vendita-case/pisa/?pag=3", "Pisa"),
-]
-
-
-# ─── Fetch via Playwright ────────────────────────────────────────────────────
-
-def fetch_html_playwright(url: str) -> str:
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        raise RuntimeError("playwright non installato — pip install playwright && playwright install chromium")
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-dev-shm-usage",
-            ],
-        )
-        ctx = browser.new_context(
-            user_agent=HEADERS_CHROME["User-Agent"],
-            locale="it-IT",
-            timezone_id="Europe/Rome",
-            viewport={"width": 1280, "height": 900},
-            extra_http_headers={"Accept-Language": "it-IT,it;q=0.9"},
-        )
-        page = ctx.new_page()
-        page.goto(url, wait_until="domcontentloaded", timeout=45000)
-        # Aspetta il caricamento di __NEXT_DATA__ o cards
-        try:
-            page.wait_for_selector('script#__NEXT_DATA__, [data-cy="listing-item"]', timeout=15000)
-        except Exception:
-            pass
-        page.wait_for_timeout(2000)
-        html = page.content()
-        browser.close()
-        return html
+UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+      "AppleWebKit/537.36 (KHTML, like Gecko) "
+      "Chrome/121.0.0.0 Safari/537.36")
 
 
 # ─── Parser ──────────────────────────────────────────────────────────────────
 
+_RE_PREZZO = re.compile(r"€\s*([\d\.]+)")
+_RE_MQ     = re.compile(r"(\d+)\s*m[²2]", re.IGNORECASE)
+_RE_LOCALI = re.compile(r"(\d+)\s*local", re.IGNORECASE)
+
+
+def _parse_prezzo(testo: str):
+    m = _RE_PREZZO.search(testo or "")
+    if not m:
+        return None
+    try:
+        return int(m.group(1).replace(".", ""))
+    except Exception:
+        return None
+
+
 def parse_pagina(html: str, provincia_hint: str) -> list:
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return []
+    try:
+        import lxml  # noqa: F401
+        soup = BeautifulSoup(html, "lxml")
+    except Exception:
+        soup = BeautifulSoup(html, "html.parser")
+
     annunci = []
 
-    # __NEXT_DATA__ è il json ufficiale di immobiliare.it
+    # Strategia A: __NEXT_DATA__ (più affidabile se presente)
     m = re.search(
         r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
         html, re.S,
@@ -92,17 +80,63 @@ def parse_pagina(html: str, provincia_hint: str) -> list:
         try:
             data = json.loads(m.group(1))
             for it in _walk_listings(data):
-                rec = _from_immobiliare(it, provincia_hint)
+                rec = _from_immobiliare_json(it, provincia_hint)
                 if rec:
                     annunci.append(rec)
         except Exception as e:
-            log(f"NEXT_DATA parse error: {e}", prefix=PREFIX)
+            log(f"  NEXT_DATA parse: {e}", prefix=PREFIX)
 
-    return annunci
+    # Strategia B: DOM card (fallback se NEXT_DATA assente)
+    if not annunci:
+        cards = soup.select('li[class*="in-listingCard"]') or \
+                soup.select('[data-cy="listing-item-card"]')
+        log(f"  DEBUG html_len={len(html)} cards_dom={len(cards)}", prefix=PREFIX)
+        for card in cards:
+            link = card.select_one('a[href*="/annunci/"]')
+            if not link:
+                continue
+            href = link.get("href", "")
+            if href.startswith("/"):
+                href = "https://www.immobiliare.it" + href
+
+            tit_el = card.select_one('a[class*="in-listingCardTitle"]')
+            titolo = tit_el.get_text(strip=True) if tit_el else (link.get("title") or "")
+            if not titolo:
+                titolo = card.get_text(" ", strip=True)[:120]
+
+            prz_el = card.select_one('[class*="in-listingCardPrice"]')
+            prezzo = _parse_prezzo(prz_el.get_text() if prz_el else card.get_text())
+
+            text = card.get_text(" ", strip=True)
+            mq     = (int(_RE_MQ.search(text).group(1)) if _RE_MQ.search(text) else None)
+            camere = (int(_RE_LOCALI.search(text).group(1)) if _RE_LOCALI.search(text) else None)
+
+            img = card.select_one("img")
+            foto = (img.get("src") or img.get("data-src")) if img else None
+
+            annunci.append({
+                "url": href,
+                "titolo": titolo,
+                "prezzo": prezzo,
+                "mq": mq,
+                "camere": camere,
+                "inserzionista": "",
+                "foto_url": foto,
+                "provincia_hint": provincia_hint,
+            })
+
+    # Dedup
+    seen = set()
+    deduped = []
+    for a in annunci:
+        if a["url"] in seen:
+            continue
+        seen.add(a["url"])
+        deduped.append(a)
+    return deduped
 
 
 def _walk_listings(obj):
-    """Cerca array di realEstate dentro la struttura props.pageProps."""
     if isinstance(obj, dict):
         for k, v in obj.items():
             if k in ("results", "items", "list") and isinstance(v, list):
@@ -116,7 +150,7 @@ def _walk_listings(obj):
             yield from _walk_listings(it)
 
 
-def _from_immobiliare(it: dict, hint: str) -> dict | None:
+def _from_immobiliare_json(it: dict, hint: str):
     re_obj = it.get("realEstate") if isinstance(it.get("realEstate"), dict) else it
     if not isinstance(re_obj, dict):
         return None
@@ -130,21 +164,18 @@ def _from_immobiliare(it: dict, hint: str) -> dict | None:
     if url and url.startswith("/"):
         url = "https://www.immobiliare.it" + url
 
-    prezzo = None
     pr = re_obj.get("price") or {}
-    if isinstance(pr, dict):
-        prezzo = pr.get("value") or pr.get("price")
+    prezzo = pr.get("value") if isinstance(pr, dict) else None
     if isinstance(prezzo, (int, float)):
         prezzo = int(prezzo)
     else:
-        prezzo = estrai_prezzo(str(prezzo or ""))
+        prezzo = _parse_prezzo(str(prezzo or ""))
 
     mq = prop.get("surface")
     try:
-        mq = int(re.sub(r'\D', '', str(mq))) if mq else None
+        mq = int(re.sub(r"\D", "", str(mq))) if mq else None
     except Exception:
         mq = None
-
     cam = prop.get("rooms") or prop.get("bedRoomsNumber")
     try:
         cam = int(cam) if cam else None
@@ -178,22 +209,111 @@ def _from_immobiliare(it: dict, hint: str) -> dict | None:
     }
 
 
-# ─── Entry point ──────────────────────────────────────────────────────────────
+# ─── Playwright Stealth ──────────────────────────────────────────────────────
+
+def _is_cf_challenge(title: str) -> bool:
+    t = (title or "").lower()
+    return ("just a moment" in t) or ("verifica" in t) or ("attendere" in t)
+
+
+async def _fetch_page(page, url: str) -> str:
+    for attempt in range(2):
+        try:
+            await page.goto(url, wait_until="networkidle", timeout=30000)
+        except Exception as e:
+            log(f"    goto error: {e}", prefix=PREFIX)
+            if attempt == 0:
+                await page.wait_for_timeout(5000)
+                continue
+            raise
+
+        title = await page.title()
+        if _is_cf_challenge(title):
+            log(f"    Cloudflare ('{title}') — attendo 20s...", prefix=PREFIX)
+            await page.wait_for_timeout(20000)
+            title = await page.title()
+            if _is_cf_challenge(title):
+                if attempt == 0:
+                    log("    Challenge persistente — retry", prefix=PREFIX)
+                    continue
+                raise RuntimeError(f"Cloudflare blocca dopo retry: {title}")
+        return await page.content()
+    raise RuntimeError("Fetch fallito dopo retry")
+
+
+async def _scrapa_async() -> list:
+    from playwright.async_api import async_playwright
+    try:
+        from playwright_stealth import stealth_async
+    except ImportError:
+        async def stealth_async(_p):
+            return None
+
+    tutti = []
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+            ],
+        )
+        context = await browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+            user_agent=UA,
+            locale="it-IT",
+            timezone_id="Europe/Rome",
+            extra_http_headers={"Accept-Language": "it-IT,it;q=0.9"},
+        )
+        page = await context.new_page()
+        await stealth_async(page)
+
+        log("Warm-up homepage...", prefix=PREFIX)
+        try:
+            await page.goto("https://www.immobiliare.it/", wait_until="networkidle", timeout=30000)
+            await page.wait_for_timeout(random.randint(2000, 4000))
+        except Exception as e:
+            log(f"  Warm-up error: {e}", prefix=PREFIX)
+
+        for i, prov in enumerate(PROVINCE_TOSCANA):
+            prov_label = prov.capitalize().replace("-", "-")
+            log(f"\n[{i+1}/{len(PROVINCE_TOSCANA)}] Provincia: {prov_label}", prefix=PREFIX)
+
+            for page_n in range(1, MAX_PAGES + 1):
+                url = f"https://www.immobiliare.it/vendita-case/{prov}/?pag={page_n}"
+                log(f"  Pagina {page_n}: {url}", prefix=PREFIX)
+                try:
+                    html = await _fetch_page(page, url)
+                    ann = parse_pagina(html, prov_label)
+                    log(f"    → {len(ann)} annunci", prefix=PREFIX)
+                    if not ann:
+                        log("    Pagina vuota — stop", prefix=PREFIX)
+                        break
+                    tutti.extend(ann)
+                except Exception as e:
+                    log(f"    Errore: {e} — passo a prossima provincia", prefix=PREFIX)
+                    break
+                await page.wait_for_timeout(random.randint(5000, 10000))
+
+            if i < len(PROVINCE_TOSCANA) - 1:
+                inter = random.randint(15000, 25000)
+                log(f"  Pausa inter-provincia: {inter/1000:.1f}s", prefix=PREFIX)
+                await page.wait_for_timeout(inter)
+
+        await browser.close()
+    return tutti
+
 
 def scrapa_immobiliare_v2() -> int:
-    log(f"Avvio scraping {PORTALE} (Playwright) — {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        prefix=PREFIX)
-    tutti = []
-    for url, provincia in URLS:
-        log(f"Pagina: {url}", prefix=PREFIX)
-        try:
-            html = fetch_html_playwright(url)
-            ann = parse_pagina(html, provincia)
-            log(f"  Trovati: {len(ann)} annunci", prefix=PREFIX)
-            tutti.extend(ann)
-        except Exception as e:
-            log(f"  Errore: {e}", prefix=PREFIX)
-        random_pause(3, 6)
+    log(f"Avvio scraping {PORTALE} (Playwright Stealth) — "
+        f"{datetime.now().strftime('%d/%m/%Y %H:%M')}", prefix=PREFIX)
+    log(f"Province: {len(PROVINCE_TOSCANA)}", prefix=PREFIX)
+    try:
+        tutti = asyncio.run(_scrapa_async())
+    except Exception as e:
+        log(f"Errore generale Playwright: {e}", prefix=PREFIX)
+        return 0
     log(f"Totale raccolti: {len(tutti)}", prefix=PREFIX)
     nuovi = salva_annunci_db(tutti, DB_PATH, PORTALE)
     log(f"Nuovi inseriti: {nuovi}", prefix=PREFIX)

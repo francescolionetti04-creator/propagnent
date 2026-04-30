@@ -1,22 +1,13 @@
 """
 HouseRadar — Tecnocasa.it scraper
 ==================================
-Selettori verificati dal vivo (gennaio 2026):
-- URL provincia (no paginazione, ~45 annunci unica pagina):
+URL provincia (no paginazione, ~45 annunci unica pagina):
     https://www.tecnocasa.it/annunci/immobili/toscana/{provincia}.html
-- Card:  .estate-card  (e parenti: anchor strategy via .estate-card-box-data)
-- Box dati: .estate-card-box-data
-    "€ 120.000 Trilocale in vendita Livorno, Via Dell' Oriolino 3 locali 60 Mq 1 bagno"
-- Regex sul testo:
-    €\s*([\d\.]+)                                        prezzo
-    (Trilocale|Bilocale|Quadrilocale|Appartamento|...)   tipo
-    (\d+)\s*locali                                       camere
-    (\d+)\s*Mq                                            mq  (M maiuscolo!)
-    (\d+)\s*bagn                                          bagni
 
-NOTA: il parser è ROBUSTO contro variazioni di markup.
-Strategia: trova tutti gli .estate-card-box-data (testo strutturato univoco
-per ogni card) e risale al contenitore card via find_parent.
+Tutti i selettori sono best-effort: il parser prova MOLTE strategie
+in cascata, stampa debug verboso, e segnala chiaramente quale strategia
+ha trovato annunci. Questo serve per diagnosticare il bug "0 annunci"
+quando l'HTML contiene 31+ occorrenze di "estate-card".
 """
 
 import os
@@ -37,7 +28,6 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 PORTALE = "tecnocasa.it"
 PREFIX  = "Tecnocasa"
 
-# Una pagina per provincia (Tecnocasa non ha ?page=)
 URLS = [
     (f"https://www.tecnocasa.it/annunci/immobili/toscana/{prov}.html",
      prov.capitalize().replace("-", "-"))
@@ -77,64 +67,137 @@ def _parse_prezzo(testo: str):
         return None
 
 
-def parse_pagina(html: str, provincia_hint: str) -> list:
+def _make_soup(html: str):
+    """
+    Prova lxml prima (più tollerante a HTML malformato), poi html.parser.
+    Ritorna (soup, parser_usato).
+    """
     try:
         from bs4 import BeautifulSoup
     except ImportError:
+        return None, "no-bs4"
+
+    try:
+        import lxml  # noqa: F401
+        return BeautifulSoup(html, "lxml"), "lxml"
+    except Exception:
+        return BeautifulSoup(html, "html.parser"), "html.parser"
+
+
+def _print_debug(html: str, soup) -> None:
+    """Diagnostica per capire perché il parser non trova card."""
+    print(f"[DEBUG-TECNO] HTML len: {len(html)}")
+    print(f"[DEBUG-TECNO] 'estate-card' nel raw HTML: {html.count('estate-card')}")
+    print(f"[DEBUG-TECNO] 'estate-card-box-data' nel raw HTML: {html.count('estate-card-box-data')}")
+    print(f"[DEBUG-TECNO] 'estate-card-current-price' nel raw HTML: {html.count('estate-card-current-price')}")
+    if soup is None:
+        print("[DEBUG-TECNO] BeautifulSoup non disponibile")
+        return
+    print(f"[DEBUG-TECNO] BS4 found .estate-card:                {len(soup.select('.estate-card'))}")
+    print(f"[DEBUG-TECNO] BS4 found .estate-card-box-data:       {len(soup.select('.estate-card-box-data'))}")
+    print(f"[DEBUG-TECNO] BS4 found [class*='estate-card']:       {len(soup.select('[class*=estate-card]'))}")
+    print(f"[DEBUG-TECNO] BS4 find_all class~='estate-card':     "
+          f"{len(soup.find_all(class_=lambda c: c and 'estate-card' in (c if isinstance(c, str) else ' '.join(c))))}")
+
+
+def parse_pagina(html: str, provincia_hint: str) -> list:
+    soup, parser_used = _make_soup(html)
+    if soup is None:
         log("BeautifulSoup mancante", prefix=PREFIX)
         return []
 
-    # Forziamo html.parser (no lxml/html5lib) per evitare differenze di parsing
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Debug: ci sono effettivamente .estate-card nel markup?
-    n_card_raw = len(soup.select(".estate-card"))
-    n_box_raw  = len(soup.select(".estate-card-box-data"))
-    log(f"DEBUG html_len={len(html)} estate-card={n_card_raw} "
-        f"box-data={n_box_raw}", prefix=PREFIX)
+    _print_debug(html, soup)
+    print(f"[DEBUG-TECNO] Parser BS4 in uso: {parser_used}")
 
     annunci = []
     seen_urls = set()
 
-    # Strategia 1: trova ogni .estate-card-box-data e risali al parent card.
-    # Il testo del box è univoco per ogni annuncio.
+    # ── Strategia 1: anchor inversa via .estate-card-box-data ────────────
     boxes = soup.select(".estate-card-box-data")
-    for box in boxes:
-        # Risali al primo parent che contiene "estate-card" tra le sue classi
-        card = box.find_parent(
-            lambda tag: tag.name in ("div", "article", "li", "section")
-                        and tag.get("class")
-                        and any("estate-card" in c for c in tag.get("class", []))
-        )
-        if card is None:
-            card = box.parent  # fallback: usa il parent immediato
+    if boxes:
+        print(f"[DEBUG-TECNO] Strategia 1 (.estate-card-box-data): {len(boxes)} boxes")
+        for box in boxes:
+            card = box.find_parent(
+                lambda tag: tag.name in ("div", "article", "li", "section")
+                            and tag.get("class")
+                            and any("estate-card" in c for c in tag.get("class", []))
+            ) or box.parent
+            rec = _parse_card(card, box, provincia_hint)
+            if rec and rec["url"] not in seen_urls:
+                seen_urls.add(rec["url"])
+                annunci.append(rec)
+        if annunci:
+            print(f"[DEBUG-TECNO] ✓ Strategia 1 OK — {len(annunci)} card")
+            return annunci
 
-        rec = _parse_card(card, box, provincia_hint)
-        if rec and rec["url"] not in seen_urls:
-            seen_urls.add(rec["url"])
-            annunci.append(rec)
-
-    # Strategia 2 di fallback: se nessun box-data trovato (rare site change),
-    # prova le card "classiche".
-    if not annunci:
-        for card in soup.select(".estate-card, [class*='estate-card']"):
+    # ── Strategia 2: .estate-card diretto ────────────────────────────────
+    cards = soup.select(".estate-card")
+    if cards:
+        print(f"[DEBUG-TECNO] Strategia 2 (.estate-card): {len(cards)} card")
+        for card in cards:
             box = card.select_one(".estate-card-box-data") or card
             rec = _parse_card(card, box, provincia_hint)
             if rec and rec["url"] not in seen_urls:
                 seen_urls.add(rec["url"])
                 annunci.append(rec)
+        if annunci:
+            print(f"[DEBUG-TECNO] ✓ Strategia 2 OK — {len(annunci)} card")
+            return annunci
 
-    log(f"  Card parsate: {len(annunci)}", prefix=PREFIX)
+    # ── Strategia 3: attribute substring [class*="estate-card"] ──────────
+    cards = soup.select('[class*="estate-card"]')
+    if cards:
+        print(f"[DEBUG-TECNO] Strategia 3 ([class*=estate-card]): {len(cards)} match")
+        for card in cards:
+            box = card.select_one(".estate-card-box-data") or card
+            rec = _parse_card(card, box, provincia_hint)
+            if rec and rec["url"] not in seen_urls and rec.get("titolo"):
+                seen_urls.add(rec["url"])
+                annunci.append(rec)
+        if annunci:
+            print(f"[DEBUG-TECNO] ✓ Strategia 3 OK — {len(annunci)} card")
+            return annunci
+
+    # ── Strategia 4: regex bruta sull'HTML grezzo ────────────────────────
+    # Cerca blocchi che contengono "in vendita" e un prezzo, accomunati.
+    print("[DEBUG-TECNO] Strategie BS4 fallite — fallback regex bruta")
+    for m in re.finditer(
+        r"€\s*[\d\.]+[^€]{10,400}?(?:locali|Mq|bagn)",
+        html, re.IGNORECASE | re.DOTALL,
+    ):
+        text = re.sub(r"<[^>]+>", " ", m.group(0))
+        text = re.sub(r"\s+", " ", text).strip()
+        if len(text) < 30:
+            continue
+        prezzo = _parse_prezzo(text)
+        m_t = _RE_TIPO.search(text)
+        tipo = m_t.group(1).strip().capitalize() if m_t else "Appartamento"
+        indirizzo = m_t.group(2).strip()[:120] if m_t else text[:120]
+        url_fake = f"https://www.tecnocasa.it/__nolink__/{abs(hash(text))}"
+        if url_fake in seen_urls:
+            continue
+        seen_urls.add(url_fake)
+        annunci.append({
+            "url": url_fake,
+            "titolo": f"{tipo} in vendita — {indirizzo}",
+            "prezzo": prezzo,
+            "mq": (int(_RE_MQ.search(text).group(1)) if _RE_MQ.search(text) else None),
+            "camere": (int(_RE_LOCALI.search(text).group(1)) if _RE_LOCALI.search(text) else None),
+            "tipo": tipo,
+            "inserzionista": "Tecnocasa",
+            "foto_url": None,
+            "provincia_hint": provincia_hint,
+        })
+    print(f"[DEBUG-TECNO] Strategia 4 (regex bruta): {len(annunci)} match")
     return annunci
 
 
 def _parse_card(card, box, provincia_hint: str):
-    """Estrae i dati da una singola card. card e box possono essere lo stesso elemento."""
     if card is None:
         return None
     box_text = box.get_text(" ", strip=True) if box is not None else card.get_text(" ", strip=True)
 
-    # ── URL: primo <a href> non vuoto ────────────────────────────
+    # URL
     href = None
     for a in card.find_all("a", href=True):
         h = a["href"].strip()
@@ -143,44 +206,37 @@ def _parse_card(card, box, provincia_hint: str):
         href = h
         break
     if not href:
-        # Genera URL deterministico se non c'è link diretto
-        # (usa l'hash del box_text per stabile dedup)
         href = f"https://www.tecnocasa.it/__nolink__/{abs(hash(box_text))}"
     if href.startswith("/"):
         href = "https://www.tecnocasa.it" + href
 
-    # ── Prezzo ───────────────────────────────────────────────────
+    # Prezzo
     prezzo_el = (card.select_one(".estate-card-current-price")
                  or card.select_one(".estate-card-price"))
     prezzo = _parse_prezzo(prezzo_el.get_text() if prezzo_el else box_text)
 
-    # ── Tipo + indirizzo ─────────────────────────────────────────
+    # Tipo + indirizzo
     tipo = None
     indirizzo_titolo = None
     m_t = _RE_TIPO.search(box_text)
     if m_t:
         tipo = m_t.group(1).strip().capitalize()
-        # Pulisce: "Livorno, Via Dell' Oriolino 3 locali 60 Mq 1 bagno"
-        # → "Livorno, Via Dell' Oriolino"  (stop alla prima occorrenza " N locali|Mq|bagn")
         rest = m_t.group(2).strip()
         cut = re.search(r"\s+\d+\s*(locali|Mq|bagn)", rest)
         if cut:
             rest = rest[:cut.start()].strip()
         indirizzo_titolo = rest
 
-    # ── Locali / Mq / Bagni ──────────────────────────────────────
     m_loc = _RE_LOCALI.search(box_text)
     camere = int(m_loc.group(1)) if m_loc else None
     m_mq = _RE_MQ.search(box_text)
     mq = int(m_mq.group(1)) if m_mq else None
 
-    # ── Titolo ───────────────────────────────────────────────────
     if tipo and indirizzo_titolo:
         titolo = f"{tipo} in vendita — {indirizzo_titolo}"
     else:
         titolo = box_text[:160]
 
-    # ── Foto ─────────────────────────────────────────────────────
     img = card.select_one("img")
     foto = (img.get("src") or img.get("data-src")) if img else None
 
@@ -206,12 +262,12 @@ def scrapa_tecnocasa() -> int:
         try:
             html = fetch_html(url)
             ann = parse_pagina(html, provincia)
-            log(f"  Trovati: {len(ann)} annunci ({provincia})", prefix=PREFIX)
+            log(f"  → {len(ann)} annunci ({provincia})", prefix=PREFIX)
             tutti.extend(ann)
         except Exception as e:
             log(f"  Errore: {e} — continuo", prefix=PREFIX)
         if i < len(URLS) - 1:
-            pause_inter_provincia()
+            pause_inter_provincia(15, 25)
     log(f"Totale raccolti: {len(tutti)}", prefix=PREFIX)
     nuovi = salva_annunci_db(tutti, DB_PATH, PORTALE)
     log(f"Nuovi inseriti: {nuovi}", prefix=PREFIX)
