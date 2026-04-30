@@ -42,6 +42,17 @@ HEADERS_CHROME = {
     "Sec-Fetch-User": "?1",
 }
 
+# Tutte le 10 province toscane (slug compatibile con i portali)
+PROVINCE_TOSCANA = [
+    "livorno", "pisa", "firenze", "siena", "arezzo",
+    "lucca", "grosseto", "pistoia", "prato", "massa-carrara",
+]
+
+
+def pause_inter_provincia(min_s: float = 10.0, max_s: float = 15.0):
+    """Pausa più lunga tra una provincia e l'altra per non triggerare rate-limit."""
+    time.sleep(random.uniform(min_s, max_s))
+
 PAROLE_AGENZIA = [
     "agenzia", "immobiliare", "srl", "s.r.l", "snc", "sas", "spa",
     "studio", "group", "real estate", "property", "invest",
@@ -52,16 +63,27 @@ PAROLE_AGENZIA = [
 ]
 
 ZONE_KEYWORDS = {
+    # Provincia di Livorno (zone HouseRadar storiche)
     "Livorno Città":      ["livorno"],
     "Costa Livornese":    ["cecina", "rosignano", "castiglioncello", "vada", "san vincenzo", "bibbona"],
     "Val di Cornia":      ["piombino", "campiglia", "suvereto", "sassetta"],
     "Isola d'Elba":       ["elba", "portoferraio", "capoliveri", "rio marina", "marciana", "porto azzurro"],
     "Hinterland Livorno": ["collesalvetti", "fauglia"],
+    # Provincia di Pisa
     "Pisa Città":         ["pisa", "san giuliano"],
     "Valdera":            ["pontedera", "calcinaia", "ponsacco", "lari", "casciana", "peccioli", "lajatico"],
     "Valdicecina":        ["volterra", "montecatini val di cecina", "pomarance"],
     "Litorale Pisano":    ["marina di pisa", "tirrenia", "calambrone"],
     "Valdarno Pisano":    ["san miniato", "santa croce", "castelfranco di sotto", "montopoli", "fucecchio"],
+    # Altre province toscane (zona = "<Provincia> Provincia")
+    "Firenze Provincia":       ["firenze", "scandicci", "sesto fiorentino", "campi bisenzio", "bagno a ripoli", "fiesole", "empoli"],
+    "Siena Provincia":         ["siena", "poggibonsi", "colle val d'elsa", "montepulciano", "san gimignano", "chianciano"],
+    "Arezzo Provincia":        ["arezzo", "cortona", "sansepolcro", "bibbiena", "castiglion fiorentino"],
+    "Lucca Provincia":         ["lucca", "viareggio", "capannori", "altopascio", "pietrasanta", "forte dei marmi"],
+    "Grosseto Provincia":      ["grosseto", "follonica", "orbetello", "monte argentario", "castiglione della pescaia"],
+    "Pistoia Provincia":       ["pistoia", "montecatini terme", "pescia", "monsummano"],
+    "Prato Provincia":         ["prato", "vaiano", "carmignano", "poggio a caiano"],
+    "Massa-Carrara Provincia": ["massa", "carrara", "aulla", "fivizzano", "pontremoli"],
 }
 
 

@@ -21,42 +21,24 @@ from datetime import datetime
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "backend", "propagnent.db")
 
 # Parametri per le chiamate all'API interna di Subito.it (Hades)
-# r = region (9 = Toscana), ci = city_id (Livorno=4, Pisa=7)
+# r = region (9 = Toscana). NON filtriamo per city_id → tutta la Toscana.
 # advt=0 privati, advt=1 agenzie
+# La regione 9 (Toscana) include tutte le 10 province.
+# determina_zona() classifica poi ogni annuncio nella zona corretta dal nome città.
 RICERCHE = [
-    {
-        "label": "Livorno privati",
-        "provincia": "Livorno",
-        "city_id": "4",
-        "advt": "0",
-    },
-    {
-        "label": "Pisa privati",
-        "provincia": "Pisa",
-        "city_id": "7",
-        "advt": "0",
-    },
-    {
-        "label": "Livorno agenzie",
-        "provincia": "Livorno",
-        "city_id": "4",
-        "advt": "1",
-    },
-    {
-        "label": "Pisa agenzie",
-        "provincia": "Pisa",
-        "city_id": "7",
-        "advt": "1",
-    },
+    {"label": "Toscana privati", "provincia": "Toscana", "advt": "0"},
+    {"label": "Toscana agenzie", "provincia": "Toscana", "advt": "1"},
 ]
 
 # URL base dell'API Hades di Subito.it
 # c=6 = immobili (real estate), r=9 = Toscana, t=s = vendita
+# La paginazione si fa con &start=N (N=0,100,200,...) — &lim è il page size.
 HADES_BASE = (
     "https://hades.subito.it/v1/search/items"
     "?c=6&r=9&t=s"
-    "&lim=100&start=0"
+    "&lim=100"
 )
+SUBITO_MAX_PAGES = 30  # 100 ann/pagina × 30 = 3000 ann/categoria max
 
 
 def determina_zona(citta: str, provincia: str) -> str:
@@ -375,44 +357,47 @@ def scrapa_subito() -> int:
     for ricerca in RICERCHE:
         label = ricerca["label"]
         provincia = ricerca["provincia"]
-        city_id = ricerca["city_id"]
         advt = ricerca["advt"]
 
-        api_url = f"{HADES_BASE}&ci={city_id}&advt={advt}"
-        print(f"Chiamata API: {label}")
-        print(f"  URL: {api_url}")
+        print(f"\n>>> {label} — paginazione fino a {SUBITO_MAX_PAGES} pagine")
+        for page_idx in range(SUBITO_MAX_PAGES):
+            start = page_idx * 100
+            api_url = f"{HADES_BASE}&advt={advt}&start={start}"
+            print(f"  start={start}: {api_url}")
 
-        try:
-            resp = session.get(
-                api_url,
-                headers={
-                    "Accept": "application/json, text/plain, */*",
-                    "Referer": "https://www.subito.it/annunci-toscana/vendita/immobili/",
-                    "Origin": "https://www.subito.it",
-                    "Sec-Fetch-Site": "same-site",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Dest": "empty",
-                },
-                timeout=20,
-            )
-            print(f"  Status: {resp.status_code}")
+            try:
+                resp = session.get(
+                    api_url,
+                    headers={
+                        "Accept": "application/json, text/plain, */*",
+                        "Referer": "https://www.subito.it/annunci-toscana/vendita/immobili/",
+                        "Origin": "https://www.subito.it",
+                        "Sec-Fetch-Site": "same-site",
+                        "Sec-Fetch-Mode": "cors",
+                        "Sec-Fetch-Dest": "empty",
+                    },
+                    timeout=20,
+                )
+                print(f"    Status: {resp.status_code}")
 
-            if resp.status_code == 200:
-                data = resp.json()
-                ads = data.get("ads", [])
-                print(f"  Risposta OK: {len(ads)} ads")
-                annunci = parse_ads_json(data, provincia)
-                print(f"  Annunci validi: {len(annunci)}")
-                tutti_raw.extend(annunci)
-            else:
-                print(f"  Errore HTTP {resp.status_code} — risposta: {resp.text[:200]}")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    ads = data.get("ads", [])
+                    print(f"    → {len(ads)} ads")
+                    if not ads:
+                        print("    Pagina vuota — stop paginazione")
+                        break
+                    annunci = parse_ads_json(data, provincia)
+                    tutti_raw.extend(annunci)
+                else:
+                    print(f"    Errore HTTP {resp.status_code} — stop paginazione")
+                    break
 
-        except Exception as e:
-            print(f"  Errore richiesta: {e}")
+            except Exception as e:
+                print(f"    Errore richiesta: {e} — stop paginazione")
+                break
 
-        delay = random.uniform(3, 6)
-        print(f"  Pausa {delay:.1f}s...\n")
-        time.sleep(delay)
+            time.sleep(random.uniform(3, 7))
 
     print(f"Annunci Subito.it raccolti: {len(tutti_raw)}")
     nuovi = salva_annunci(tutti_raw)

@@ -558,6 +558,21 @@ input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
       <button class="btn-search" onclick="render()">Cerca</button>
     </div>
     <div class="filter-bar">
+      <span class="fb-label">Provincia:</span>
+      <select id="f-provincia" class="fb-select" onchange="onChangeProvincia()">
+        <option value="">Tutte le province</option>
+        <option value="livorno">Livorno</option>
+        <option value="pisa">Pisa</option>
+        <option value="firenze">Firenze</option>
+        <option value="siena">Siena</option>
+        <option value="arezzo">Arezzo</option>
+        <option value="lucca">Lucca</option>
+        <option value="grosseto">Grosseto</option>
+        <option value="pistoia">Pistoia</option>
+        <option value="prato">Prato</option>
+        <option value="massa-carrara">Massa-Carrara</option>
+      </select>
+      <div class="fb-sep"></div>
       <span class="fb-label">Mostra:</span>
       <span class="fb-chip chip-privato on" id="f-priv" onclick="toggleF('priv')">&#10004; Privati</span>
       <span class="fb-chip chip-noescl on" id="f-noescl" onclick="toggleF('noescl')">&#9888; Non in esclusiva</span>
@@ -703,6 +718,7 @@ let allData = [];
 let showPriv = true, showNoescl = true, showAg = false;
 let showSubito = true, showIdealista = true, showImm = true;
 let showCasa = true, showWiki = true, showTec = true;
+let provinciaFilter = "";  // "" = tutte le province
 let omiData = {};  // {zona: {min, max, anno, semestre}}
 
 /* ========== GALLERIA FOTO ========== */
@@ -872,6 +888,12 @@ function toggleF(f) {
   render();
 }
 
+function onChangeProvincia() {
+  const el = document.getElementById('f-provincia');
+  provinciaFilter = el ? el.value : "";
+  render();
+}
+
 function togglePortale(p) {
   if (p === 'sub')  { showSubito    = !showSubito;    document.getElementById('f-sub').classList.toggle('on', showSubito); }
   if (p === 'ide')  { showIdealista = !showIdealista; document.getElementById('f-ide').classList.toggle('on', showIdealista); }
@@ -899,6 +921,12 @@ function render() {
     if (d.portale === 'casa.it'        && !showCasa)      return false;
     if (d.portale === 'wikicasa.it'    && !showWiki)      return false;
     if (d.portale === 'tecnocasa.it'   && !showTec)       return false;
+    if (provinciaFilter) {
+      const pf = provinciaFilter.toLowerCase();
+      const blob = ((d.zona || "") + " " + (d.indirizzo || "")).toLowerCase();
+      // Match il nome provincia o il pattern "<Provincia> Provincia"
+      if (!blob.includes(pf) && !blob.includes(pf.replace("-", " "))) return false;
+    }
     if (tipo && d.tipo !== tipo) return false;
     if (zona) {
       const zL = zona.toLowerCase();

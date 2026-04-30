@@ -25,7 +25,8 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _scraper_common import (
-    HEADERS_CHROME, log, random_pause,
+    HEADERS_CHROME, log, random_pause, pause_inter_provincia,
+    PROVINCE_TOSCANA,
     salva_annunci_db,
 )
 
@@ -33,14 +34,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "..", "backend", "propagnent.db")
 PORTALE = "casa.it"
 PREFIX  = "Casa"
-
-URLS = []
-for prov in ("livorno-provincia", "pisa-provincia"):
-    for page in (1, 2, 3):
-        URLS.append((
-            f"https://www.casa.it/vendita/residenziale/{prov}/?page={page}",
-            "Livorno" if "livorno" in prov else "Pisa",
-        ))
+MAX_PAGES = 50  # esce prima se trova pagina vuota
 
 
 # ─── Fetch (curl_cffi → Playwright fallback) ────────────────────────────────
@@ -198,18 +192,29 @@ def parse_pagina(html: str, provincia_hint: str) -> list:
 
 def scrapa_casa() -> int:
     log(f"Avvio scraping {PORTALE} — {datetime.now().strftime('%d/%m/%Y %H:%M')}", prefix=PREFIX)
+    log(f"Province: {len(PROVINCE_TOSCANA)}", prefix=PREFIX)
     tutti = []
-    for url, provincia in URLS:
-        log(f"Pagina: {url}", prefix=PREFIX)
-        try:
-            html = fetch_html(url)
-            ann = parse_pagina(html, provincia)
-            log(f"  Trovati: {len(ann)} annunci", prefix=PREFIX)
-            tutti.extend(ann)
-        except Exception as e:
-            log(f"  Errore: {e}", prefix=PREFIX)
-        random_pause(3, 7)
-    log(f"Totale raccolti: {len(tutti)}", prefix=PREFIX)
+    for i, prov in enumerate(PROVINCE_TOSCANA):
+        prov_label = prov.capitalize().replace("-", "-")
+        log(f"\n[{i+1}/{len(PROVINCE_TOSCANA)}] Provincia: {prov_label}", prefix=PREFIX)
+        for page in range(1, MAX_PAGES + 1):
+            url = f"https://www.casa.it/vendita/residenziale/{prov}-provincia/?page={page}"
+            log(f"  Pagina {page}: {url}", prefix=PREFIX)
+            try:
+                html = fetch_html(url)
+                ann = parse_pagina(html, prov_label)
+                log(f"    → {len(ann)} annunci", prefix=PREFIX)
+                if not ann:
+                    log("    Pagina vuota — stop paginazione", prefix=PREFIX)
+                    break
+                tutti.extend(ann)
+            except Exception as e:
+                log(f"    Errore: {e} — passo alla prossima", prefix=PREFIX)
+                break
+            random_pause(3, 7)
+        if i < len(PROVINCE_TOSCANA) - 1:
+            pause_inter_provincia()
+    log(f"\nTotale raccolti: {len(tutti)}", prefix=PREFIX)
     nuovi = salva_annunci_db(tutti, DB_PATH, PORTALE)
     log(f"Nuovi inseriti: {nuovi}", prefix=PREFIX)
     return nuovi

@@ -17,15 +17,20 @@ from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "backend", "propagnent.db")
 
+# Tutte le 10 province toscane × paginazione dinamica fino a MAX_PAGES.
+# Con esegui_scraper esce dal loop pagine appena trova una pagina vuota.
+PROVINCE_TOSCANA = [
+    "livorno", "pisa", "firenze", "siena", "arezzo",
+    "lucca", "grosseto", "pistoia", "prato", "massa-carrara",
+]
+MAX_PAGES = 50
+
+# Per retrocompatibilità: la lista viene ricalcolata dinamicamente in esegui_scraper.
 URLS_DA_SCRAPARE = [
-    # Livorno provincia — tutti gli immobili
-    ("https://www.idealista.it/vendita-case/livorno-provincia/?num_page=1", "Livorno"),
-    ("https://www.idealista.it/vendita-case/livorno-provincia/?num_page=2", "Livorno"),
-    ("https://www.idealista.it/vendita-case/livorno-provincia/?num_page=3", "Livorno"),
-    # Pisa provincia — tutti gli immobili
-    ("https://www.idealista.it/vendita-case/pisa-provincia/?num_page=1", "Pisa"),
-    ("https://www.idealista.it/vendita-case/pisa-provincia/?num_page=2", "Pisa"),
-    ("https://www.idealista.it/vendita-case/pisa-provincia/?num_page=3", "Pisa"),
+    (f"https://www.idealista.it/vendita-case/{prov}-provincia/?num_page={page}",
+     prov.capitalize().replace("-", "-"))
+    for prov in PROVINCE_TOSCANA
+    for page in range(1, 4)  # solo per riferimento — esegui_scraper itera in modo dinamico
 ]
 
 SESSION_HEADERS = [
@@ -334,30 +339,40 @@ def salva_nel_db(annunci_raw: list) -> int:
 def esegui_scraper() -> int:
     print(f"\n{'='*50}")
     print(f"Avvio scraping Idealista — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    print(f"Zone: Livorno e Pisa (Toscana)")
+    print(f"Province toscane: {len(PROVINCE_TOSCANA)} (max {MAX_PAGES} pag/cad)")
     print(f"{'='*50}\n")
 
     tutti = []
     opener = crea_sessione()
     time.sleep(2)
 
-    for url, provincia in URLS_DA_SCRAPARE:
-        print(f"Scraping: {url}")
-        try:
-            html = fetch_html(opener, url)
-            annunci = parse_pagina(html, provincia)
-            print(f"  Trovati: {len(annunci)} annunci")
-            tutti.extend(annunci)
-        except urllib.error.HTTPError as e:
-            print(f"  HTTP {e.code}: {e.reason}")
-        except Exception as e:
-            print(f"  Errore: {e}")
+    for i, prov in enumerate(PROVINCE_TOSCANA):
+        prov_label = prov.capitalize().replace("-", "-")
+        print(f"\n>>> [{i+1}/{len(PROVINCE_TOSCANA)}] Provincia: {prov_label}")
+        for page in range(1, MAX_PAGES + 1):
+            url = f"https://www.idealista.it/vendita-case/{prov}-provincia/?num_page={page}"
+            print(f"  Pagina {page}: {url}")
+            try:
+                html = fetch_html(opener, url)
+                annunci = parse_pagina(html, prov_label)
+                print(f"    → {len(annunci)} annunci")
+                if not annunci:
+                    print("    Pagina vuota — stop paginazione")
+                    break
+                tutti.extend(annunci)
+            except urllib.error.HTTPError as e:
+                print(f"    HTTP {e.code}: {e.reason} — passo a prossima provincia")
+                break
+            except Exception as e:
+                print(f"    Errore: {e} — passo a prossima provincia")
+                break
+            time.sleep(random.uniform(3, 7))
+        if i < len(PROVINCE_TOSCANA) - 1:
+            inter = random.uniform(10, 15)
+            print(f"  Pausa inter-provincia: {inter:.1f}s")
+            time.sleep(inter)
 
-        delay = random.uniform(5, 10)
-        print(f"  Attesa {delay:.1f}s...\n")
-        time.sleep(delay)
-
-    print(f"Totale annunci raccolti: {len(tutti)}")
+    print(f"\nTotale annunci raccolti: {len(tutti)}")
     nuovi = salva_nel_db(tutti)
     print(f"Nuovi inseriti nel DB: {nuovi}")
     print(f"Scraping completato — {datetime.now().strftime('%H:%M:%S')}\n")
