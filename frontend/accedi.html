@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accedi — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:#f5f5f3;color:#1a1a1a;line-height:1.6;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:24px;color:#185FA5;margin-bottom:32px}
+.brand svg{width:42px;height:42px}
+.card{
+  max-width:520px;width:100%;background:#fff;border-radius:18px;
+  padding:48px 40px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.08);
+  border:1px solid #D3D1C7;
+}
+.icon{font-size:54px;margin-bottom:18px}
+h1{font-size:30px;font-weight:800;margin-bottom:14px;letter-spacing:-.01em}
+p{color:#666;font-size:16px;margin-bottom:14px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:13px 28px;border-radius:10px;font-weight:600;font-size:15px;
+  background:#185FA5;color:#fff;text-decoration:none;margin-top:18px;transition:all .2s
+}
+.btn:hover{background:#0F4275;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+a.back{color:#185FA5;text-decoration:none;font-size:14px;font-weight:500;margin-top:24px;display:inline-block}
+a.back:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<a href="/" class="brand">
+  <svg viewBox="0 0 100 100" fill="none">
+    <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+    <circle cx="73" cy="73" r="14" fill="#5DCAA5"/>
+    <circle cx="73" cy="73" r="6" fill="#fff"/>
+  </svg>
+  HouseRadar
+</a>
+
+<div class="card">
+  <div class="icon">🔐</div>
+  <h1>Login in arrivo</h1>
+  <p>Il login arriverà nello Sprint 2 insieme alla registrazione e ai piani di abbonamento.</p>
+  <p>Per ora la dashboard demo è accessibile pubblicamente.</p>
+  <a href="/app" class="btn">Vedi la dashboard demo</a>
+  <br><a href="/" class="back">← Torna alla home</a>
+</div>
+
+</body>
+</html>

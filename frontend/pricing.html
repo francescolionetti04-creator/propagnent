@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Prezzi — HouseRadar</title>
+<meta name="description" content="HouseRadar: 197€/mese per agenti indipendenti, 397€/mese per agenzie. 14 giorni gratis su tutti i piani.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+:root{
+  --blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;
+  --green:#5DCAA5;--green-d:#1D9E75;--green-l:#E1F5EE;
+  --bg:#fff;--off:#f5f5f3;--dark:#1a1a1a;--gray:#666;
+  --border:#D3D1C7;--shadow:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:var(--off);color:var(--dark);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none}
+.container{max-width:1180px;margin:0 auto;padding:0 24px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 24px;border-radius:10px;font-weight:600;font-size:15px;
+  transition:all .18s ease;cursor:pointer;width:100%}
+.btn-pri{background:var(--blue);color:#fff}
+.btn-pri:hover{background:var(--blue-d);transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn-out{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-out:hover{background:var(--blue-l)}
+
+/* Navbar identica a homepage */
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);
+  backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--border)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:72px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;color:var(--blue)}
+.brand svg{width:34px;height:34px}
+.nav-menu{display:flex;gap:32px;align-items:center}
+.nav-menu a{font-size:15px;color:var(--dark);font-weight:500;transition:color .15s}
+.nav-menu a:hover,.nav-menu a.active{color:var(--blue)}
+.nav-cta{display:flex;gap:10px;align-items:center}
+.nav-cta .btn{width:auto;padding:11px 22px}
+.hamburger{display:none;background:none;border:none;font-size:24px;color:var(--dark)}
+
+/* Header */
+.head{padding:80px 0 40px;text-align:center}
+.head h1{font-size:54px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px;line-height:1.1}
+.head p{font-size:18px;color:var(--gray);max-width:560px;margin:0 auto}
+
+/* Toggle */
+.toggle{display:flex;justify-content:center;margin:36px 0 12px;position:relative}
+.tg-pill{
+  display:inline-flex;background:#fff;border:1px solid var(--border);
+  border-radius:999px;padding:5px;position:relative;box-shadow:var(--shadow);
+}
+.tg-pill button{
+  padding:10px 26px;border-radius:999px;font-size:14px;font-weight:600;
+  background:transparent;color:var(--gray);transition:all .2s;position:relative;z-index:2;
+}
+.tg-pill button.on{background:var(--blue);color:#fff}
+.tg-save{
+  display:inline-block;background:var(--green);color:#fff;font-size:11px;
+  font-weight:700;padding:3px 9px;border-radius:6px;margin-left:6px;letter-spacing:.04em;
+}
+
+/* Tiers */
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin:40px 0 64px}
+.tier{
+  background:#fff;border:1px solid var(--border);border-radius:18px;padding:36px 30px;
+  display:flex;flex-direction:column;position:relative;transition:transform .25s;
+}
+.tier:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.tier.featured{border:2px solid var(--blue);box-shadow:var(--shadow-lg)}
+.tier-badge{
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  background:var(--blue);color:#fff;padding:5px 16px;font-size:12px;font-weight:700;
+  letter-spacing:.04em;border-radius:999px;
+}
+.tier h3{font-size:14px;font-weight:700;letter-spacing:.1em;color:var(--gray);
+  text-transform:uppercase;margin-bottom:10px}
+.tier .sub{font-size:14.5px;color:var(--gray);margin-bottom:24px;min-height:42px}
+.tier .price{font-size:48px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.tier .price .cur{font-size:24px;font-weight:600;vertical-align:super;margin-right:2px;color:var(--gray)}
+.tier .per{font-size:15px;color:var(--gray);margin:6px 0 6px}
+.tier .eq{font-size:13px;color:var(--green-d);font-weight:600;margin-bottom:24px;min-height:18px}
+.tier ul{list-style:none;margin-bottom:28px;flex:1}
+.tier li{padding:9px 0;font-size:14.5px;display:flex;gap:10px;align-items:flex-start;
+  border-bottom:1px solid #f0f0eb}
+.tier li:last-child{border-bottom:none}
+.tier li::before{
+  content:'';flex-shrink:0;width:18px;height:18px;background:var(--green);
+  border-radius:50%;margin-top:3px;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>");
+  background-size:14px;background-position:center;background-repeat:no-repeat;
+}
+
+.bot-note{
+  text-align:center;background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:22px;font-size:14.5px;color:var(--gray);max-width:760px;margin:0 auto;
+}
+.bot-note strong{color:var(--dark)}
+
+/* Footer */
+footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
+.foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:36px;margin-bottom:36px}
+.foot-grid h5{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--green);margin-bottom:14px;text-transform:uppercase}
+.foot-grid a{color:rgba(255,255,255,.78);font-size:14px;display:block;padding:5px 0}
+.foot-grid a:hover{color:#fff}
+.foot-grid p{color:rgba(255,255,255,.78);font-size:14px;margin:8px 0}
+.foot-bot{border-top:1px solid rgba(255,255,255,.1);padding-top:22px;text-align:center;
+  font-size:13px;color:rgba(255,255,255,.6)}
+
+@media (max-width:1024px){.tiers{grid-template-columns:1fr;max-width:500px;margin:40px auto 64px}}
+@media (max-width:768px){
+  .nav-menu,.nav-cta{display:none}.hamburger{display:block}
+  .head{padding:50px 0 20px}.head h1{font-size:36px}.head p{font-size:16px}
+  .tier{padding:30px 24px}.tier .price{font-size:38px}
+  .foot-grid{grid-template-columns:1fr;gap:24px}
+  .container{padding:0 18px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-in">
+    <a href="/" class="brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+        <circle cx="73" cy="73" r="14" fill="#5DCAA5"/>
+        <circle cx="73" cy="73" r="6" fill="#fff"/>
+      </svg>
+      HouseRadar
+    </a>
+    <div class="nav-menu">
+      <a href="/">Home</a>
+      <a href="/#funzionalita">Funzionalità</a>
+      <a href="/pricing" class="active">Prezzi</a>
+      <a href="/#chi-siamo">Chi Siamo</a>
+      <a href="/#blog">Blog</a>
+    </div>
+    <div class="nav-cta">
+      <a href="/accedi" class="btn btn-out">Accedi</a>
+      <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis</a>
+    </div>
+    <button class="hamburger">☰</button>
+  </div>
+</nav>
+
+<section class="head">
+  <div class="container">
+    <h1>Un piano per ogni esigenza</h1>
+    <p>14 giorni gratis su tutti i piani. Nessuna carta richiesta.</p>
+    <div class="toggle">
+      <div class="tg-pill">
+        <button id="tgM" class="on" onclick="setBilling('m')">Mensile</button>
+        <button id="tgY"        onclick="setBilling('y')">Annuale <span class="tg-save">2 mesi gratis</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="tiers">
+
+      <!-- TIER 1: SOLO -->
+      <div class="tier">
+        <h3>Solo</h3>
+        <p class="sub">Per l'agente indipendente che vuole acquisire più mandati</p>
+        <div>
+          <span class="price"><span class="cur">€</span><span data-m="197" data-y="164" id="p-solo">197</span></span>
+          <span class="per">/mese</span>
+        </div>
+        <p class="eq" id="eq-solo">&nbsp;</p>
+        <ul>
+          <li>1 agente</li>
+          <li>2 città a scelta</li>
+          <li>Annunci illimitati da tutti i portali</li>
+          <li>Filtri privati e non in esclusiva</li>
+          <li>Report PDF di valutazione illimitati</li>
+          <li>Stime OMI Agenzia delle Entrate</li>
+          <li>Supporto via email</li>
+        </ul>
+        <a href="/signup?role=agente&plan=solo" class="btn btn-out">Inizia 14 giorni gratis</a>
+      </div>
+
+      <!-- TIER 2: AGENZIA (featured) -->
+      <div class="tier featured">
+        <span class="tier-badge">Più scelto</span>
+        <h3>Agenzia</h3>
+        <p class="sub">Per agenzie che vogliono dare il radar a tutto il team</p>
+        <div>
+          <span class="price"><span class="cur">€</span><span data-m="397" data-y="331" id="p-ag">397</span></span>
+          <span class="per">/mese</span>
+        </div>
+        <p class="eq" id="eq-ag">&nbsp;</p>
+        <ul>
+          <li>Fino a 5 agenti</li>
+          <li>Tutta la Toscana</li>
+          <li>Tutto del piano Solo</li>
+          <li>Dashboard agenzia con assegnazione lead</li>
+          <li>Logo agenzia sui report PDF</li>
+          <li>Export CSV/Excel</li>
+          <li>Supporto prioritario</li>
+        </ul>
+        <a href="/signup?role=agente&plan=agenzia" class="btn btn-pri">Inizia 14 giorni gratis</a>
+      </div>
+
+      <!-- TIER 3: SU MISURA -->
+      <div class="tier">
+        <h3>Su Misura</h3>
+        <p class="sub">Per franchising, reti di agenzie e progetti custom</p>
+        <div>
+          <span class="price" style="font-size:36px">Parliamone</span>
+        </div>
+        <p class="per">&nbsp;</p>
+        <p class="eq">&nbsp;</p>
+        <ul>
+          <li>Numero illimitato di agenti</li>
+          <li>Tutta Italia</li>
+          <li>Onboarding e training dedicato</li>
+          <li>Custom branding completo</li>
+          <li>API e integrazioni gestionali</li>
+          <li>Account manager dedicato</li>
+          <li>SLA contrattuale</li>
+        </ul>
+        <a href="mailto:info@houseradar.it" class="btn btn-out">Contattaci</a>
+      </div>
+
+    </div>
+
+    <p class="bot-note">
+      <strong>14 giorni di prova gratuita</strong> su tutti i piani · Disdici quando vuoi · Pagamento sicuro con Stripe
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="foot-grid">
+      <div>
+        <a href="/" class="brand" style="color:#fff;margin-bottom:14px">
+          <svg viewBox="0 0 100 100" fill="none">
+            <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#5DCAA5"/>
+            <circle cx="73" cy="73" r="14" fill="#fff"/>
+            <circle cx="73" cy="73" r="6" fill="#185FA5"/>
+          </svg>
+          HouseRadar
+        </a>
+        <p>Il radar delle acquisizioni immobiliari.</p>
+        <p><a href="mailto:info@houseradar.it">info@houseradar.it</a></p>
+      </div>
+      <div>
+        <h5>Sito</h5>
+        <a href="/">Home</a>
+        <a href="/#funzionalita">Funzionalità</a>
+        <a href="/pricing">Prezzi</a>
+      </div>
+      <div>
+        <h5>Legal</h5>
+        <a href="/termini">Termini</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/cookie">Cookie</a>
+      </div>
+    </div>
+    <div class="foot-bot">© 2026 HouseRadar · Made in Italy</div>
+  </div>
+</footer>
+
+<script>
+function setBilling(mode){
+  const tgM = document.getElementById('tgM'), tgY = document.getElementById('tgY');
+  tgM.classList.toggle('on', mode === 'm');
+  tgY.classList.toggle('on', mode === 'y');
+  ['p-solo','p-ag'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = mode === 'm' ? el.dataset.m : el.dataset.y;
+  });
+  document.getElementById('eq-solo').innerHTML = mode === 'y' ? '1.970€/anno · risparmi 394€' : '&nbsp;';
+  document.getElementById('eq-ag').innerHTML   = mode === 'y' ? '3.970€/anno · risparmi 794€' : '&nbsp;';
+}
+</script>
+</body>
+</html>

@@ -374,29 +374,52 @@ def debug_stats():
 # ── Serve frontend ──────────────────────────────────────────────────────────
 # IMPORTANTE: le route API vanno definite PRIMA del mount statico
 
-@app.get("/profilo")
-def profilo():
-    """Pagina pubblica del profilo agente — accessibile senza login."""
-    return FileResponse(
-        os.path.join(FRONTEND_DIR, "profilo.html"),
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
-    )
+_NO_CACHE = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+
+def _serve(html_file: str) -> FileResponse:
+    return FileResponse(os.path.join(FRONTEND_DIR, html_file), headers=_NO_CACHE)
 
 
 @app.get("/")
 def root():
-    return FileResponse(
-        os.path.join(FRONTEND_DIR, "index.html"),
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
-    )
+    """Homepage pubblica — landing page marketing."""
+    return _serve("index.html")
+
+
+@app.get("/pricing")
+def pricing():
+    """Pagina pubblica pricing."""
+    return _serve("pricing.html")
+
+
+@app.get("/app")
+def app_dashboard():
+    """Dashboard agenti (annunci + match + valutazione)."""
+    return _serve("app.html")
+
+
+@app.get("/signup")
+def signup():
+    """Placeholder registrazione (Sprint 2)."""
+    return _serve("signup.html")
+
+
+@app.get("/accedi")
+def accedi():
+    """Placeholder login (Sprint 2)."""
+    return _serve("accedi.html")
+
+
+@app.get("/profilo")
+def profilo():
+    """Pagina pubblica del profilo agente."""
+    return _serve("profilo.html")
+
 
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 

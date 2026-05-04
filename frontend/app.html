@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>HouseRadar — AI for Real Estate Agents</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23185FA5'/><path d='M16 5 L4 14 L4 28 L12 28 L12 20 L20 20 L20 28 L28 28 L28 14 Z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/><circle cx='24' cy='9' r='4' fill='%235DCAA5'/><circle cx='24' cy='9' r='2' fill='white'/></svg>">
+<style>
+/* ========== RESET & BASE ========== */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;background:#f5f5f3;min-height:100vh}
+.app{max-width:1100px;margin:0 auto;padding:1.5rem}
+
+/* ========== TOPBAR ========== */
+.topbar{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:#185FA5;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700}
+.logo-name{font-size:17px;font-weight:700;color:#1a1a1a}
+.logo-sub{font-size:11px;color:#888;margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.live-badge{display:flex;align-items:center;gap:6px;background:#E1F5EE;border:1px solid #5DCAA5;border-radius:20px;padding:5px 14px;font-size:12px;color:#0F6E56;font-weight:600;cursor:default;position:relative}
+.live-badge .live-tip{display:none;position:absolute;top:calc(100% + 8px);right:0;background:#1a1a1a;color:#fff;font-size:11px;font-weight:400;white-space:nowrap;padding:6px 10px;border-radius:7px;line-height:1.5;z-index:50;pointer-events:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.live-badge .live-tip::before{content:'';position:absolute;top:-5px;right:18px;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1a1a1a}
+.live-badge:hover .live-tip{display:block}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;animation:pulse-dot 1.5s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-refresh{padding:7px 16px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-refresh:hover{background:#0C447C}
+.btn-refresh:disabled{background:#888;cursor:not-allowed}
+
+/* ========== SEARCH PANEL ========== */
+.search-panel{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.search-row{display:flex;gap:8px;margin-bottom:.85rem}
+.search-row input{flex:1;padding:11px 16px;border:1px solid #d0d0cc;border-radius:8px;font-size:14px;outline:none;color:#1a1a1a;background:#fff}
+.search-row input:focus{border-color:#185FA5;box-shadow:0 0 0 3px #B5D4F420}
+.btn-search{padding:11px 22px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-search:hover{background:#0C447C}
+.filter-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fb-label{font-size:12px;color:#888;font-weight:600;white-space:nowrap}
+.fb-chip{padding:5px 13px;border-radius:20px;border:1px solid #d0d0cc;font-size:12px;cursor:pointer;background:#fff;color:#666;white-space:nowrap;transition:all .12s;user-select:none}
+.chip-privato.on{background:#E1F5EE;border-color:#1D9E75;color:#0F6E56;font-weight:600}
+.chip-noescl.on{background:#FAEEDA;border-color:#EF9F27;color:#633806;font-weight:600}
+.chip-agenzia.on{background:#E6F1FB;border-color:#378ADD;color:#0C447C;font-weight:600}
+.chip-subito.on    {background:#FEF0EC;border-color:#F4A47E;color:#C94D1A;font-weight:600}
+.chip-idealista.on {background:#F0EBF8;border-color:#B89DD6;color:#6B3FA0;font-weight:600}
+.chip-imm.on       {background:#E8F4FD;border-color:#7EC3E8;color:#0D5E8A;font-weight:600}
+.chip-casa.on      {background:#E6F8EE;border-color:#7DCB9E;color:#1D5E3A;font-weight:600}
+.chip-wiki.on      {background:#FEF7E0;border-color:#E6C757;color:#7A5C0E;font-weight:600}
+.chip-tec.on       {background:#FBEFE0;border-color:#F0A85B;color:#8C4A12;font-weight:600}
+.fb-sep{width:1px;height:20px;background:#e5e5e0;margin:0 4px}
+.fb-select{font-size:12px;padding:5px 10px;border:1px solid #d0d0cc;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer}
+
+/* ========== ALERT BANNER ========== */
+.alert-banner{background:#FAEEDA;border:1px solid #FAC775;border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;display:flex;align-items:flex-start;gap:10px}
+.alert-icon{font-size:18px;flex-shrink:0}
+.alert-text{font-size:13px;color:#633806;line-height:1.5}
+.alert-text strong{font-weight:700;color:#412402}
+
+/* ========== STATS ========== */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
+.stat{background:#fff;border:1px solid #e5e5e0;border-radius:10px;padding:.85rem 1rem}
+.stat-val{font-size:24px;font-weight:700}
+.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+.stat-sub{font-size:11px;margin-top:4px;font-weight:600}
+
+/* ========== RESULTS HEADER ========== */
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:8px}
+.results-title{font-size:14px;color:#888}
+.results-title span{font-weight:700;color:#1a1a1a}
+.legend{display:flex;gap:10px;font-size:12px;color:#888;align-items:center}
+.leg-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:3px;vertical-align:middle}
+
+/* ========== CARDS ========== */
+.cards{display:flex;flex-direction:column;gap:.85rem}
+.lcard{background:#fff;border-radius:12px;overflow:hidden;transition:box-shadow .15s}
+.lcard:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
+.lcard-priv{border:2px solid #5DCAA5}
+.lcard-noescl{border:2px solid #EF9F27}
+.lcard-agenzia{border:1px solid #e5e5e0}
+.lcard-inner{display:flex}
+.lcard-stripe{width:5px;flex-shrink:0}
+.lcard-body{flex:1;padding:1rem 1.2rem}
+
+/* ── Card cliccabile ── */
+.lcard{cursor:pointer}
+
+/* ── Galleria foto ── */
+.card-gallery{position:relative;height:190px;overflow:hidden;background:#e8e8e4;user-select:none}
+.gallery-track{display:flex;height:100%;transition:transform .28s ease}
+.gallery-slide{flex:0 0 100%;height:100%;overflow:hidden}
+.gallery-slide img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.gallery-overlay{position:absolute;bottom:9px;left:9px;display:flex;gap:5px;pointer-events:none;z-index:2}
+.cp-badge{background:rgba(0,0,0,.62);color:#fff;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+/* frecce navigazione */
+.gal-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;width:30px;height:30px;border-radius:50%;font-size:14px;line-height:1;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.gal-btn:hover{background:rgba(0,0,0,.7)}
+.gal-prev{left:8px}.gal-next{right:8px}
+/* pallini */
+.gallery-dots{position:absolute;bottom:8px;right:9px;display:flex;gap:4px;z-index:2}
+.gal-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;transition:background .15s}
+.gal-dot.active{background:#fff}
+/* placeholder senza foto */
+.card-no-photo{height:90px;background:#eeecea;display:flex;align-items:center;justify-content:center;font-size:28px;opacity:.35;pointer-events:none}
+
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:.65rem;flex-wrap:wrap}
+.card-addr{font-size:15px;font-weight:700;color:#1a1a1a;display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.3}
+.addr-badge{display:inline-flex;align-items:center;gap:3px;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap}
+.addr-ok{background:#E1F5EE;border:1px solid #5DCAA5;color:#0F6E56}
+.addr-est{background:#FAEEDA;border:1px solid #FAC775;color:#633806}
+.card-zona{font-size:12px;color:#888;margin-top:3px}
+.badges{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
+.b-priv{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
+.b-noescl{background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
+.b-new{background:#E6F1FB;color:#0C447C;border:1px solid #85B7EB}
+.b-hot{background:#FCEBEB;color:#A32D2D;border:1px solid #F09595}
+
+.specs{display:flex;border:1px solid #e5e5e0;border-radius:8px;overflow:hidden;margin:.65rem 0}
+.spec{flex:1;padding:7px 8px;text-align:center;border-right:1px solid #e5e5e0}
+.spec:last-child{border-right:none}
+.spec-v{font-size:13px;font-weight:700;color:#1a1a1a}
+.spec-l{font-size:10px;color:#888;margin-top:2px}
+
+.intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:.65rem 0}
+.ibox{border-radius:8px;padding:.65rem .9rem}
+.ibox-g{background:#E1F5EE;border:1px solid #5DCAA5}
+.ibox-o{background:#FAEEDA;border:1px solid #FAC775}
+.ibox-p{background:#EEEDFE;border:1px solid #AFA9EC}
+.ibox-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.ibox-label-g{color:#0F6E56}
+.ibox-label-o{color:#854F0B}
+.ibox-label-p{color:#3C3489}
+.ibox-text{font-size:12px;line-height:1.5}
+.ibox-text-g{color:#0F6E56}
+.ibox-text-o{color:#633806}
+.ibox-text-p{color:#534AB7}
+.ibox-tel{margin-top:6px;font-size:13px;font-weight:700;color:#0F6E56}
+
+.noescl-box{background:#FAEEDA;border:1px solid #EF9F27;border-radius:8px;padding:.65rem .9rem;margin:.65rem 0}
+.noescl-title{font-size:11px;font-weight:700;color:#412402;margin-bottom:3px}
+.noescl-text{font-size:12px;color:#633806;line-height:1.4;margin-bottom:6px}
+.agency-pills{display:flex;flex-wrap:wrap;gap:4px}
+.ap{padding:2px 9px;border-radius:8px;background:#fff;border:1px solid #FAC775;font-size:11px;color:#633806;font-weight:600}
+
+/* portale badge */
+.portale-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.02em;white-space:nowrap;border:1px solid}
+.pb-subito{background:#FEF0EC;color:#C94D1A;border-color:#F4A47E}
+.pb-idealista{background:#F0EBF8;color:#6B3FA0;border-color:#B89DD6}
+.pb-immobiliare{background:#E8F4FD;color:#0D5E8A;border-color:#7EC3E8}
+.pb-casa{background:#E6F8EE;color:#1D5E3A;border-color:#7DCB9E}
+.pb-wikicasa{background:#FEF7E0;color:#7A5C0E;border-color:#E6C757}
+.pb-tecnocasa{background:#FBEFE0;color:#8C4A12;border-color:#F0A85B}
+.pb-altro{background:#F0F0EC;color:#666;border-color:#CCC}
+
+.card-footer{display:flex;gap:6px;margin-top:.85rem;padding-top:.85rem;border-top:1px solid #f0f0ec;flex-wrap:wrap;align-items:center}
+.cf-btn{flex:1;min-width:120px;padding:8px 10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;border:none}
+.cf-outline{background:#f5f5f3;color:#1a1a1a;border:1px solid #d0d0cc}
+.cf-outline:hover{background:#ebebea}
+.cf-green{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
+.cf-green:hover{background:#A3DCC8}
+.cf-blue{background:#185FA5;color:#fff}
+.cf-blue:hover{background:#0C447C}
+.cf-amber{background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
+.cf-amber:hover{background:#FAC775}
+
+/* ========== SPINNER ========== */
+.spinner{display:none;text-align:center;padding:3rem;color:#888;font-size:14px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#185FA5;margin:0 3px;animation:blink 1s infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+
+/* ========== MODAL ========== */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:1.5rem;max-width:540px;width:92%;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:.85rem;color:#1a1a1a}
+.modal-text{font-size:13px;line-height:1.75;color:#333;white-space:pre-wrap;background:#f9f9f7;border-radius:8px;padding:1rem;border:1px solid #e5e5e0}
+.modal-actions{display:flex;gap:8px;margin-top:1rem}
+.modal-copy{flex:1;padding:9px;background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.modal-copy:hover{background:#A3DCC8}
+.modal-close{flex:1;padding:9px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.modal-close:hover{background:#0C447C}
+
+/* ========== OMI BADGE ========== */
+.omi-bar{font-size:11px;padding:3px 9px;border-radius:6px;margin:.45rem 0 0;display:inline-flex;align-items:center;gap:5px;font-weight:600}
+.omi-under{background:#E1F5EE;color:#0F6E56}
+.omi-ok   {background:#f0f0ec;color:#555}
+.omi-over {background:#FCEBEB;color:#A32D2D}
+
+/* ========== EMPTY STATE ========== */
+.empty{text-align:center;padding:3rem;color:#888;font-size:14px}
+
+/* ========== TABS ========== */
+.tabs{display:flex;gap:6px;margin-bottom:1.1rem}
+.tab-btn{padding:8px 20px;border-radius:8px;border:1px solid #d0d0cc;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#666;transition:all .12s}
+.tab-btn.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.tab-btn:not(.active):hover{background:#f5f5f3}
+
+/* ========== VALUTAZIONE RAPIDA ========== */
+.val-panel{display:none}
+.val-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1.1rem}
+.val-title{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:.25rem}
+.val-sub{font-size:12px;color:#888;margin-bottom:1rem}
+.val-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-bottom:1rem}
+.val-field{display:flex;flex-direction:column;gap:5px}
+.val-lbl{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.val-input{padding:9px 12px;border:1px solid #d0d0cc;border-radius:8px;font-size:13px;color:#1a1a1a;background:#fff;outline:none}
+.val-input:focus{border-color:#185FA5}
+.btn-pdf{width:100%;padding:11px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:background .12s}
+.btn-pdf:hover{background:#0F6E56}
+@media(max-width:640px){.val-grid{grid-template-columns:1fr}}
+
+/* ========== MATCH CLIENTE ========== */
+.match-panel{display:none}
+.mf-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1.1rem}
+.mf-title{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:1rem}
+.mf-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-bottom:.85rem}
+.mf-field{display:flex;flex-direction:column;gap:5px}
+.mf-lbl{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.mf-select{padding:9px 12px;border:1px solid #d0d0cc;border-radius:8px;font-size:13px;color:#1a1a1a;background:#fff;outline:none}
+.mf-select:focus{border-color:#185FA5}
+.sl-wrap{display:flex;flex-direction:column;gap:6px}
+.sl-head{display:flex;justify-content:space-between;align-items:center}
+.sl-val{font-size:13px;font-weight:700;color:#185FA5;min-width:80px;text-align:right}
+input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
+.extras-row{display:flex;flex-wrap:wrap;gap:8px;margin:.65rem 0 1rem}
+.ecb{background:#f5f5f3;border:1px solid #d0d0cc;border-radius:20px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .12s;user-select:none}
+.ecb.on{background:#E1F5EE;border-color:#5DCAA5;color:#0F6E56}
+.btn-match{width:100%;padding:11px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:background .12s}
+.btn-match:hover{background:#0C447C}
+.btn-match:disabled{background:#888;cursor:not-allowed}
+
+/* Score Cards */
+.m-hdr{font-size:13px;color:#888;margin-bottom:.85rem}
+.m-hdr span{font-weight:700;color:#1a1a1a}
+.scard{background:#fff;border:1px solid #e5e5e0;border-radius:12px;overflow:hidden;margin-bottom:.85rem;cursor:pointer;transition:box-shadow .15s}
+.scard:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
+.scard-inner{display:flex}
+.sc-col{width:90px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem .6rem;gap:6px}
+.sc-ring{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
+.sr-g{background:linear-gradient(135deg,#1D9E75,#0F6E56)}
+.sr-o{background:linear-gradient(135deg,#EF9F27,#C07A10)}
+.sr-r{background:linear-gradient(135deg,#D94F4F,#A83232)}
+.sc-lbl{font-size:9px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.06em;line-height:1.3;max-width:72px}
+.slbl-g{color:#0F6E56}
+.slbl-o{color:#7A4A0A}
+.slbl-r{color:#8B1C1C}
+.scard-body{flex:1;padding:.9rem 1.1rem;min-width:0}
+.sc-addr{font-size:14px;font-weight:700;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.sc-meta{font-size:11px;color:#888;margin-bottom:.6rem}
+.dim-bars{display:flex;flex-direction:column;gap:5px;margin-bottom:.5rem}
+.d-row{display:flex;align-items:center;gap:7px}
+.d-lbl{font-size:10px;color:#aaa;width:58px;text-align:right;flex-shrink:0}
+.d-bg{flex:1;height:5px;background:#f0f0ec;border-radius:3px;overflow:hidden}
+.d-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.d-pct{font-size:10px;color:#aaa;width:26px;text-align:right;flex-shrink:0}
+.etags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:.5rem}
+.etag{padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700}
+.etag-y{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
+.etag-n{background:#FCEBEB;color:#A32D2D;border:1px solid #F09595}
+
+/* ========== CALENDAR BTN ========== */
+.cf-cal{background:#F0EBF8;color:#6B3FA0;border:1px solid #B89DD6}
+.cf-cal:hover{background:#E0D5F5}
+
+/* ========== WHATSAPP SHARE ========== */
+.btn-wa-share{padding:7px 16px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-wa-share:hover{background:#1EB558}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:640px){
+  .stats-row{grid-template-columns:1fr 1fr}
+  .intel-grid{grid-template-columns:1fr}
+  .card-footer{flex-direction:column}
+  .cf-btn{min-width:unset}
+  .topbar{flex-direction:column;align-items:flex-start}
+  .mf-grid{grid-template-columns:1fr}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SPRINT 1 — WOW RESTYLE LAYER
+   Spaziature più generose, ombre soft, hover lift, fade-in, radius 12px,
+   tipografia migliorata, palette HouseRadar (blu + verde acqua).
+   ══════════════════════════════════════════════════════════════════════ */
+
+body{
+  background:linear-gradient(180deg, #f5f5f3 0%, #ffffff 320px);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  line-height:1.6;
+}
+
+/* Typography enhancement */
+h1,h2,h3{letter-spacing:-.01em}
+h1{font-weight:800}
+h2{font-weight:700}
+
+/* Soft shadows + radius su tutte le card */
+.card,.match-card,.profile-card,.val-card{
+  border-radius:12px !important;
+  box-shadow:0 4px 12px rgba(0,0,0,.06);
+  transition:transform .2s ease, box-shadow .2s ease;
+  animation:hr-fadein .35s ease-out both;
+}
+.card:hover,.match-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 22px rgba(0,0,0,.10);
+}
+.card{padding:22px !important}      /* +50% rispetto a default ~14px */
+
+@keyframes hr-fadein{
+  from{opacity:0;transform:translateY(8px)}
+  to  {opacity:1;transform:translateY(0)}
+}
+
+/* Stagger fade-in delle card nel grid */
+.cards-grid > .card:nth-child(1)  {animation-delay:.02s}
+.cards-grid > .card:nth-child(2)  {animation-delay:.04s}
+.cards-grid > .card:nth-child(3)  {animation-delay:.06s}
+.cards-grid > .card:nth-child(4)  {animation-delay:.08s}
+.cards-grid > .card:nth-child(5)  {animation-delay:.10s}
+.cards-grid > .card:nth-child(6)  {animation-delay:.12s}
+
+/* Topbar/header più "premium" */
+.topbar{
+  background:rgba(255,255,255,.95);
+  backdrop-filter:saturate(180%) blur(12px);
+  border-radius:14px;
+  box-shadow:0 4px 12px rgba(0,0,0,.05);
+  padding:18px 22px !important;
+}
+
+/* Pulsanti primari più morbidi */
+button.btn-primary,.btn-pri,.cf-btn{
+  border-radius:10px;
+  transition:transform .15s ease, box-shadow .2s ease;
+}
+button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(24,95,165,.20);
+}
+
+/* Stat cards più grandi e con accento */
+.stat-card{
+  border-radius:12px !important;
+  padding:18px 20px !important;
+  border-left:3px solid #5DCAA5;
+}
+
+/* Filtri / chip più pulite */
+.fb-chip{transition:all .15s ease}
+.fb-chip:hover{transform:translateY(-1px)}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 3 L3 12 L3 29 L11 29 L11 21 L21 21 L21 29 L29 29 L29 12 Z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="24" cy="8" r="5" fill="#5DCAA5"/>
+          <circle cx="24" cy="8" r="2" fill="#fff"/>
+          <path d="M27.5 4.5 Q30 2.5 32.5 4.5" stroke="#5DCAA5" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-name">HouseRadar</div>
+        <div class="logo-sub">Radar annunci — privati &amp; non in esclusiva · Livorno e Pisa</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-badge">
+        <div class="live-dot"></div>Live
+        <span class="live-tip">Annunci aggiornati ogni 5 min via RSS<br>Scraping completo ogni 30 min</span>
+      </div>
+      <button class="btn-refresh" id="btn-refresh" onclick="avviaScraper()">&#8635; Aggiorna ora</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-annunci" onclick="switchTab('annunci')">📋 Annunci</button>
+    <button class="tab-btn" id="tab-match" onclick="switchTab('match')">🎯 Match Cliente</button>
+    <button class="tab-btn" id="tab-valuta" onclick="switchTab('valuta')">📊 Valutazione</button>
+  </div>
+
+  <!-- MATCH PANEL -->
+  <div class="match-panel" id="match-panel">
+    <div class="mf-card">
+      <div class="mf-title">🎯 Profilo cliente — trova gli annunci più compatibili</div>
+      <div class="mf-grid">
+
+        <div class="mf-field">
+          <span class="mf-lbl">Zona desiderata</span>
+          <select class="mf-select" id="m-zona">
+            <option value="">Tutte le zone</option>
+            <optgroup label="Provincia di Livorno">
+              <option value="Livorno Città">Livorno</option>
+              <option value="Hinterland Livorno">Collesalvetti</option>
+              <option value="Costa Livornese">Rosignano Marittimo</option>
+              <option value="Costa Livornese">Cecina</option>
+              <option value="Costa Livornese">Castagneto Carducci</option>
+              <option value="Costa Livornese">Bibbona</option>
+              <option value="Val di Cornia">Campiglia Marittima</option>
+              <option value="Val di Cornia">Piombino</option>
+              <option value="Val di Cornia">Suvereto</option>
+              <option value="Val di Cornia">Sassetta</option>
+              <option value="Val di Cornia">Monteverdi Marittimo</option>
+              <option value="Isola d'Elba">Portoferraio</option>
+              <option value="Isola d'Elba">Campo nell'Elba</option>
+              <option value="Isola d'Elba">Marciana</option>
+              <option value="Isola d'Elba">Marciana Marina</option>
+              <option value="Isola d'Elba">Capoliveri</option>
+              <option value="Isola d'Elba">Porto Azzurro</option>
+              <option value="Isola d'Elba">Rio</option>
+              <option value="Isola d'Elba">Capraia Isola</option>
+            </optgroup>
+            <optgroup label="Provincia di Pisa">
+              <option value="Pisa Città">Pisa</option>
+              <option value="Pisa Città">Cascina</option>
+              <option value="Litorale Pisano">San Giuliano Terme</option>
+              <option value="Litorale Pisano">Vecchiano</option>
+              <option value="Pisa Città">Calci</option>
+              <option value="Valdera">Vicopisano</option>
+              <option value="Valdera">Buti</option>
+              <option value="Valdera">Calcinaia</option>
+              <option value="Valdera">Pontedera</option>
+              <option value="Valdera">Ponsacco</option>
+              <option value="Valdera">Casciana Terme Lari</option>
+              <option value="Valdera">Palaia</option>
+              <option value="Valdicecina">Lajatico</option>
+              <option value="Valdera">Terricciola</option>
+              <option value="Valdera">Chianni</option>
+              <option value="Valdera">Peccioli</option>
+              <option value="Valdicecina">Volterra</option>
+              <option value="Valdicecina">Pomarance</option>
+              <option value="Valdicecina">Montecatini Val di Cecina</option>
+              <option value="Valdicecina">Castelnuovo Val di Cecina</option>
+              <option value="Valdarno Pisano">Santa Maria a Monte</option>
+              <option value="Valdarno Pisano">Montopoli in Val d'Arno</option>
+              <option value="Valdarno Pisano">San Miniato</option>
+              <option value="Valdarno Pisano">Fucecchio (parte)</option>
+              <option value="Valdarno Pisano">Bientina</option>
+              <option value="Valdera">Capannoli</option>
+              <option value="Valdera">Santo Pietro Belvedere</option>
+              <option value="Litorale Pisano">Fauglia</option>
+              <option value="Litorale Pisano">Crespina Lorenzana</option>
+              <option value="Valdicecina">Riparbella</option>
+              <option value="Valdicecina">Montescudaio</option>
+              <option value="Valdicecina">Guardistallo</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="mf-field">
+          <span class="mf-lbl">Tipo immobile</span>
+          <select class="mf-select" id="m-tipo">
+            <option value="">Tutti</option>
+            <option>Appartamento</option>
+            <option>Villa</option>
+            <option>Bilocale</option>
+            <option>Attico</option>
+            <option>Rustico</option>
+            <option>Monolocale</option>
+          </select>
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Budget massimo</span>
+            <span class="sl-val" id="sv-budget">€ 350.000</span>
+          </div>
+          <input type="range" id="m-budget" min="50000" max="1000000" step="10000" value="350000"
+            oninput="updSlider('sv-budget',this.value,'budget')">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Superficie desiderata</span>
+            <span class="sl-val" id="sv-mq">110 m²</span>
+          </div>
+          <input type="range" id="m-mq" min="30" max="300" step="5" value="110"
+            oninput="updSlider('sv-mq',this.value,'mq')">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Numero camere</span>
+            <span class="sl-val" id="sv-camere">3</span>
+          </div>
+          <input type="range" id="m-camere" min="1" max="6" step="1" value="3"
+            oninput="updSlider('sv-camere',this.value,'camere')">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="mf-lbl">Bagni minimi <span style="color:#bbb;font-weight:400;text-transform:none">(testo)</span></span>
+            <span class="sl-val" id="sv-bagni">1</span>
+          </div>
+          <input type="range" id="m-bagni" min="1" max="4" step="1" value="1"
+            oninput="updSlider('sv-bagni',this.value,'bagni')">
+        </div>
+
+      </div>
+
+      <span class="mf-lbl">Extra richiesti</span>
+      <div class="extras-row">
+        <span class="ecb" id="ecb-terrazzo" onclick="toggleExtra('terrazzo')">🌿 Terrazzo</span>
+        <span class="ecb" id="ecb-garage"   onclick="toggleExtra('garage')">🚗 Garage/Box</span>
+        <span class="ecb" id="ecb-ascensore" onclick="toggleExtra('ascensore')">🔝 Ascensore</span>
+        <span class="ecb" id="ecb-giardino" onclick="toggleExtra('giardino')">🌳 Giardino</span>
+      </div>
+
+      <button class="btn-match" id="btn-match" onclick="cercaMatch()">🔍 Trova Match</button>
+    </div>
+
+    <div id="m-spinner" class="spinner" style="display:none">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <br><br>Calcolo compatibilità in corso...
+    </div>
+    <div class="m-hdr" id="m-hdr" style="display:none">Trovati <span id="m-cnt">—</span> immobili compatibili · ordinati per score</div>
+    <div id="m-results"></div>
+  </div>
+
+  <!-- VALUTAZIONE RAPIDA PANEL -->
+  <div class="val-panel" id="val-panel">
+    <div class="val-card">
+      <div class="val-title">📊 Valutazione Rapida — Genera Report PDF</div>
+      <div class="val-sub">Inserisci i dati dell'immobile per ottenere una valutazione professionale con dati OMI e comparabili di mercato.</div>
+      <div class="val-grid">
+
+        <div class="val-field" style="grid-column:1/-1">
+          <span class="val-lbl">Indirizzo completo</span>
+          <input class="val-input" id="v-indirizzo" type="text" placeholder="es. Via Roma 15, Livorno" />
+        </div>
+
+        <div class="val-field">
+          <span class="val-lbl">Tipo immobile</span>
+          <select class="val-input" id="v-tipo">
+            <option>Appartamento</option>
+            <option>Villa</option>
+            <option>Bilocale</option>
+            <option>Attico</option>
+            <option>Rustico</option>
+            <option>Monolocale</option>
+          </select>
+        </div>
+
+        <div class="val-field">
+          <span class="val-lbl">Superficie (m²)</span>
+          <input class="val-input" id="v-mq" type="number" placeholder="es. 90" min="10" max="1000" />
+        </div>
+
+        <div class="val-field" style="grid-column:1/-1">
+          <span class="val-lbl">Zona</span>
+          <select class="val-input" id="v-zona">
+            <option value="">Seleziona zona...</option>
+            <optgroup label="Provincia di Livorno">
+              <option value="Livorno Città">Livorno</option>
+              <option value="Hinterland Livorno">Collesalvetti</option>
+              <option value="Costa Livornese">Rosignano Marittimo</option>
+              <option value="Costa Livornese">Cecina</option>
+              <option value="Costa Livornese">Castagneto Carducci</option>
+              <option value="Costa Livornese">Bibbona</option>
+              <option value="Val di Cornia">Campiglia Marittima</option>
+              <option value="Val di Cornia">Piombino</option>
+              <option value="Val di Cornia">Suvereto</option>
+              <option value="Val di Cornia">Sassetta</option>
+              <option value="Val di Cornia">Monteverdi Marittimo</option>
+              <option value="Isola d'Elba">Portoferraio</option>
+              <option value="Isola d'Elba">Campo nell'Elba</option>
+              <option value="Isola d'Elba">Marciana</option>
+              <option value="Isola d'Elba">Marciana Marina</option>
+              <option value="Isola d'Elba">Capoliveri</option>
+              <option value="Isola d'Elba">Porto Azzurro</option>
+              <option value="Isola d'Elba">Rio</option>
+              <option value="Isola d'Elba">Capraia Isola</option>
+            </optgroup>
+            <optgroup label="Provincia di Pisa">
+              <option value="Pisa Città">Pisa</option>
+              <option value="Pisa Città">Cascina</option>
+              <option value="Litorale Pisano">San Giuliano Terme</option>
+              <option value="Litorale Pisano">Vecchiano</option>
+              <option value="Pisa Città">Calci</option>
+              <option value="Valdera">Vicopisano</option>
+              <option value="Valdera">Buti</option>
+              <option value="Valdera">Calcinaia</option>
+              <option value="Valdera">Pontedera</option>
+              <option value="Valdera">Ponsacco</option>
+              <option value="Valdera">Casciana Terme Lari</option>
+              <option value="Valdera">Palaia</option>
+              <option value="Valdicecina">Lajatico</option>
+              <option value="Valdera">Terricciola</option>
+              <option value="Valdera">Chianni</option>
+              <option value="Valdera">Peccioli</option>
+              <option value="Valdicecina">Volterra</option>
+              <option value="Valdicecina">Pomarance</option>
+              <option value="Valdicecina">Montecatini Val di Cecina</option>
+              <option value="Valdicecina">Castelnuovo Val di Cecina</option>
+              <option value="Valdarno Pisano">Santa Maria a Monte</option>
+              <option value="Valdarno Pisano">Montopoli in Val d'Arno</option>
+              <option value="Valdarno Pisano">San Miniato</option>
+              <option value="Valdarno Pisano">Fucecchio (parte)</option>
+              <option value="Valdarno Pisano">Bientina</option>
+              <option value="Valdera">Capannoli</option>
+              <option value="Valdera">Santo Pietro Belvedere</option>
+              <option value="Litorale Pisano">Fauglia</option>
+              <option value="Litorale Pisano">Crespina Lorenzana</option>
+              <option value="Valdicecina">Riparbella</option>
+              <option value="Valdicecina">Montescudaio</option>
+              <option value="Valdicecina">Guardistallo</option>
+            </optgroup>
+          </select>
+        </div>
+
+      </div>
+      <button class="btn-pdf" onclick="generaReportForm()">📄 Genera Report PDF</button>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-panel" id="annunci-search">
+    <div class="search-row">
+      <input type="text" id="q" placeholder="Filtra per zona, tipo, indirizzo..." oninput="render()" />
+      <button class="btn-search" onclick="render()">Cerca</button>
+    </div>
+    <div class="filter-bar">
+      <span class="fb-label">Provincia:</span>
+      <select id="f-provincia" class="fb-select" onchange="onChangeProvincia()">
+        <option value="">Tutte le province</option>
+        <option value="livorno">Livorno</option>
+        <option value="pisa">Pisa</option>
+        <option value="firenze">Firenze</option>
+        <option value="siena">Siena</option>
+        <option value="arezzo">Arezzo</option>
+        <option value="lucca">Lucca</option>
+        <option value="grosseto">Grosseto</option>
+        <option value="pistoia">Pistoia</option>
+        <option value="prato">Prato</option>
+        <option value="massa-carrara">Massa-Carrara</option>
+      </select>
+      <div class="fb-sep"></div>
+      <span class="fb-label">Mostra:</span>
+      <span class="fb-chip chip-privato on" id="f-priv" onclick="toggleF('priv')">&#10004; Privati</span>
+      <span class="fb-chip chip-noescl on" id="f-noescl" onclick="toggleF('noescl')">&#9888; Non in esclusiva</span>
+      <span class="fb-chip chip-agenzia" id="f-ag" onclick="toggleF('ag')">Agenzie</span>
+      <div class="fb-sep"></div>
+      <span class="fb-label">Portale:</span>
+      <span class="fb-chip chip-subito on"    id="f-sub"  onclick="togglePortale('sub')">🔴 subito.it</span>
+      <span class="fb-chip chip-idealista on" id="f-ide"  onclick="togglePortale('ide')">🟣 idealista.it</span>
+      <span class="fb-chip chip-imm on"       id="f-imm"  onclick="togglePortale('imm')">🔵 immobiliare.it</span>
+      <span class="fb-chip chip-casa on"      id="f-casa" onclick="togglePortale('casa')">🟢 casa.it</span>
+      <span class="fb-chip chip-wiki on"      id="f-wiki" onclick="togglePortale('wiki')">🟡 wikicasa.it</span>
+      <span class="fb-chip chip-tec on"       id="f-tec"  onclick="togglePortale('tec')">🟠 tecnocasa.it</span>
+      <div class="fb-sep"></div>
+      <span class="fb-label">Ordina:</span>
+      <select class="fb-select" id="f-sort" onchange="render()">
+        <option value="new">Più recenti</option>
+        <option value="priv">Privati prima</option>
+        <option value="noescl">Non esclusiva prima</option>
+        <option value="prezzo-asc">Prezzo ↑</option>
+        <option value="giorni">Più vecchi</option>
+      </select>
+      <span class="fb-label">Tipo:</span>
+      <select class="fb-select" id="f-tipo" onchange="render()">
+        <option value="">Tutti</option>
+        <option>Appartamento</option>
+        <option>Villa</option>
+        <option>Bilocale</option>
+        <option>Attico</option>
+        <option>Rustico</option>
+        <option>Monolocale</option>
+      </select>
+      <span class="fb-label">Zona:</span>
+      <select class="fb-select" id="f-zona" onchange="render()">
+        <option value="">Tutte</option>
+        <optgroup label="Provincia di Livorno">
+          <option value="Livorno">Livorno</option>
+          <option value="Collesalvetti">Collesalvetti</option>
+          <option value="Rosignano Marittimo">Rosignano Marittimo</option>
+          <option value="Cecina">Cecina</option>
+          <option value="Castagneto Carducci">Castagneto Carducci</option>
+          <option value="Bibbona">Bibbona</option>
+          <option value="Campiglia Marittima">Campiglia Marittima</option>
+          <option value="Piombino">Piombino</option>
+          <option value="Suvereto">Suvereto</option>
+          <option value="Sassetta">Sassetta</option>
+          <option value="Monteverdi Marittimo">Monteverdi Marittimo</option>
+          <option value="Portoferraio">Portoferraio</option>
+          <option value="Campo nell'Elba">Campo nell'Elba</option>
+          <option value="Marciana">Marciana</option>
+          <option value="Marciana Marina">Marciana Marina</option>
+          <option value="Capoliveri">Capoliveri</option>
+          <option value="Porto Azzurro">Porto Azzurro</option>
+          <option value="Rio">Rio</option>
+          <option value="Capraia Isola">Capraia Isola</option>
+        </optgroup>
+        <optgroup label="Provincia di Pisa">
+          <option value="Pisa">Pisa</option>
+          <option value="Cascina">Cascina</option>
+          <option value="San Giuliano Terme">San Giuliano Terme</option>
+          <option value="Vecchiano">Vecchiano</option>
+          <option value="Calci">Calci</option>
+          <option value="Vicopisano">Vicopisano</option>
+          <option value="Buti">Buti</option>
+          <option value="Calcinaia">Calcinaia</option>
+          <option value="Pontedera">Pontedera</option>
+          <option value="Ponsacco">Ponsacco</option>
+          <option value="Casciana Terme Lari">Casciana Terme Lari</option>
+          <option value="Palaia">Palaia</option>
+          <option value="Lajatico">Lajatico</option>
+          <option value="Terricciola">Terricciola</option>
+          <option value="Chianni">Chianni</option>
+          <option value="Peccioli">Peccioli</option>
+          <option value="Volterra">Volterra</option>
+          <option value="Pomarance">Pomarance</option>
+          <option value="Montecatini Val di Cecina">Montecatini Val di Cecina</option>
+          <option value="Castelnuovo Val di Cecina">Castelnuovo Val di Cecina</option>
+          <option value="Santa Maria a Monte">Santa Maria a Monte</option>
+          <option value="Montopoli in Val d'Arno">Montopoli in Val d'Arno</option>
+          <option value="San Miniato">San Miniato</option>
+          <option value="Fucecchio (parte)">Fucecchio (parte)</option>
+          <option value="Bientina">Bientina</option>
+          <option value="Capannoli">Capannoli</option>
+          <option value="Santo Pietro Belvedere">Santo Pietro Belvedere</option>
+          <option value="Fauglia">Fauglia</option>
+          <option value="Crespina Lorenzana">Crespina Lorenzana</option>
+          <option value="Riparbella">Riparbella</option>
+          <option value="Montescudaio">Montescudaio</option>
+          <option value="Guardistallo">Guardistallo</option>
+        </optgroup>
+      </select>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert-banner" id="alert-banner" style="display:none">
+    <div class="alert-icon">&#9889;</div>
+    <div class="alert-text" id="alert-text"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val" style="color:#0F6E56" id="st-priv">—</div><div class="stat-lbl">Annunci privati</div><div class="stat-sub" style="color:#0F6E56">contatto diretto</div></div>
+    <div class="stat"><div class="stat-val" style="color:#854F0B" id="st-noescl">—</div><div class="stat-lbl">Non in esclusiva</div><div class="stat-sub" style="color:#854F0B">puoi inserirli</div></div>
+    <div class="stat"><div class="stat-val" id="st-addr">—</div><div class="stat-lbl">Indirizzo preciso</div><div class="stat-sub" style="color:#888">verificato</div></div>
+    <div class="stat"><div class="stat-val" style="color:#A32D2D" id="st-new">—</div><div class="stat-lbl">Nuovi oggi</div><div class="stat-sub" style="color:#A32D2D">ultimi inserimenti</div></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-header">
+    <div class="results-title">Trovati <span id="cnt-tot">—</span> annunci</div>
+    <button class="btn-wa-share" onclick="condividiProfilo()">📤 Condividi profilo su WhatsApp</button>
+    <div class="legend">
+      <span><span class="leg-dot" style="background:#E1F5EE;border:1px solid #5DCAA5"></span>Privato</span>
+      <span><span class="leg-dot" style="background:#FAEEDA;border:1px solid #EF9F27"></span>Non esclusiva</span>
+    </div>
+  </div>
+
+  <div id="spinner" class="spinner"><span class="dot"></span><span class="dot"></span><span class="dot"></span><br><br>Caricamento annunci...</div>
+  <div class="empty" id="empty" style="display:none">Nessun annuncio trovato con i filtri selezionati.</div>
+  <div class="cards" id="cards"></div>
+
+</div>
+
+<!-- MODAL SCRIPT -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <div class="modal-text" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="modal-copy" onclick="copyModal()">&#128203; Copia testo</button>
+      <button class="modal-close" onclick="closeModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// In produzione (Render) la pagina è servita da FastAPI stesso → path relativo ''.
+// In sviluppo locale via file:// o live-server → punta a localhost:8000.
+const API = (window.location.protocol === 'file:' || window.location.port === '5500')
+  ? 'http://localhost:8000'
+  : '';
+let allData = [];
+let showPriv = true, showNoescl = true, showAg = false;
+let showSubito = true, showIdealista = true, showImm = true;
+let showCasa = true, showWiki = true, showTec = true;
+let provinciaFilter = "";  // "" = tutte le province
+let omiData = {};  // {zona: {min, max, anno, semestre}}
+
+/* ========== GALLERIA FOTO ========== */
+const _galIdx = {};   // { cardId: currentIndex }
+
+function galNav(id, dir, total, e) {
+  e.stopPropagation();
+  if (_galIdx[id] === undefined) _galIdx[id] = 0;
+  _galIdx[id] = (_galIdx[id] + dir + total) % total;
+  _galApply(id, _galIdx[id], total);
+}
+
+function galDot(id, idx, total, e) {
+  e.stopPropagation();
+  _galIdx[id] = idx;
+  _galApply(id, idx, total);
+}
+
+function _galApply(id, idx, total) {
+  const g = document.getElementById('gal-' + id);
+  if (!g) return;
+  g.querySelector('.gallery-track').style.transform = `translateX(-${idx * 100}%)`;
+  g.querySelectorAll('.gal-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+/* Auto-advance alla prima foto orizzontale (evita planimetrie/ritratti come prima foto).
+   Carica le immagini in background e, se images[0] è verticale, salta alla prima
+   orizzontale (naturalWidth > naturalHeight) senza aspettare l'utente. */
+function _galInit(id, total) {
+  if (total <= 1) return;
+  const gEl = document.getElementById('gal-' + id);
+  if (!gEl) return;
+  const imgs = Array.from(gEl.querySelectorAll('.gallery-slide img'));
+
+  const tryJump = () => {
+    // Non toccare se l'utente ha già navigato manualmente
+    if (_galIdx[id] !== undefined && _galIdx[id] !== 0) return;
+    const first = imgs[0];
+    if (!first.naturalWidth) return;              // img[0] non ancora caricata
+    if (first.naturalWidth >= first.naturalHeight) return; // già orizzontale, ok
+    // img[0] è verticale (planimetria/porta) → cerca la prima orizzontale
+    for (let i = 1; i < imgs.length; i++) {
+      const img = imgs[i];
+      if (img.naturalWidth && img.naturalWidth >= img.naturalHeight) {
+        _galIdx[id] = i;
+        _galApply(id, i, total);
+        return;
+      }
+    }
+  };
+
+  // Ascolta il caricamento di ciascuna immagine (lazy load)
+  imgs.forEach(img => {
+    if (img.complete && img.naturalWidth) tryJump();
+    else img.addEventListener('load', tryJump, { once: true });
+  });
+}
+
+function openAnnuncio(url, e) {
+  if (e.target.closest('button,.gal-btn,.gal-dot')) return;
+  if (url) {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.click();
+  }
+}
+
+/* ========== INIT ========== */
+async function init() {
+  await loadStats();
+  await loadAlert();
+  await loadAnnunci();
+  loadOMI();  // non-blocking: aggiorna i badge quando arriva
+}
+
+async function loadOMI() {
+  try {
+    const r = await fetch(`${API}/api/omi`);
+    omiData = await r.json();
+    // Re-render silenzioso se le card sono già visibili
+    if (allData.length > 0) render();
+  } catch(e) { /* OMI opzionale, non blocca */ }
+}
+
+/* ── Calcola badge OMI per una card ─────────────────────────────────────── */
+function getOmiLabel(d) {
+  if (!d.prezzo || !d.mq || !omiData) return '';
+  const o = omiData[d.zona];
+  if (!o || !o.min) return '';
+  const ppm = Math.round(d.prezzo / d.mq);
+  // Ville/rustici tendono sopra del 20% rispetto alle abitazioni civili
+  const fattore = (d.tipo === 'Villa' || d.tipo === 'Rustico') ? 1.2 : 1.0;
+  const minAdj = Math.round(o.min * fattore);
+  const maxAdj = Math.round(o.max * fattore);
+  const range = `€\u202f${minAdj.toLocaleString('it-IT')}\u2013${maxAdj.toLocaleString('it-IT')}/m\u00b2`;
+  const anno = o.anno ? ` · OMI ${o.anno}` : '';
+  if (ppm < minAdj * 0.90) {
+    return `<div class="omi-bar omi-under">🔥 Sotto mercato ${range}${anno}</div>`;
+  } else if (ppm > maxAdj * 1.10) {
+    return `<div class="omi-bar omi-over">⚠ Sopra mercato ${range}${anno}</div>`;
+  } else {
+    return `<div class="omi-bar omi-ok">✓ Nel range ${range}${anno}</div>`;
+  }
+}
+
+/* ========== API CALLS ========== */
+async function loadStats() {
+  try {
+    const r = await fetch(`${API}/stats`);
+    const d = await r.json();
+    document.getElementById('st-priv').textContent = d.privati;
+    document.getElementById('st-noescl').textContent = d.noescl;
+    document.getElementById('st-addr').textContent = d.indirizzi_precisi;
+    document.getElementById('st-new').textContent = d.nuovi_oggi;
+  } catch(e) { console.error('Stats error:', e); }
+}
+
+async function loadAlert() {
+  try {
+    const r = await fetch(`${API}/alert`);
+    const d = await r.json();
+    if (d.ha_alert) {
+      document.getElementById('alert-text').innerHTML = d.testo;
+      document.getElementById('alert-banner').style.display = 'flex';
+    }
+  } catch(e) {}
+}
+
+async function loadAnnunci() {
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('cards').innerHTML = '';
+  document.getElementById('empty').style.display = 'none';
+  try {
+    const r = await fetch(`${API}/annunci`);
+    allData = await r.json();
+    render();
+  } catch(e) {
+    document.getElementById('spinner').style.display = 'none';
+    document.getElementById('cards').innerHTML = '<div class="empty">Errore connessione al server.<br>Se sei in locale: <code>cd backend &amp;&amp; uvicorn main:app --port 8000</code></div>';
+  }
+}
+
+async function avviaScraper() {
+  const btn = document.getElementById('btn-refresh');
+  btn.disabled = true;
+  btn.textContent = '⟳ Scansione in corso...';
+  try {
+    await fetch(`${API}/scraper/avvia`, { method: 'POST' });
+    setTimeout(async () => {
+      await loadAnnunci();
+      await loadStats();
+      await loadAlert();
+      btn.disabled = false;
+      btn.textContent = '⟳ Aggiorna ora';
+    }, 3000);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '⟳ Aggiorna ora';
+  }
+}
+
+/* ========== RENDER ========== */
+function toggleF(f) {
+  if (f === 'priv') { showPriv = !showPriv; document.getElementById('f-priv').classList.toggle('on', showPriv); }
+  if (f === 'ag') { showAg = !showAg; document.getElementById('f-ag').classList.toggle('on', showAg); }
+  if (f === 'noescl') { showNoescl = !showNoescl; document.getElementById('f-noescl').classList.toggle('on', showNoescl); }
+  render();
+}
+
+function onChangeProvincia() {
+  const el = document.getElementById('f-provincia');
+  provinciaFilter = el ? el.value : "";
+  render();
+}
+
+function togglePortale(p) {
+  if (p === 'sub')  { showSubito    = !showSubito;    document.getElementById('f-sub').classList.toggle('on', showSubito); }
+  if (p === 'ide')  { showIdealista = !showIdealista; document.getElementById('f-ide').classList.toggle('on', showIdealista); }
+  if (p === 'imm')  { showImm       = !showImm;       document.getElementById('f-imm').classList.toggle('on', showImm); }
+  if (p === 'casa') { showCasa      = !showCasa;      document.getElementById('f-casa').classList.toggle('on', showCasa); }
+  if (p === 'wiki') { showWiki      = !showWiki;      document.getElementById('f-wiki').classList.toggle('on', showWiki); }
+  if (p === 'tec')  { showTec       = !showTec;       document.getElementById('f-tec').classList.toggle('on', showTec); }
+  render();
+}
+
+function render() {
+  document.getElementById('spinner').style.display = 'none';
+  const q = document.getElementById('q').value.toLowerCase();
+  const tipo = document.getElementById('f-tipo').value;
+  const zona = document.getElementById('f-zona').value;
+  const sort = document.getElementById('f-sort').value;
+
+  let data = allData.filter(d => {
+    if (d.fonte === 'privato' && !showPriv) return false;
+    if (d.fonte === 'noescl' && !showNoescl) return false;
+    if (d.fonte === 'agenzia' && !showAg) return false;
+    if (d.portale === 'subito.it'      && !showSubito)    return false;
+    if (d.portale === 'idealista.it'   && !showIdealista) return false;
+    if (d.portale === 'immobiliare.it' && !showImm)       return false;
+    if (d.portale === 'casa.it'        && !showCasa)      return false;
+    if (d.portale === 'wikicasa.it'    && !showWiki)      return false;
+    if (d.portale === 'tecnocasa.it'   && !showTec)       return false;
+    if (provinciaFilter) {
+      const pf = provinciaFilter.toLowerCase();
+      const blob = ((d.zona || "") + " " + (d.indirizzo || "")).toLowerCase();
+      // Match il nome provincia o il pattern "<Provincia> Provincia"
+      if (!blob.includes(pf) && !blob.includes(pf.replace("-", " "))) return false;
+    }
+    if (tipo && d.tipo !== tipo) return false;
+    if (zona) {
+      const zL = zona.toLowerCase();
+      if (!(d.zona      && d.zona.toLowerCase().includes(zL)) &&
+          !(d.indirizzo && d.indirizzo.toLowerCase().includes(zL))) return false;
+    }
+    if (q && !d.indirizzo.toLowerCase().includes(q) && !(d.zona||'').toLowerCase().includes(q) && !d.tipo.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const sorts = {
+    new: (a,b) => a.giorni_online - b.giorni_online,
+    priv: (a,b) => (a.fonte==='privato'?0:1) - (b.fonte==='privato'?0:1),
+    noescl: (a,b) => (a.fonte==='noescl'?0:1) - (b.fonte==='noescl'?0:1),
+    'prezzo-asc': (a,b) => a.prezzo - b.prezzo,
+    giorni: (a,b) => b.giorni_online - a.giorni_online
+  };
+  data.sort(sorts[sort] || sorts.new);
+
+  document.getElementById('cnt-tot').textContent = data.length;
+
+  const cards = document.getElementById('cards');
+  const empty = document.getElementById('empty');
+
+  if (data.length === 0) {
+    cards.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  cards.innerHTML = data.map(cardHTML).join('');
+  // Dopo il render, auto-orienta ogni galleria sulla prima foto orizzontale
+  requestAnimationFrame(() => {
+    data.forEach(d => {
+      const total = Array.isArray(d.foto_urls) ? d.foto_urls.length : (d.foto_url ? 1 : 0);
+      if (total > 1) _galInit(d.id, total);
+    });
+  });
+}
+
+/* ========== CARD HTML ========== */
+function fmt(n) { return n ? n.toLocaleString('it-IT') + ' \u20ac' : '\u2014'; }
+
+function cardHTML(d) {
+  const isP = d.fonte === 'privato', isN = d.fonte === 'noescl';
+  const stripe = isP ? '#1D9E75' : isN ? '#EF9F27' : '#B4B2A9';
+  const cls = isP ? 'lcard-priv' : isN ? 'lcard-noescl' : 'lcard-agenzia';
+  const agenzie = Array.isArray(d.agenzie) ? d.agenzie : (typeof d.agenzie === 'string' ? JSON.parse(d.agenzie || '[]') : []);
+
+  const addrB = d.indirizzo_preciso
+    ? '<span class="addr-badge addr-ok">\u2714 indirizzo preciso</span>'
+    : '<span class="addr-badge addr-est">~ stima AI</span>';
+
+  const srcB = isP ? '<span class="badge b-priv">Privato \u2014 nessun agente</span>'
+    : isN ? '<span class="badge b-noescl">\u26a0 Non in esclusiva</span>'
+    : '<span class="badge" style="background:#f0f0ec;color:#888;border:1px solid #d0d0cc">Agenzia</span>';
+
+  const newB = d.is_nuovo ? '<span class="badge b-new">\u25cf Nuovo</span>' : '';
+  const hotB = d.giorni_online === 0 ? '<span class="badge b-hot">\ud83d\udd25 Oggi</span>' : '';
+
+  const id = d.id;
+
+  const intel = isP ? `
+    <div class="intel-grid">
+      <div class="ibox ibox-g">
+        <div class="ibox-label ibox-label-g">Contatto diretto</div>
+        <div class="ibox-text ibox-text-g">${d.intel_privato || '\u2014'}</div>
+        ${d.telefono ? `<div class="ibox-tel">Tel: ${d.telefono}</div>` : ''}
+      </div>
+      <div class="ibox ibox-p">
+        <div class="ibox-label ibox-label-p">\u2746 Strategia AI</div>
+        <div class="ibox-text ibox-text-p">${d.ai_insight || '\u2014'}</div>
+      </div>
+    </div>
+    <div class="ibox ibox-o" style="margin-top:0">
+      <div class="ibox-label ibox-label-o">Attenzione</div>
+      <div class="ibox-text ibox-text-o">${d.intel_warning || '\u2014'}</div>
+    </div>`
+  : `<div class="noescl-box">
+      <div class="noescl-title">\u26a0 Gestito da pi\u00f9 agenzie senza esclusiva</div>
+      <div class="noescl-text">${d.intel_warning || '\u2014'}</div>
+      <div class="agency-pills">${agenzie.map(a => `<span class="ap">${a}</span>`).join('')}</div>
+    </div>
+    <div class="ibox ibox-p" style="margin-top:8px">
+      <div class="ibox-label ibox-label-p">\u2746 Come acquisirlo</div>
+      <div class="ibox-text ibox-text-p">${d.ai_insight || '\u2014'}</div>
+    </div>`;
+
+  // ── Galleria foto ──────────────────────────────────────────────────
+  const fotos = Array.isArray(d.foto_urls) && d.foto_urls.length
+    ? d.foto_urls
+    : (d.foto_url ? [d.foto_url] : []);
+  const n = fotos.length;
+
+  let galHtml;
+  if (n === 0) {
+    galHtml = `<div class="card-no-photo">🏠</div>`;
+  } else {
+    const slides = fotos.map(url =>
+      `<div class="gallery-slide">
+         <img src="${url}" loading="lazy"
+           onerror="this.style.display='none';this.parentElement.style.background='#eeecea'">
+       </div>`
+    ).join('');
+    const nav = n > 1 ? `
+      <button class="gal-btn gal-prev" onclick="galNav(${id},-1,${n},event)">&#8249;</button>
+      <button class="gal-btn gal-next" onclick="galNav(${id},1,${n},event)">&#8250;</button>
+      <div class="gallery-dots">${fotos.map((_,i) =>
+        `<span class="gal-dot${i===0?' active':''}" onclick="galDot(${id},${i},${n},event)"></span>`
+      ).join('')}</div>` : '';
+    galHtml = `<div class="card-gallery" id="gal-${id}">
+      <div class="gallery-track">${slides}</div>
+      <div class="gallery-overlay">
+        <span class="cp-badge">${d.tipo}</span>
+        <span class="cp-badge">${d.zona}</span>
+      </div>
+      ${nav}
+    </div>`;
+  }
+
+  // ── Footer con pulsante "Vedi annuncio" ─────────────────────────────
+  const btnVedi = d.url_originale
+    ? `<a class="cf-btn cf-outline" href="${d.url_originale}" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" style="text-align:center;text-decoration:none">
+         Vedi annuncio &#8594;</a>`
+    : '';
+
+  // ── Bottone Report PDF ───────────────────────────────────────────────
+  const btnReport = `<button class="cf-btn" style="background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5"
+      onclick="event.stopPropagation();apriReport(${id})">📄 Report</button>`;
+
+  // ── Bottone Google Calendar ──────────────────────────────────────────
+  const btnCal = `<button class="cf-btn cf-cal"
+      onclick="event.stopPropagation();apriCalendar(${id})" title="Aggiungi al calendario">📅 Agenda</button>`;
+
+  // ── Portale badge ────────────────────────────────────────────────────
+  const portaleMap = {
+    'subito.it':       { cls: 'pb-subito',       label: '● subito.it' },
+    'idealista.it':    { cls: 'pb-idealista',    label: '● idealista.it' },
+    'immobiliare.it':  { cls: 'pb-immobiliare',  label: '● immobiliare.it' },
+    'casa.it':         { cls: 'pb-casa',         label: '● casa.it' },
+    'wikicasa.it':     { cls: 'pb-wikicasa',     label: '● wikicasa.it' },
+    'tecnocasa.it':    { cls: 'pb-tecnocasa',    label: '● tecnocasa.it' },
+  };
+  const pm = d.portale ? (portaleMap[d.portale] || { cls: 'pb-altro', label: d.portale }) : null;
+  const portaleBadge = pm
+    ? `<span class="portale-badge ${pm.cls}" onclick="event.stopPropagation()" title="Portale sorgente">${pm.label}</span>`
+    : '';
+
+  const footerFull = isP ? `
+    <button class="cf-btn cf-green" onclick="event.stopPropagation();showScript('whatsapp',${id})">&#128172; WhatsApp</button>
+    <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
+    <button class="cf-btn cf-blue" onclick="event.stopPropagation();showScript('esclusiva',${id})">+ Esclusiva</button>
+    ${btnVedi}${btnReport}${btnCal}
+    <span style="flex:1"></span>${portaleBadge}`
+  : `
+    <button class="cf-btn cf-amber" onclick="event.stopPropagation();showScript('conquista',${id})">&#127919; Conquista</button>
+    <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
+    <button class="cf-btn cf-blue" onclick="event.stopPropagation();showValuta(${id})">&#128161; Valuta</button>
+    ${btnVedi}${btnReport}${btnCal}
+    <span style="flex:1"></span>${portaleBadge}`;
+
+  return `<div class="lcard ${cls}" onclick="openAnnuncio('${d.url_originale || ''}',event)" title="Clicca per aprire l'annuncio">
+    ${galHtml}
+    <div class="lcard-inner">
+      <div class="lcard-stripe" style="background:${stripe}"></div>
+      <div class="lcard-body">
+        <div class="card-top">
+          <div>
+            <div class="card-addr">${d.indirizzo} ${addrB}</div>
+            <div class="card-zona">${d.zona} \u00b7 ${d.tipo}</div>
+          </div>
+          <div class="badges">${srcB}${newB}${hotB}</div>
+        </div>
+        <div class="specs">
+          <div class="spec"><div class="spec-v">${fmt(d.prezzo)}</div><div class="spec-l">prezzo</div></div>
+          <div class="spec"><div class="spec-v">${d.mq || '\u2014'} m\u00b2</div><div class="spec-l">superficie</div></div>
+          <div class="spec"><div class="spec-v">${d.camere || '\u2014'}</div><div class="spec-l">camere</div></div>
+          <div class="spec"><div class="spec-v">${d.giorni_online === 0 ? 'oggi' : d.giorni_online + ' gg'}</div><div class="spec-l">online</div></div>
+          <div class="spec"><div class="spec-v">${d.mq && d.prezzo ? Math.round(d.prezzo/d.mq).toLocaleString('it-IT') + ' \u20ac' : '\u2014'}</div><div class="spec-l">\u20ac/m\u00b2</div></div>
+        </div>
+        ${getOmiLabel(d)}
+        ${intel}
+        <div class="card-footer">${footerFull}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function showValuta(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+  const ppm = d.mq && d.prezzo ? Math.round(d.prezzo / d.mq).toLocaleString('it-IT') : '—';
+  alert(`Stima: ${ppm} €/m²\nPrezzo: ${fmt(d.prezzo)}\nZona: ${d.zona}\nSuperficie: ${d.mq || '—'} m²`);
+}
+
+/* ========== SCRIPTS ========== */
+function showScript(tipo, id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+  const agenzie = Array.isArray(d.agenzie) ? d.agenzie : (typeof d.agenzie === 'string' ? JSON.parse(d.agenzie || '[]') : []);
+
+  const scripts = {
+    whatsapp: `Buongiorno ${d.proprietario || ''},
+ho visto il suo annuncio per ${(d.tipo||'immobile').toLowerCase()} in ${d.indirizzo}.
+
+Sono un agente immobiliare della zona e ho clienti interessati a questa tipologia.
+
+Sarebbe disponibile per una visita nei prossimi giorni?
+Non le rubo più di 20 minuti.
+
+Distinti saluti,
+[Il tuo nome] — [La tua agenzia]`,
+
+    telefono: `SCRIPT TELEFONATA — ${d.indirizzo}
+
+"Buongiorno, sono [Nome], agente immobiliare.
+Ho visto il suo annuncio per il ${(d.tipo||'immobile').toLowerCase()} in ${d.indirizzo}.
+
+Ho clienti che cercano esattamente questa tipologia.
+Le farebbe piacere che passassi a dare un'occhiata?
+Ci vogliono solo 20 minuti — quando è libero questa settimana?"
+
+[Se chiede la provvigione]:
+"Non la disturbo con costi in questa fase — prima vediamo se c'è l'interesse giusto."
+
+[Se dice no]:
+"Capisco, posso lasciarle un contatto nel caso cambiasse idea?"`,
+
+    esclusiva: `PROPOSTA MANDATO ESCLUSIVA
+${d.tipo} — ${d.indirizzo}
+
+Gentile proprietario,
+
+le propongo un mandato in esclusiva per la vendita del suo immobile.
+
+Cosa otterrebbe:
+• 1 solo referente — nessuna confusione
+• Piano marketing professionale (foto, virtual tour, sponsorizzate)
+• Accesso alla mia rete di acquirenti già qualificati
+• Prezzo di vendita mediamente più alto del 4-7% rispetto al fai-da-te
+• Obiettivo: vendere in 60 giorni al miglior prezzo
+
+Sono disponibile per un incontro senza impegno.
+
+[Nome Agente] — [Agenzia] — [Tel]`,
+
+    conquista: `STRATEGIA: CONQUISTARE L'ESCLUSIVA
+${d.indirizzo} (attualmente con ${agenzie.length || 'più'} agenzie)
+
+1. APPROCCIO INIZIALE:
+"So che ha già delle agenzie — voglio mostrarle cosa faccio di diverso in 15 minuti."
+
+2. ARGOMENTI CHIAVE:
+• Con più agenzie il mercato si confonde — gli acquirenti pensano "se è ancora lì c'è qualcosa che non va"
+• L'esclusiva crea urgenza e scarsità = prezzo migliore
+• Le mostro il mio piano marketing concreto, non promesse
+
+3. LA PROPOSTA:
+Esclusiva 90 giorni con clausola di uscita a 45 se non ci sono risultati concreti.
+
+4. CHIUSURA:
+"Cosa ha da perdere a provarci per 90 giorni?"`
+  };
+
+  const titles = {
+    whatsapp: `💬 Messaggio WhatsApp — ${d.indirizzo}`,
+    telefono: `📞 Script telefonata — ${d.indirizzo}`,
+    esclusiva: `📋 Proposta esclusiva — ${d.indirizzo}`,
+    conquista: `🎯 Strategia conquista esclusiva — ${d.indirizzo}`
+  };
+
+  document.getElementById('modal-title').textContent = titles[tipo];
+  document.getElementById('modal-body').textContent = scripts[tipo];
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function copyModal() {
+  const text = document.getElementById('modal-body').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.modal-copy');
+    btn.textContent = '✔ Copiato!';
+    setTimeout(() => btn.textContent = '📋 Copia testo', 2000);
+  });
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+/* ========== TABS ========== */
+function switchTab(tab) {
+  const isA = tab === 'annunci';
+  const isM = tab === 'match';
+  const isV = tab === 'valuta';
+  document.getElementById('tab-annunci').classList.toggle('active', isA);
+  document.getElementById('tab-match').classList.toggle('active', isM);
+  document.getElementById('tab-valuta').classList.toggle('active', isV);
+  document.getElementById('match-panel').style.display = isM ? 'block' : 'none';
+  document.getElementById('val-panel').style.display   = isV ? 'block' : 'none';
+  // Sezioni visibili solo nel tab Annunci
+  ['annunci-search', 'alert-banner', 'spinner', 'empty', 'cards'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isA ? '' : 'none';
+  });
+  document.querySelector('.stats-row').style.display      = isA ? '' : 'none';
+  document.querySelector('.results-header').style.display = isA ? '' : 'none';
+}
+
+/* ── Report PDF da card annuncio ──────────────────────────────────────────── */
+function apriReport(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+  const p = new URLSearchParams();
+  if (d.indirizzo) p.set('indirizzo', d.indirizzo);
+  if (d.tipo)      p.set('tipo', d.tipo);
+  if (d.mq)        p.set('mq', String(d.mq));
+  if (d.zona)      p.set('zona', d.zona);
+  const a = document.createElement('a');
+  a.href = `${API}/api/report-pdf?${p}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
+}
+
+/* ── Report PDF da form Valutazione rapida ────────────────────────────────── */
+function generaReportForm() {
+  const indirizzo = document.getElementById('v-indirizzo').value.trim();
+  const tipo      = document.getElementById('v-tipo').value;
+  const mq        = document.getElementById('v-mq').value.trim();
+  const zona      = document.getElementById('v-zona').value;
+  if (!zona) { alert('Seleziona la zona per continuare.'); return; }
+  const p = new URLSearchParams();
+  if (indirizzo) p.set('indirizzo', indirizzo);
+  p.set('tipo', tipo);
+  if (mq)  p.set('mq', mq);
+  p.set('zona', zona);
+  const a = document.createElement('a');
+  a.href = `${API}/api/report-pdf?${p}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
+}
+
+/* ── Google Calendar — aggiungi promemoria chiamata ──────────────────────── */
+function apriCalendar(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+
+  // Domani 9:00 – 9:30 in ora locale (no Z = Google Calendar usa il timezone del browser)
+  const fmtCal = dt => {
+    const p = n => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}${p(dt.getMonth()+1)}${p(dt.getDate())}T${p(dt.getHours())}${p(dt.getMinutes())}00`;
+  };
+  const start = new Date();
+  start.setDate(start.getDate() + 1);
+  start.setHours(9, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(9, 30, 0, 0);
+
+  const portale = d.portale || 'portale web';
+  const prezzo  = d.prezzo ? d.prezzo.toLocaleString('it-IT') : '—';
+  const mq      = d.mq ? d.mq + 'mq' : '—';
+  const zona    = d.zona || d.indirizzo;
+  const tipo    = (d.tipo || 'immobile').toLowerCase();
+
+  const script =
+    `Buongiorno, ho visto il suo annuncio su ${portale} per ${tipo} ` +
+    `in ${zona} di ${mq} a ${prezzo}€. ` +
+    `Sono [nome agente], agente immobiliare. ` +
+    `Sarebbe disponibile per un appuntamento di valutazione gratuita?`;
+
+  const params = new URLSearchParams({
+    action:  'TEMPLATE',
+    text:    `Chiamata — ${d.tipo || ''} ${d.indirizzo}`.trim(),
+    details: script,
+    dates:   `${fmtCal(start)}/${fmtCal(end)}`,
+  });
+
+  const a = document.createElement('a');
+  a.href = `https://calendar.google.com/calendar/render?${params}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
+}
+
+/* ── Condividi profilo agente su WhatsApp ─────────────────────────────────── */
+function condividiProfilo() {
+  const baseUrl = window.location.origin;
+  const text = `Ciao! Sono Gianluca Celli, agente immobiliare a Livorno e Pisa. ` +
+               `Guarda i miei annunci su HouseRadar: ${baseUrl}/profilo`;
+  const a = document.createElement('a');
+  a.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.click();
+}
+
+/* ========== MATCH CLIENTE ========== */
+const _extras = new Set();
+
+function updSlider(valId, val, type) {
+  const el = document.getElementById(valId);
+  if (!el) return;
+  if (type === 'budget') el.textContent = '€ ' + Number(val).toLocaleString('it-IT');
+  else if (type === 'mq') el.textContent = val + ' m²';
+  else el.textContent = val;
+}
+
+function toggleExtra(key) {
+  const el = document.getElementById('ecb-' + key);
+  if (!el) return;
+  if (_extras.has(key)) { _extras.delete(key); el.classList.remove('on'); }
+  else                   { _extras.add(key);    el.classList.add('on'); }
+}
+
+async function cercaMatch() {
+  const btn = document.getElementById('btn-match');
+  btn.disabled = true; btn.textContent = '⏳ Calcolo...';
+  document.getElementById('m-spinner').style.display = 'block';
+  document.getElementById('m-hdr').style.display = 'none';
+  document.getElementById('m-results').innerHTML = '';
+
+  const params = new URLSearchParams({
+    zona:      document.getElementById('m-zona').value,
+    tipo:      document.getElementById('m-tipo').value,
+    mq:        document.getElementById('m-mq').value,
+    budget:    document.getElementById('m-budget').value,
+    camere:    document.getElementById('m-camere').value,
+    bagni:     document.getElementById('m-bagni').value,
+    terrazzo:  _extras.has('terrazzo')  ? 1 : 0,
+    garage:    _extras.has('garage')    ? 1 : 0,
+    ascensore: _extras.has('ascensore') ? 1 : 0,
+    giardino:  _extras.has('giardino')  ? 1 : 0,
+  });
+  // Rimuovi param vuoti (zona/tipo non selezionati)
+  [...params.keys()].forEach(k => { if (params.get(k) === '') params.delete(k); });
+
+  try {
+    const r = await fetch(`${API}/match?${params}`);
+    const data = await r.json();
+    document.getElementById('m-spinner').style.display = 'none';
+    document.getElementById('m-cnt').textContent = data.length;
+    document.getElementById('m-hdr').style.display = 'block';
+    document.getElementById('m-results').innerHTML = data.map(matchCardHTML).join('');
+  } catch(e) {
+    document.getElementById('m-spinner').style.display = 'none';
+    document.getElementById('m-results').innerHTML = '<div class="empty">Errore connessione al server.</div>';
+  }
+  btn.disabled = false; btn.textContent = '🔍 Trova Match';
+}
+
+/* ── Match card renderer ─────────────────────────────────────────────────── */
+const _PORTALE_MAP = {
+  'subito.it':      { cls: 'pb-subito',      label: '● subito.it' },
+  'idealista.it':   { cls: 'pb-idealista',   label: '● idealista.it' },
+  'immobiliare.it': { cls: 'pb-immobiliare', label: '● immobiliare.it' },
+  'casa.it':        { cls: 'pb-casa',        label: '● casa.it' },
+  'wikicasa.it':    { cls: 'pb-wikicasa',    label: '● wikicasa.it' },
+  'tecnocasa.it':   { cls: 'pb-tecnocasa',   label: '● tecnocasa.it' },
+};
+const _DIM_CFG = [
+  { k:'prezzo',     lbl:'Prezzo',  color:'#185FA5' },
+  { k:'superficie', lbl:'Sup.',    color:'#1D9E75' },
+  { k:'zona',       lbl:'Zona',    color:'#7B5EA7' },
+  { k:'camere',     lbl:'Camere',  color:'#EF9F27' },
+  { k:'extra',      lbl:'Extra',   color:'#D94F4F' },
+];
+const _EXTRA_NAMES = {
+  terrazzo:'🌿 Terrazzo', garage:'🚗 Garage',
+  ascensore:'🔝 Ascensore', giardino:'🌳 Giardino', bagni:'🚿 Bagni',
+};
+
+function matchCardHTML(d) {
+  const s = d.score;
+  const ringCls = s >= 85 ? 'sr-g' : s >= 65 ? 'sr-o' : 'sr-r';
+  const lblCls  = s >= 85 ? 'slbl-g' : s >= 65 ? 'slbl-o' : 'slbl-r';
+  const lblTxt  = s >= 90 ? 'Match perfetto ✦'
+                : s >= 80 ? 'Match ottimo'
+                : s >= 65 ? 'Buon match'
+                : s >= 50 ? 'Match parziale'
+                :           'Match basso';
+
+  const sd = d.score_dettaglio || {};
+  const bars = _DIM_CFG.map(({ k, lbl, color }) => {
+    const v = Math.round(sd[k] || 0);
+    return `<div class="d-row">
+      <span class="d-lbl">${lbl}</span>
+      <div class="d-bg"><div class="d-fill" style="width:${v}%;background:${color}"></div></div>
+      <span class="d-pct">${v}%</span>
+    </div>`;
+  }).join('');
+
+  const ed = d.extra_detail || {};
+  const etags = Object.entries(ed)
+    .filter(([, v]) => v !== null)
+    .map(([k, v]) => `<span class="etag ${v ? 'etag-y' : 'etag-n'}">${_EXTRA_NAMES[k] || k} ${v ? '✓' : '✗'}</span>`)
+    .join('');
+
+  const isP = d.fonte === 'privato', isN = d.fonte === 'noescl';
+  const srcB = isP ? '<span class="badge b-priv">Privato</span>'
+    : isN ? '<span class="badge b-noescl">&#9888; Non esclusiva</span>'
+    : '<span class="badge" style="background:#f0f0ec;color:#888;border:1px solid #d0d0cc">Agenzia</span>';
+
+  const pm = d.portale ? (_PORTALE_MAP[d.portale] || { cls:'pb-altro', label:d.portale }) : null;
+  const portaleBadge = pm ? `<span class="portale-badge ${pm.cls}">${pm.label}</span>` : '';
+
+  const btnVedi = d.url_originale
+    ? `<a class="cf-btn cf-outline" href="${d.url_originale}" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" style="text-decoration:none;text-align:center;flex:none;padding:6px 14px;min-width:unset;font-size:12px">Vedi →</a>`
+    : '';
+
+  const url = d.url_originale || '';
+  return `<div class="scard" onclick="if(!event.target.closest('a,button')&&'${url}'){const _a=document.createElement('a');_a.href='${url}';_a.target='_blank';_a.rel='noopener noreferrer';_a.click()}">
+    <div class="scard-inner">
+      <div class="sc-col">
+        <div class="sc-ring ${ringCls}">${s}</div>
+        <div class="sc-lbl ${lblCls}">${lblTxt}</div>
+      </div>
+      <div class="scard-body">
+        <div class="sc-addr">${d.indirizzo}</div>
+        <div class="sc-meta">${d.zona || ''} · ${d.tipo || ''} · ${d.mq ? d.mq + ' m²' : '—'} · ${fmt(d.prezzo)}</div>
+        <div class="dim-bars">${bars}</div>
+        ${etags ? `<div class="etags">${etags}</div>` : ''}
+        <div class="card-footer" style="margin-top:.5rem;padding-top:.5rem;align-items:center">
+          ${srcB}${portaleBadge ? ' ' + portaleBadge : ''}<span style="flex:1"></span>
+          <button class="cf-btn cf-cal" style="flex:none;padding:6px 12px;min-width:unset;font-size:12px"
+            onclick="event.stopPropagation();apriCalendar(${d.id})" title="Aggiungi al calendario">📅 Agenda</button>
+          ${btnVedi}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ========== START ========== */
+init();
+</script>
+</body>
+</html>
