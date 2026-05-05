@@ -31,9 +31,8 @@ FOUNDERS = [
     ("info@houseradar.it",              "agente",     "HouseRadar",    None),
     ("francescolionetti04@gmail.com",   "privato",    "Francesco",     "Lionetti"),
     ("jmk.condor@libero.it",            "privato",    None,            None),
-    ("gianlucacelli02@gmail.com",       "consulente", "Gianluca",      "Celli"),
-    # Tommaso — slot riservato, attivare quando avremo l'email definitiva
-    # ("tommaso.placeholder@example.com", "agente", "Tommaso", None),
+    ("gianlucacelli02@gmail.com",                 "consulente", "Gianluca", "Celli"),
+    ("t.miglinotoscanaimmobiliare51@gmail.com",   "consulente", "Tommaso",  None),
 ]
 
 

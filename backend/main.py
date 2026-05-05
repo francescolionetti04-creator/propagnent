@@ -29,10 +29,10 @@ SCRAPER_DIR  = os.path.join(os.path.dirname(__file__), "..", "scraper")
 # ── Init DB (tabelle annunci/users/app_config) ───────────────────────────────
 init_db()
 
-# ── Seed founders se tabella users vuota ─────────────────────────────────────
+# ── Seed founders (idempotente per-email, gira ad ogni boot) ─────────────────
 try:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-    from seed_founders import run_if_empty as _seed_founders
+    from seed_founders import run as _seed_founders
     _seed_founders()
 except Exception as _seed_err:
     print(f"[Seed] errore founders: {_seed_err}")
