@@ -43,12 +43,18 @@ def run() -> int:
         if get_user_by_email(email):
             print(f"[seed] {email} già presente — skip")
             continue
-        # Password placeholder casuale (32 char) — l'utente farà reset
-        placeholder = secrets.token_urlsafe(24)
+
+        # Password placeholder casuale — bcrypt accetta max 72 byte di input.
+        # token_urlsafe(16) produce ~22 char ASCII (= 22 byte), ben sotto il limite.
+        # Aggiungiamo defense-in-depth troncando a 32 byte.
+        placeholder = secrets.token_urlsafe(16)
+        placeholder = placeholder.encode("utf-8")[:32].decode("utf-8", errors="ignore")
+
         try:
+            hashed = pwd.hash(placeholder)
             create_user(
                 email=email,
-                password_hash=pwd.hash(placeholder),
+                password_hash=hashed,
                 role=role,
                 nome=nome,
                 cognome=cognome,
@@ -56,9 +62,10 @@ def run() -> int:
                 is_email_verified=True,
             )
             creati += 1
-            print(f"[seed] ✓ founder creato: {email} (role={role})")
+            print(f"[seed] ✓ Founder creato: {email} (role={role})")
         except Exception as e:
-            print(f"[seed] errore creazione {email}: {e}")
+            print(f"[seed] ✗ errore creazione {email}: {e}")
+    print(f"[seed] Totale founder creati in questo run: {creati}")
     return creati
 
 
