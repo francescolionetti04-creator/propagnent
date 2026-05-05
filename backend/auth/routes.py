@@ -7,8 +7,9 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
-from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, constr, validator
+
+from .passwords import hash_password, verify_password
 
 from .jwt_utils import issue_token, cookie_kwargs, SESSION_COOKIE
 from .users_db import (
@@ -24,7 +25,6 @@ from services.email import send_verification_email, send_password_reset_email, s
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 APP_BASE_URL = os.environ.get("APP_BASE_URL", "https://houseradar.it").rstrip("/")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -71,15 +71,8 @@ class ResetBody(BaseModel):
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
-def _hash(pw: str) -> str:
-    return pwd.hash(pw)
-
-
-def _verify(pw: str, hashed: str) -> bool:
-    try:
-        return pwd.verify(pw, hashed)
-    except Exception:
-        return False
+_hash   = hash_password
+_verify = verify_password
 
 
 # ─── Routes ─────────────────────────────────────────────────────────────────

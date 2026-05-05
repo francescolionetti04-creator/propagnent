@@ -20,10 +20,7 @@ import secrets
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 from auth.users_db import create_user, get_user_by_email, count_users
-from passlib.context import CryptContext
-
-
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from auth.passwords import hash_password
 
 
 FOUNDERS = [
@@ -51,7 +48,7 @@ def run() -> int:
         placeholder = placeholder.encode("utf-8")[:32].decode("utf-8", errors="ignore")
 
         try:
-            hashed = pwd.hash(placeholder)
+            hashed = hash_password(placeholder)
             create_user(
                 email=email,
                 password_hash=hashed,
