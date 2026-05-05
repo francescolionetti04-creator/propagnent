@@ -1,9 +1,10 @@
 import asyncio
 import threading
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, Response
+from fastapi.responses import JSONResponse, FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import HTTPException
 from typing import Optional
 import sys
 import os
@@ -16,20 +17,58 @@ from database import (
 )
 from models import Annuncio
 
+# ── Auth + Stripe ─────────────────────────────────────────────────────────────
+from auth.routes import router as auth_router
+from auth.dependencies import require_auth, require_paid, current_user, AuthRedirect
+from auth.users_db import public_user
+from services.stripe_svc import router as stripe_router, ensure_stripe_prices
+
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 SCRAPER_DIR  = os.path.join(os.path.dirname(__file__), "..", "scraper")
 
-app = FastAPI(title="PropAgent AI", version="1.0.0")
+# ── Init DB (tabelle annunci/users/app_config) ───────────────────────────────
+init_db()
+
+# ── Seed founders se tabella users vuota ─────────────────────────────────────
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+    from seed_founders import run_if_empty as _seed_founders
+    _seed_founders()
+except Exception as _seed_err:
+    print(f"[Seed] errore founders: {_seed_err}")
+
+
+app = FastAPI(title="HouseRadar", version="2.1.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
-# Inizializza il database all'avvio (crea tabelle + migrazioni)
-init_db()
+# ── Auth + Stripe routers ────────────────────────────────────────────────────
+app.include_router(auth_router)
+app.include_router(stripe_router)
+
+
+@app.exception_handler(AuthRedirect)
+async def _auth_redirect_handler(request: Request, exc: AuthRedirect):
+    """Pagine → 303 redirect; API/JSON → 401 con destinazione."""
+    accept = request.headers.get("accept", "")
+    if request.url.path.startswith("/api") or "application/json" in accept:
+        return JSONResponse({"error": "auth_required", "location": exc.location},
+                            status_code=401)
+    return RedirectResponse(url=exc.location, status_code=303)
+
+
+# ── Bootstrap Stripe price_id al boot (best-effort) ──────────────────────────
+try:
+    if os.environ.get("STRIPE_SECRET_KEY"):
+        ensure_stripe_prices()
+except Exception as _se:
+    print(f"[Stripe] bootstrap errore: {_se}")
 
 # Carica dati OMI al boot (seed se DB vuoto, ~0.1s)
 try:
@@ -398,9 +437,26 @@ def pricing():
 
 
 @app.get("/app")
-def app_dashboard():
-    """Dashboard agenti (annunci + match + valutazione)."""
+def app_dashboard(user=Depends(require_paid)):
+    """Dashboard agenti — richiede auth + (founder OR subscription attiva)."""
     return _serve("app.html")
+
+
+@app.get("/forgot-password")
+def forgot_page():
+    return _serve("forgot-password.html")
+
+
+@app.get("/reset-password")
+def reset_page():
+    return _serve("reset-password.html")
+
+
+@app.get("/api/me")
+def api_me(request: Request):
+    """Ritorna l'utente corrente (None se non autenticato)."""
+    user = current_user(request)
+    return JSONResponse({"user": public_user(user)})
 
 
 @app.get("/signup")

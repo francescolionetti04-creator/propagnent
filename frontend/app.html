@@ -379,9 +379,27 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
         <div class="live-dot"></div>Live
         <span class="live-tip">Annunci aggiornati ogni 5 min via RSS<br>Scraping completo ogni 30 min</span>
       </div>
+      <span id="user-badge" style="display:none;font-size:13px;color:#185FA5;font-weight:600;padding:6px 12px;background:#EDF4FC;border-radius:8px"></span>
+      <span id="founder-badge" style="display:none;font-size:13px;color:#1D9E75;font-weight:700;padding:6px 12px;background:#E1F5EE;border-radius:8px;border:1px solid #5DCAA5">🌟 Founder</span>
       <button class="btn-refresh" id="btn-refresh" onclick="avviaScraper()">&#8635; Aggiorna ora</button>
+      <button class="btn-refresh" onclick="logoutHr()" style="background:#fff;color:#666">Esci</button>
     </div>
   </div>
+  <script>
+    // Carica info utente per topbar (founder badge + nome)
+    fetch('/api/me', {credentials:'include'}).then(r=>r.json()).then(({user})=>{
+      if (!user) return;
+      const ub = document.getElementById('user-badge');
+      const fb = document.getElementById('founder-badge');
+      const nome = user.nome || user.email.split('@')[0];
+      ub.textContent = nome; ub.style.display = '';
+      if (user.is_founder) fb.style.display = '';
+    }).catch(()=>{});
+    async function logoutHr(){
+      await fetch('/auth/logout', {method:'POST', credentials:'include'});
+      location.href = '/';
+    }
+  </script>
 
   <!-- TABS -->
   <div class="tabs">

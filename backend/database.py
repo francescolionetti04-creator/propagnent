@@ -210,6 +210,44 @@ def init_db():
         )
     """))
 
+    # ── Tabella users (auth) ─────────────────────────────────────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            nome TEXT,
+            cognome TEXT,
+            telefono TEXT,
+            role TEXT NOT NULL,
+            city TEXT,
+            is_founder BOOLEAN DEFAULT FALSE,
+            is_email_verified BOOLEAN DEFAULT FALSE,
+            email_verification_token TEXT,
+            password_reset_token TEXT,
+            password_reset_expires TEXT,
+            stripe_customer_id TEXT,
+            stripe_subscription_id TEXT,
+            subscription_status TEXT DEFAULT 'none',
+            trial_ends_at TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """))
+    # Indice email (case-sensitive su SQLite, ma noi memorizziamo già lowercase)
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)"))
+    except Exception:
+        pass
+
+    # ── Tabella app_config (key-value) ───────────────────────────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS app_config (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """))
+
     conn.commit()
     conn.close()
 

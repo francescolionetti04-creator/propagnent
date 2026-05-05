@@ -269,7 +269,7 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
           <li>Stime OMI Agenzia delle Entrate</li>
           <li>Supporto via email</li>
         </ul>
-        <a href="/signup?role=agente&plan=solo" class="btn btn-out">Inizia 14 giorni gratis</a>
+        <a href="#" class="btn btn-out" data-checkout="solo">Inizia 14 giorni gratis</a>
       </div>
 
       <!-- TIER 2: AGENZIA (featured) -->
@@ -291,7 +291,7 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
           <li>Export CSV/Excel</li>
           <li>Supporto prioritario</li>
         </ul>
-        <a href="/signup?role=agente&plan=agenzia" class="btn btn-pri">Inizia 14 giorni gratis</a>
+        <a href="#" class="btn btn-pri" data-checkout="agenzia">Inizia 14 giorni gratis</a>
       </div>
 
       <!-- TIER 3: SU MISURA -->
@@ -400,7 +400,36 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
   }
 })();
 
+// ── Stripe checkout ─────────────────────────────────────────────
+let _billing = 'm';  // 'm' | 'y'
+document.querySelectorAll('[data-checkout]').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const plan     = btn.dataset.checkout;          // 'solo' | 'agenzia'
+    const interval = _billing === 'y' ? 'year' : 'month';
+    btn.style.opacity = '.6';
+    try {
+      const meR = await fetch('/api/me', {credentials:'include'});
+      const me  = (await meR.json()).user;
+      if (!me) { location.href = '/signup?role=agente&plan=' + plan; return; }
+      const r = await fetch('/api/stripe/create-checkout-session', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({plan, interval}),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.checkout_url) throw new Error(j.detail || 'Errore Stripe');
+      location.href = j.checkout_url;
+    } catch (err) {
+      alert('Impossibile aprire il checkout: ' + err.message);
+    } finally {
+      btn.style.opacity = '';
+    }
+  });
+});
+
 function setBilling(mode){
+  _billing = mode;
   const tgM = document.getElementById('tgM'), tgY = document.getElementById('tgY');
   tgM.classList.toggle('on', mode === 'm');
   tgY.classList.toggle('on', mode === 'y');

@@ -1,0 +1,131 @@
+"""
+HouseRadar — Email transazionali via Resend.
+
+ENV vars:
+  RESEND_API_KEY     — chiave API Resend
+  EMAIL_FROM         — mittente (default: HouseRadar <onboarding@resend.dev>)
+                       finché DNS Aruba non sono configurati per houseradar.it
+
+Tutte le funzioni sono "best-effort": loggano errori ma non sollevano,
+così un fallimento email non blocca signup/reset/etc.
+"""
+
+import os
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+EMAIL_FROM     = os.environ.get("EMAIL_FROM", "HouseRadar <onboarding@resend.dev>")
+
+_BLUE  = "#185FA5"
+_GREEN = "#5DCAA5"
+
+
+def _send(to: str, subject: str, html: str) -> bool:
+    """Wrapper Resend. Ritorna True se inviato, False altrimenti."""
+    if not RESEND_API_KEY:
+        print(f"[Email] RESEND_API_KEY mancante — skip invio a {to} ({subject!r})")
+        return False
+    try:
+        import resend
+        resend.api_key = RESEND_API_KEY
+        resp = resend.Emails.send({
+            "from":    EMAIL_FROM,
+            "to":      [to],
+            "subject": subject,
+            "html":    html,
+        })
+        print(f"[Email] inviato a {to}: {subject!r} (id={resp.get('id') if isinstance(resp, dict) else 'ok'})")
+        return True
+    except Exception as e:
+        print(f"[Email] errore invio a {to}: {e}")
+        return False
+
+
+def _wrap(content_html: str, preheader: str = "") -> str:
+    """Wrapper HTML coerente con il brand HouseRadar."""
+    return f"""<!doctype html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<span style="display:none;visibility:hidden;color:transparent">{preheader}</span>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f5f5f3;padding:40px 20px">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:14px;border:1px solid #D3D1C7;overflow:hidden">
+      <tr><td style="background:{_BLUE};padding:28px;text-align:center">
+        <span style="display:inline-block;color:#fff;font-size:22px;font-weight:700;letter-spacing:-.01em">
+          🏠 HouseRadar
+        </span>
+      </td></tr>
+      <tr><td style="padding:36px 36px 28px;color:#1a1a1a;line-height:1.6;font-size:15px">
+        {content_html}
+      </td></tr>
+      <tr><td style="padding:18px 36px;border-top:1px solid #f0f0eb;color:#888;font-size:12px;text-align:center">
+        © 2026 HouseRadar · Made in Italy<br>
+        <a href="https://houseradar.it" style="color:{_BLUE}">houseradar.it</a>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>"""
+
+
+def _btn(url: str, label: str) -> str:
+    return f"""
+<div style="text-align:center;margin:28px 0">
+  <a href="{url}" style="display:inline-block;background:{_BLUE};color:#fff;
+     padding:14px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:15px">
+    {label}
+  </a>
+</div>"""
+
+
+# ─── Public API ──────────────────────────────────────────────────────────────
+
+def send_verification_email(to: str, link: str, nome: str | None = None) -> bool:
+    saluto = f"Ciao {nome}," if nome else "Ciao,"
+    body = f"""
+<h2 style="margin:0 0 18px;font-size:22px;font-weight:700">Conferma il tuo account</h2>
+<p>{saluto}</p>
+<p>Grazie per esserti registrato a HouseRadar. Per attivare il tuo account
+clicca sul bottone qui sotto:</p>
+{_btn(link, "Verifica email")}
+<p style="font-size:13px;color:#666">
+  Se il bottone non funziona, copia questo link nel browser:<br>
+  <a href="{link}" style="color:{_BLUE};word-break:break-all">{link}</a>
+</p>
+<p style="font-size:13px;color:#666;margin-top:24px">
+  Se non hai richiesto tu la registrazione, ignora questo messaggio.
+</p>"""
+    return _send(to, "Conferma il tuo account HouseRadar", _wrap(body, "Conferma il tuo account"))
+
+
+def send_password_reset_email(to: str, link: str, nome: str | None = None) -> bool:
+    saluto = f"Ciao {nome}," if nome else "Ciao,"
+    body = f"""
+<h2 style="margin:0 0 18px;font-size:22px;font-weight:700">Reimposta la tua password</h2>
+<p>{saluto}</p>
+<p>Hai richiesto di reimpostare la password del tuo account HouseRadar.
+Clicca qui sotto per scegliere una nuova password:</p>
+{_btn(link, "Reimposta password")}
+<p style="font-size:13px;color:#666">
+  Il link è valido <strong>1 ora</strong>. Se non hai richiesto tu il reset,
+  ignora questa email — la tua password non verrà cambiata.
+</p>"""
+    return _send(to, "Reimposta la tua password HouseRadar", _wrap(body, "Reset password"))
+
+
+def send_welcome_email(to: str, role: str, nome: str | None = None) -> bool:
+    saluto = f"Benvenuto {nome}!" if nome else "Benvenuto in HouseRadar!"
+    role_msg = {
+        "agente":     "Sei pronto a trovare i tuoi prossimi mandati prima della concorrenza. Inizia subito a esplorare gli annunci aggregati da 6 portali.",
+        "consulente": "Hai accesso completo alla dashboard agenti. Trova i tuoi prossimi mandati con il radar HouseRadar.",
+        "privato":    "Stai per vendere casa con i migliori agenti della tua zona. Riceverai presto le prime proposte.",
+        "compratore": "Stai per ricevere alert sui nuovi annunci nella tua zona. Configura le tue preferenze e lascia che HouseRadar trovi la tua prossima casa.",
+    }.get(role, "Benvenuto in HouseRadar.")
+    body = f"""
+<h2 style="margin:0 0 18px;font-size:22px;font-weight:700">{saluto} 👋</h2>
+<p>Il tuo account è ora attivo.</p>
+<p>{role_msg}</p>
+{_btn("https://houseradar.it/app", "Apri la dashboard")}
+<p style="font-size:13px;color:#666">
+  Hai domande? Rispondi a questa email — saremo felici di aiutarti.
+</p>"""
+    return _send(to, "Benvenuto in HouseRadar 👋", _wrap(body, "Benvenuto"))

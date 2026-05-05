@@ -6,28 +6,36 @@
 <title>Accedi — HouseRadar</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
 <style>
+:root{--blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;--green:#5DCAA5;--green-l:#E1F5EE;
+  --off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--border:#D3D1C7;--err:#C92E2E}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
-  background:#f5f5f3;color:#1a1a1a;line-height:1.6;min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:24px;color:#185FA5;margin-bottom:32px}
+  background:var(--off);color:var(--dark);line-height:1.55;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:24px}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:24px;color:var(--blue);margin:24px 0 28px}
 .brand svg{width:42px;height:42px}
-.card{
-  max-width:520px;width:100%;background:#fff;border-radius:18px;
-  padding:48px 40px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.08);
-  border:1px solid #D3D1C7;
-}
-.icon{font-size:54px;margin-bottom:18px}
-h1{font-size:30px;font-weight:800;margin-bottom:14px;letter-spacing:-.01em}
-p{color:#666;font-size:16px;margin-bottom:14px}
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:13px 28px;border-radius:10px;font-weight:600;font-size:15px;
-  background:#185FA5;color:#fff;text-decoration:none;margin-top:18px;transition:all .2s
-}
-.btn:hover{background:#0F4275;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
-a.back{color:#185FA5;text-decoration:none;font-size:14px;font-weight:500;margin-top:24px;display:inline-block}
-a.back:hover{text-decoration:underline}
+.card{max-width:440px;width:100%;background:#fff;border-radius:18px;padding:40px;
+  box-shadow:0 12px 40px rgba(0,0,0,.07);border:1px solid var(--border)}
+h1{font-size:28px;font-weight:800;margin-bottom:8px;letter-spacing:-.01em}
+.sub{color:var(--gray);margin-bottom:24px;font-size:15px}
+label{display:block;margin:14px 0 6px;font-size:13px;font-weight:600;color:#333}
+input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:10px;
+  font-size:15px;font-family:inherit;transition:border .15s,box-shadow .15s}
+input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.btn{width:100%;padding:13px 24px;border-radius:10px;font-weight:600;font-size:15px;
+  background:var(--blue);color:#fff;cursor:pointer;border:none;margin-top:22px;
+  transition:all .18s;font-family:inherit}
+.btn:hover{background:var(--blue-d);transform:translateY(-1px);box-shadow:0 6px 16px rgba(24,95,165,.2)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.alt{margin-top:20px;text-align:center;font-size:14px;color:var(--gray)}
+.msg{margin-top:14px;padding:11px 14px;border-radius:8px;font-size:14px;display:none}
+.msg.ok{background:var(--green-l);color:#0E5E3F;display:block;border:1px solid var(--green)}
+.msg.err{background:#FBE8E8;color:var(--err);display:block;border:1px solid var(--err)}
+.row-line{display:flex;justify-content:flex-end;margin-top:6px}
+.row-line a{font-size:13px}
+@media(max-width:520px){.card{padding:28px 22px}}
 </style>
 </head>
 <body>
@@ -42,13 +50,62 @@ a.back:hover{text-decoration:underline}
 </a>
 
 <div class="card">
-  <div class="icon">🔐</div>
-  <h1>Login in arrivo</h1>
-  <p>Il login arriverà nello Sprint 2 insieme alla registrazione e ai piani di abbonamento.</p>
-  <p>Per ora la dashboard demo è accessibile pubblicamente.</p>
-  <a href="/app" class="btn">Vedi la dashboard demo</a>
-  <br><a href="/" class="back">← Torna alla home</a>
+  <h1>Accedi</h1>
+  <p class="sub">Bentornato! Inserisci le tue credenziali.</p>
+
+  <form id="loginForm" novalidate>
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required autocomplete="email">
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required autocomplete="current-password">
+    <div class="row-line"><a href="/forgot-password">Password dimenticata?</a></div>
+
+    <button type="submit" class="btn" id="submitBtn">Accedi</button>
+    <div class="msg" id="msg"></div>
+  </form>
+
+  <p class="alt">Non hai un account? <a href="/signup">Registrati gratis</a></p>
 </div>
 
+<script>
+const params = new URLSearchParams(location.search);
+const msg = document.getElementById('msg');
+if (params.get('verified') === '1') {
+  msg.className = 'msg ok';
+  msg.textContent = '✓ Email verificata. Ora puoi accedere.';
+}
+if (params.get('verified') === '0') {
+  msg.className = 'msg err';
+  msg.textContent = 'Link di verifica non valido o scaduto.';
+}
+
+const form = document.getElementById('loginForm');
+const btn  = document.getElementById('submitBtn');
+const next = params.get('next') || '/app';
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg.className = 'msg'; msg.textContent = '';
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  btn.disabled = true; btn.textContent = 'Accesso…';
+  try {
+    const resp = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(json.detail || 'Login fallito');
+    msg.className = 'msg ok'; msg.textContent = '✓ Login riuscito, reindirizzo…';
+    setTimeout(() => location.href = next, 400);
+  } catch (err) {
+    msg.className = 'msg err'; msg.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Accedi';
+  }
+});
+</script>
 </body>
 </html>
