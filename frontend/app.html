@@ -406,6 +406,7 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
     <button class="tab-btn active" id="tab-annunci" onclick="switchTab('annunci')">📋 Annunci</button>
     <button class="tab-btn" id="tab-match" onclick="switchTab('match')">🎯 Match Cliente</button>
     <button class="tab-btn" id="tab-valuta" onclick="switchTab('valuta')">📊 Valutazione</button>
+    <button class="tab-btn" id="tab-leadp" onclick="switchTab('leadp')">📋 Lead Privati</button>
   </div>
 
   <!-- MATCH PANEL -->
@@ -639,6 +640,26 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
 
       </div>
       <button class="btn-pdf" onclick="generaReportForm()">📄 Genera Report PDF</button>
+    </div>
+  </div>
+
+  <!-- LEAD PRIVATI PANEL -->
+  <div class="val-panel" id="leadp-panel" style="display:none">
+    <div class="val-card">
+      <div class="val-title">📋 Lead Privati — Annunci da privati nella tua zona</div>
+      <div class="val-sub">Privati che cercano un agente per vendere casa. Il loro telefono ti viene mostrato dopo aver cliccato "Contatta".</div>
+      <div style="margin:16px 0">
+        <span class="val-lbl">Filtro provincia:</span>
+        <select class="val-input" id="leadp-prov" onchange="loadLeadPrivati()" style="max-width:260px;display:inline-block;margin-left:8px">
+          <option value="">Tutte le province</option>
+          <option value="Livorno">Livorno</option><option value="Pisa">Pisa</option>
+          <option value="Firenze">Firenze</option><option value="Siena">Siena</option>
+          <option value="Arezzo">Arezzo</option><option value="Lucca">Lucca</option>
+          <option value="Grosseto">Grosseto</option><option value="Pistoia">Pistoia</option>
+          <option value="Prato">Prato</option><option value="Massa-Carrara">Massa-Carrara</option>
+        </select>
+      </div>
+      <div id="leadp-list" style="display:flex;flex-direction:column;gap:14px"></div>
     </div>
   </div>
 
@@ -1313,11 +1334,14 @@ function switchTab(tab) {
   const isA = tab === 'annunci';
   const isM = tab === 'match';
   const isV = tab === 'valuta';
+  const isL = tab === 'leadp';
   document.getElementById('tab-annunci').classList.toggle('active', isA);
   document.getElementById('tab-match').classList.toggle('active', isM);
   document.getElementById('tab-valuta').classList.toggle('active', isV);
+  document.getElementById('tab-leadp').classList.toggle('active', isL);
   document.getElementById('match-panel').style.display = isM ? 'block' : 'none';
   document.getElementById('val-panel').style.display   = isV ? 'block' : 'none';
+  document.getElementById('leadp-panel').style.display = isL ? 'block' : 'none';
   // Sezioni visibili solo nel tab Annunci
   ['annunci-search', 'alert-banner', 'spinner', 'empty', 'cards'].forEach(id => {
     const el = document.getElementById(id);
@@ -1325,6 +1349,81 @@ function switchTab(tab) {
   });
   document.querySelector('.stats-row').style.display      = isA ? '' : 'none';
   document.querySelector('.results-header').style.display = isA ? '' : 'none';
+  if (isL) loadLeadPrivati();
+}
+
+/* ========== LEAD PRIVATI ========== */
+async function loadLeadPrivati() {
+  const list = document.getElementById('leadp-list');
+  list.innerHTML = '<p style="color:#888;padding:14px">Caricamento…</p>';
+  const prov = document.getElementById('leadp-prov').value;
+  const url = prov ? `${API}/api/agente/lead-privati?provincia=${encodeURIComponent(prov)}`
+                   : `${API}/api/agente/lead-privati`;
+  try {
+    const r = await fetch(url, {credentials:'include'});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Errore');
+    if (!j.leads || j.leads.length === 0) {
+      list.innerHTML = `<p style="color:#888;padding:32px;text-align:center;background:#fff;border:1px dashed #d3d1c7;border-radius:12px">
+        Nessun lead attivo${prov ? ' a ' + prov : ''} al momento.</p>`;
+      return;
+    }
+    list.innerHTML = j.leads.map(L => {
+      const urgCls = L.urgenza === 'alta' ? 'background:#FFF7E8;color:#A45F12;border:1px solid #EF9F27'
+                  : L.urgenza === 'bassa' ? 'background:#E1F5EE;color:#1D9E75;border:1px solid #5DCAA5'
+                                          : 'background:#EDF4FC;color:#185FA5';
+      const prezzo = L.prezzo_richiesto ? '€ ' + Number(L.prezzo_richiesto).toLocaleString('it-IT') : '—';
+      const contatto = L.already_contacted
+        ? `<span style="font-size:12px;color:#888;font-weight:600;padding:8px 12px">Già contattato</span>`
+        : `<button class="btn-pdf" style="width:auto;padding:9px 18px;background:#185FA5" onclick="contattaLead(${L.id}, this)">📞 Contatta</button>`;
+      return `
+        <div style="background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:18px 20px;box-shadow:0 4px 12px rgba(0,0,0,.05)">
+          <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
+            <div style="flex:1;min-width:240px">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+                <span style="display:inline-block;padding:3px 10px;font-size:11px;font-weight:700;border-radius:6px;letter-spacing:.04em;text-transform:uppercase;${urgCls}">Urgenza ${L.urgenza || 'media'}</span>
+                <span style="font-size:12px;color:#888">${L.tipo_immobile || 'immobile'}</span>
+              </div>
+              <div style="font-size:17px;font-weight:700">${L.indirizzo}</div>
+              <div style="color:#666;font-size:14px;margin-bottom:6px">${L.citta} (${L.provincia})</div>
+              <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:#444">
+                <span><strong>${prezzo}</strong></span>
+                <span>${L.mq ? L.mq + ' m²' : ''}</span>
+                <span>${L.camere ? L.camere + ' camere' : ''}</span>
+                <span>${L.bagni ? L.bagni + ' bagni' : ''}</span>
+              </div>
+              ${L.descrizione ? `<p style="color:#555;font-size:13px;margin-top:8px">${L.descrizione}</p>` : ''}
+            </div>
+            <div style="display:flex;align-items:center" data-lead-id="${L.id}">${contatto}</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<p style="color:#C92E2E;padding:14px">Errore: ${e.message}</p>`;
+  }
+}
+
+async function contattaLead(leadId, btn) {
+  if (!confirm('Vuoi contattare questo privato? Il privato riceverà una notifica via email.')) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch(`${API}/api/agente/contatta-lead/${leadId}`, {method:'POST', credentials:'include'});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Errore');
+    const tel = j.telefono_privato || '(non disponibile)';
+    const wrap = btn.parentElement;
+    wrap.innerHTML = `
+      <div style="background:#E1F5EE;border:1px solid #5DCAA5;color:#0E5E3F;padding:10px 14px;border-radius:10px;font-weight:600">
+        📞 ${tel}
+        <button onclick="navigator.clipboard.writeText('${tel}').then(()=>this.textContent='✓ Copiato')"
+          style="margin-left:8px;background:#fff;border:1px solid #5DCAA5;color:#1D9E75;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
+          Copia
+        </button>
+      </div>`;
+  } catch (e) {
+    alert('Errore: ' + e.message);
+    btn.disabled = false; btn.textContent = '📞 Contatta';
+  }
 }
 
 /* ── Report PDF da card annuncio ──────────────────────────────────────────── */

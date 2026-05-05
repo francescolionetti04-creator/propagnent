@@ -17,11 +17,12 @@ from database import (
 )
 from models import Annuncio
 
-# ── Auth + Stripe ─────────────────────────────────────────────────────────────
+# ── Auth + Stripe + Privato ───────────────────────────────────────────────────
 from auth.routes import router as auth_router
-from auth.dependencies import require_auth, require_paid, current_user, AuthRedirect
+from auth.dependencies import require_auth, require_paid, require_privato, current_user, AuthRedirect
 from auth.users_db import public_user
 from services.stripe_svc import router as stripe_router, ensure_stripe_prices
+from privato.routes import router_priv as privato_router, router_agent as agente_router
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 SCRAPER_DIR  = os.path.join(os.path.dirname(__file__), "..", "scraper")
@@ -48,9 +49,11 @@ app.add_middleware(
     allow_credentials=True,
 )
 
-# ── Auth + Stripe routers ────────────────────────────────────────────────────
+# ── Auth + Stripe + Privato routers ──────────────────────────────────────────
 app.include_router(auth_router)
 app.include_router(stripe_router)
+app.include_router(privato_router)
+app.include_router(agente_router)
 
 
 @app.exception_handler(AuthRedirect)
@@ -440,6 +443,21 @@ def pricing():
 def app_dashboard(user=Depends(require_paid)):
     """Dashboard agenti — richiede auth + (founder OR subscription attiva)."""
     return _serve("app.html")
+
+
+@app.get("/privato/onboarding")
+def privato_onboarding(user=Depends(require_privato)):
+    return _serve("privato_onboarding.html")
+
+
+@app.get("/privato/nuovo-annuncio")
+def privato_nuovo_annuncio(user=Depends(require_privato)):
+    return _serve("privato_nuovo_annuncio.html")
+
+
+@app.get("/privato/dashboard")
+def privato_dashboard(user=Depends(require_privato)):
+    return _serve("privato_dashboard.html")
 
 
 @app.get("/forgot-password")

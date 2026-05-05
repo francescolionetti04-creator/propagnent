@@ -49,3 +49,13 @@ def require_paid(request: Request):
     if not has_paid_access(user):
         raise AuthRedirect("/pricing?upgrade=1")
     return user
+
+
+def require_privato(request: Request):
+    """Richiede auth + role='privato'. Agenti → /pricing, anonimi → /accedi."""
+    user = _current_user_optional(request)
+    if not user:
+        raise AuthRedirect("/accedi?next=" + request.url.path)
+    if user.get("role") != "privato":
+        raise AuthRedirect("/app")
+    return user

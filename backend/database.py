@@ -248,6 +248,50 @@ def init_db():
         )
     """))
 
+    # ── Tabella lead_venditori (Privati che vogliono vendere casa) ───────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS lead_venditori (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            indirizzo TEXT NOT NULL,
+            citta TEXT NOT NULL,
+            provincia TEXT NOT NULL,
+            tipo_immobile TEXT,
+            mq INTEGER,
+            camere INTEGER,
+            bagni INTEGER,
+            prezzo_richiesto INTEGER,
+            descrizione TEXT,
+            urgenza TEXT DEFAULT 'media',
+            telefono_privato TEXT,
+            foto_url TEXT,
+            status TEXT DEFAULT 'attivo',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_lead_user      ON lead_venditori(user_id)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_lead_provincia ON lead_venditori(provincia)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_lead_status    ON lead_venditori(status)"))
+    except Exception:
+        pass
+
+    # ── Tabella lead_contatti (audit click "Contatta" agenti) ────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS lead_contatti (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_venditore_id INTEGER NOT NULL,
+            agente_user_id INTEGER NOT NULL,
+            contattato_at TEXT
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_contatti_lead   ON lead_contatti(lead_venditore_id)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_contatti_agente ON lead_contatti(agente_user_id)"))
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
 

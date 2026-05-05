@@ -146,7 +146,20 @@ def verify(token: str):
         send_welcome_email(user["email"], user["role"], nome=user.get("nome"))
     except Exception as e:
         print(f"[Verify] Welcome email errore: {e}")
-    return RedirectResponse(url="/accedi?verified=1", status_code=303)
+
+    # Auto-login + redirect per role
+    role = user["role"]
+    if role == "privato":
+        dest = "/privato/onboarding"
+    elif role in ("agente", "consulente"):
+        dest = "/app"  # require_paid eventualmente redirige a /pricing
+    else:
+        dest = "/accedi?verified=1"
+
+    jwt_token = issue_token(user["id"])
+    resp = RedirectResponse(url=dest, status_code=303)
+    resp.set_cookie(value=jwt_token, **cookie_kwargs())
+    return resp
 
 
 @router.post("/forgot-password")
