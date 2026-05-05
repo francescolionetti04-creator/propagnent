@@ -50,7 +50,48 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .btn-out{background:transparent;color:var(--blue);border:1.5px solid var(--blue)}
 .btn-out:hover{background:var(--blue-l)}
 .btn-lg{padding:16px 32px;font-size:17px;border-radius:12px}
-.hamburger{display:none;background:none;border:none;font-size:24px;color:var(--dark)}
+.hamburger{
+  display:none;background:none;border:none;width:42px;height:42px;
+  align-items:center;justify-content:center;color:var(--blue);cursor:pointer;
+  padding:0;border-radius:8px;transition:background .15s;
+}
+.hamburger:hover{background:var(--blue-l)}
+.hamburger svg{width:24px;height:24px;display:block}
+
+/* ─── MOBILE DRAWER ──────────────────────────────────────── */
+.drawer-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.drawer-overlay.open{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;height:100vh;width:min(86vw,340px);
+  background:#fff;z-index:100;box-shadow:-12px 0 32px rgba(0,0,0,.18);
+  transform:translateX(100%);transition:transform .28s ease;
+  display:flex;flex-direction:column;
+}
+.drawer.open{transform:translateX(0)}
+.drawer-head{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:18px 22px;border-bottom:1px solid var(--border);
+}
+.drawer-head .brand{font-size:18px}
+.drawer-head .brand svg{width:30px;height:30px}
+.drawer-close{
+  width:38px;height:38px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;color:var(--dark);cursor:pointer;background:none;border:none;
+  font-size:22px;transition:background .15s;
+}
+.drawer-close:hover{background:var(--off)}
+.drawer-links{flex:1;padding:8px 0;overflow-y:auto}
+.drawer-links a{
+  display:block;padding:16px 22px;font-size:16px;font-weight:500;
+  color:var(--dark);border-bottom:1px solid var(--off);transition:background .15s;
+}
+.drawer-links a:hover{background:var(--off);color:var(--blue)}
+.drawer-cta{padding:18px 22px;display:flex;flex-direction:column;gap:10px;
+  border-top:1px solid var(--border);background:var(--off);}
+.drawer-cta .btn{width:100%}
 
 /* ─── HERO ───────────────────────────────────────────────── */
 .hero{padding:100px 0 80px;position:relative;overflow:hidden}
@@ -191,10 +232,7 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
 }
 @media (max-width:768px){
   .nav-menu,.nav-cta{display:none}
-  .nav-cta.mobile-open{display:flex;position:absolute;top:72px;right:0;left:0;
-    background:#fff;flex-direction:column;padding:20px;gap:12px;
-    border-bottom:1px solid var(--border);box-shadow:var(--shadow)}
-  .hamburger{display:block}
+  .hamburger{display:inline-flex}
   .hero{padding:50px 0 40px}
   .hero-grid{grid-template-columns:1fr;gap:32px}
   h1.hero-h{font-size:36px}
@@ -236,9 +274,42 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
       <a href="/accedi" class="btn btn-out">Accedi</a>
       <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis</a>
     </div>
-    <button class="hamburger" onclick="toggleMenu()">☰</button>
+    <button class="hamburger" id="hbBtn" aria-label="Apri menu" onclick="openDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <line x1="4" y1="7"  x2="20" y2="7"/>
+        <line x1="4" y1="12" x2="20" y2="12"/>
+        <line x1="4" y1="17" x2="20" y2="17"/>
+      </svg>
+    </button>
   </div>
 </nav>
+
+<!-- ═══════════════ MOBILE DRAWER ═══════════════ -->
+<div class="drawer-overlay" id="drawerBg" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" aria-label="Menu mobile">
+  <div class="drawer-head">
+    <a href="/" class="brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+        <circle cx="73" cy="73" r="14" fill="#5DCAA5"/>
+        <circle cx="73" cy="73" r="6" fill="#fff"/>
+      </svg>
+      HouseRadar
+    </a>
+    <button class="drawer-close" aria-label="Chiudi menu" onclick="closeDrawer()">✕</button>
+  </div>
+  <nav class="drawer-links">
+    <a href="/" onclick="closeDrawer()">Home</a>
+    <a href="/#funzionalita" onclick="closeDrawer()">Funzionalità</a>
+    <a href="/pricing" onclick="closeDrawer()">Prezzi</a>
+    <a href="/#chi-siamo" onclick="closeDrawer()">Chi Siamo</a>
+    <a href="/#blog" onclick="closeDrawer()">Blog</a>
+  </nav>
+  <div class="drawer-cta">
+    <a href="/accedi" class="btn btn-out">Accedi</a>
+    <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis</a>
+  </div>
+</aside>
 
 <!-- ═══════════════ HERO ═══════════════ -->
 <section class="hero">
@@ -440,9 +511,21 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
 </footer>
 
 <script>
-function toggleMenu(){
-  document.getElementById('navCta').classList.toggle('mobile-open');
+const _drawer = document.getElementById('drawer');
+const _drawerBg = document.getElementById('drawerBg');
+function openDrawer(){
+  _drawer.classList.add('open');
+  _drawerBg.classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
+function closeDrawer(){
+  _drawer.classList.remove('open');
+  _drawerBg.classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDrawer();
+});
 </script>
 </body>
 </html>
