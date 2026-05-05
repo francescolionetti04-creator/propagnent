@@ -230,9 +230,21 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
   .hero-grid{gap:40px}
   h1.hero-h{font-size:52px}
 }
+/* ─── BREAKPOINT NAV: regole esplicite in entrambe le direzioni ─── */
+@media (min-width:769px){
+  .hamburger{display:none !important}
+  .nav-menu,.nav-cta{display:flex !important}
+}
 @media (max-width:768px){
-  .nav-menu,.nav-cta{display:none}
-  .hamburger{display:inline-flex}
+  .nav-menu,.nav-cta{display:none !important}
+  .hamburger{display:inline-flex !important}
+}
+
+/* Forza apertura del drawer (specificità + !important) */
+.drawer.open{transform:translateX(0) !important}
+.drawer-overlay.open{opacity:1 !important;pointer-events:auto !important}
+
+@media (max-width:768px){
   .hero{padding:50px 0 40px}
   .hero-grid{grid-template-columns:1fr;gap:32px}
   h1.hero-h{font-size:36px}
@@ -511,21 +523,57 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
 </footer>
 
 <script>
-const _drawer = document.getElementById('drawer');
-const _drawerBg = document.getElementById('drawerBg');
-function openDrawer(){
-  _drawer.classList.add('open');
-  _drawerBg.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeDrawer(){
-  _drawer.classList.remove('open');
-  _drawerBg.classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeDrawer();
-});
+(function(){
+  // Lazy lookup ad ogni chiamata (defensive)
+  function $(id){ return document.getElementById(id); }
+
+  function isOpen(){
+    var d = $('drawer');
+    return !!(d && d.classList.contains('open'));
+  }
+
+  function openDrawer(){
+    var d = $('drawer'), bg = $('drawerBg');
+    if (!d || !bg) return;
+    d.classList.add('open');
+    bg.classList.add('open');
+    // Blocca scroll body SOLO se il drawer è effettivamente aperto
+    if (isOpen()) document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer(){
+    var d = $('drawer'), bg = $('drawerBg');
+    if (d)  d.classList.remove('open');
+    if (bg) bg.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Espone globalmente per inline onclick (compatibilità)
+  window.openDrawer  = openDrawer;
+  window.closeDrawer = closeDrawer;
+
+  // Bind robusto (anche se inline onclick fallisse)
+  function init(){
+    var hb = $('hbBtn'), bg = $('drawerBg');
+    if (hb) hb.addEventListener('click', function(e){ e.preventDefault(); openDrawer(); });
+    if (bg) bg.addEventListener('click', closeDrawer);
+    document.querySelectorAll('.drawer-close').forEach(function(b){
+      b.addEventListener('click', closeDrawer);
+    });
+    document.querySelectorAll('.drawer-links a').forEach(function(a){
+      a.addEventListener('click', closeDrawer);
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && isOpen()) closeDrawer();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 </script>
 </body>
 </html>
