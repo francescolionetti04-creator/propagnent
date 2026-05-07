@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>I miei match — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+:root{--blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;--green:#5DCAA5;--green-l:#E1F5EE;
+  --off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--border:#D3D1C7;--err:#C92E2E}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:linear-gradient(180deg,var(--off) 0%,#fff 320px);color:var(--dark);line-height:1.55;min-height:100vh;padding:24px}
+a{color:var(--blue);text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto}
+.topbar{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--border);
+  border-radius:14px;padding:16px 20px;margin-bottom:24px;box-shadow:0 4px 12px rgba(0,0,0,.05);flex-wrap:wrap;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--blue)}
+.brand svg{width:30px;height:30px}
+.user-bar{display:flex;align-items:center;gap:10px;font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;border-radius:10px;
+  font-weight:600;font-size:14px;background:var(--blue);color:#fff;cursor:pointer;border:none;
+  transition:all .18s;font-family:inherit;text-decoration:none}
+.btn:hover{background:var(--blue-d);transform:translateY(-1px);box-shadow:0 6px 16px rgba(24,95,165,.2)}
+.btn-out{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+.btn-out:hover{background:var(--blue-l)}
+
+h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-.01em}
+.sub{color:var(--gray);margin-bottom:24px}
+
+.card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px 26px;
+  margin-bottom:18px;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+.card h3{font-size:17px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+.pref-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.pref-fld{background:var(--off);padding:12px 14px;border-radius:10px}
+.pref-fld .l{font-size:11px;color:var(--gray);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.pref-fld .v{font-size:15px;font-weight:600}
+.pill{display:inline-block;padding:3px 9px;font-size:12px;font-weight:600;border-radius:6px;background:var(--blue-l);color:var(--blue);margin:1px 3px 1px 0}
+
+.toggle-row{display:flex;align-items:center;gap:14px;background:var(--off);border-radius:10px;padding:14px 16px;margin-top:16px}
+.toggle{position:relative;display:inline-block;width:46px;height:24px}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.2s}
+.slider:before{position:absolute;content:'';width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked + .slider{background:var(--green-d)}
+.toggle input:checked + .slider:before{transform:translateX(22px)}
+
+.matches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:8px}
+.match{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  box-shadow:0 4px 12px rgba(0,0,0,.04);transition:transform .2s,box-shadow .2s;
+  display:flex;flex-direction:column}
+.match:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.08)}
+.match img{width:100%;height:160px;object-fit:cover;background:#f0f0eb;display:block}
+.match-body{padding:14px 16px;flex:1;display:flex;flex-direction:column}
+.match-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.score-pill{display:inline-block;padding:3px 9px;font-size:11px;font-weight:700;border-radius:6px;
+  background:var(--green-l);color:#1D9E75;letter-spacing:.04em}
+.new-pill{display:inline-block;padding:3px 8px;font-size:10px;font-weight:700;border-radius:5px;
+  background:#FFF7E8;color:#A45F12;border:1px solid #EF9F27;letter-spacing:.06em}
+.match-prezzo{font-size:18px;font-weight:800;color:var(--blue);margin:6px 0 4px}
+.match-addr{font-size:14px;color:#333;margin-bottom:4px}
+.match-meta{font-size:12px;color:var(--gray);margin-bottom:10px}
+.match-foot{margin-top:auto;display:flex;gap:8px}
+
+.flash{background:var(--green-l);color:#0E5E3F;padding:11px 14px;border-radius:10px;margin-bottom:18px;border:1px solid var(--green)}
+@media (max-width:600px){.topbar{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a href="/" class="brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+        <circle cx="73" cy="73" r="14" fill="#5DCAA5"/><circle cx="73" cy="73" r="6" fill="#fff"/>
+      </svg>HouseRadar
+    </a>
+    <div class="user-bar">
+      <span id="user-name" style="font-weight:600;color:var(--blue)"></span>
+      <button class="btn btn-out" onclick="logoutHr()">Esci</button>
+    </div>
+  </div>
+
+  <h1>La mia ricerca</h1>
+  <p class="sub">Le tue preferenze e gli annunci che corrispondono. I match si aggiornano ogni notte.</p>
+
+  <div id="flash" class="flash" style="display:none"></div>
+
+  <!-- PREFERENZE -->
+  <div class="card" id="pref-card">
+    <h3>🎯 Le mie preferenze</h3>
+    <div id="pref-content"><p style="color:#888">Caricamento…</p></div>
+  </div>
+
+  <!-- MATCH -->
+  <div class="card">
+    <h3>🏡 Annunci match per te</h3>
+    <div id="match-content"><p style="color:#888">Caricamento…</p></div>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+if (params.get('created') === '1') {
+  const f = document.getElementById('flash');
+  f.style.display = ''; f.textContent = '✓ Preferenze salvate! I primi match arriveranno entro 24h.';
+}
+
+async function logoutHr(){
+  await fetch('/auth/logout', {method:'POST', credentials:'include'});
+  location.href = '/';
+}
+
+function fmtPrezzo(p){ return p ? '€ ' + Number(p).toLocaleString('it-IT') : '—'; }
+function fmtRange(min, max){
+  if (min == null && max == null) return null;
+  if (min != null && max != null) return `${min} – ${max}`;
+  if (min != null) return `≥ ${min}`;
+  return `≤ ${max}`;
+}
+function isNew(iso){
+  if (!iso) return false;
+  try { return (Date.now() - new Date(iso).getTime()) < 7*24*3600*1000; } catch { return false; }
+}
+
+let _leadId = null;
+
+async function loadAll(){
+  // user
+  try {
+    const meR = await fetch('/api/me', {credentials:'include'});
+    const me  = (await meR.json()).user;
+    if (me) document.getElementById('user-name').textContent = me.nome || me.email;
+  } catch {}
+
+  // preferenze
+  const pc = document.getElementById('pref-content');
+  try {
+    const r = await fetch('/api/compratore/me/lead', {credentials:'include'});
+    const j = await r.json();
+    if (!j.lead) {
+      pc.innerHTML = `
+        <p style="color:#666;margin-bottom:14px">Non hai ancora impostato preferenze.</p>
+        <a class="btn" href="/compratore/nuove-preferenze">Impostale ora</a>`;
+    } else {
+      _leadId = j.lead.id;
+      const L = j.lead;
+      const tipi = (L.tipo_immobile && L.tipo_immobile.length) ? L.tipo_immobile : ['Tutti'];
+      pc.innerHTML = `
+        <div class="pref-grid">
+          <div class="pref-fld"><div class="l">Province</div><div class="v">
+            ${(L.province_interesse || []).map(p => `<span class="pill">${p}</span>`).join('') || '—'}
+          </div></div>
+          <div class="pref-fld"><div class="l">Tipo immobile</div><div class="v">
+            ${tipi.map(t => `<span class="pill">${t}</span>`).join('')}
+          </div></div>
+          ${L.zona_libera ? `<div class="pref-fld" style="grid-column:1/-1"><div class="l">Zone</div><div class="v">${L.zona_libera}</div></div>` : ''}
+          <div class="pref-fld"><div class="l">MQ</div><div class="v">${fmtRange(L.mq_min, L.mq_max) || '—'}</div></div>
+          <div class="pref-fld"><div class="l">Camere min</div><div class="v">${L.camere_min ?? '—'}</div></div>
+          <div class="pref-fld"><div class="l">Prezzo (€)</div><div class="v">${fmtRange(L.prezzo_min, L.prezzo_max) || '—'}</div></div>
+          <div class="pref-fld"><div class="l">Urgenza</div><div class="v">${L.urgenza || 'media'}</div></div>
+        </div>
+        ${L.note_aggiuntive ? `<p style="color:#444;margin-top:14px;font-size:14px">"${L.note_aggiuntive}"</p>` : ''}
+        <div class="toggle-row">
+          <label class="toggle">
+            <input type="checkbox" id="email-toggle" ${L.email_match_attivo ? 'checked' : ''}>
+            <span class="slider"></span>
+          </label>
+          <div>
+            <strong>Email match: <span id="email-state">${L.email_match_attivo ? 'ON' : 'OFF'}</span></strong>
+            <div style="font-size:12px;color:#666">Ricevi una mail al giorno con i nuovi annunci che matchano</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+          <a class="btn btn-out" href="/compratore/nuove-preferenze">Modifica preferenze</a>
+        </div>`;
+      // toggle handler
+      document.getElementById('email-toggle').addEventListener('change', async (e) => {
+        const on = e.target.checked;
+        document.getElementById('email-state').textContent = on ? 'ON' : 'OFF';
+        try {
+          await fetch(`/api/compratore/lead/${_leadId}/email-toggle`, {
+            method:'PUT', credentials:'include',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({email_match_attivo: on}),
+          });
+        } catch {}
+      });
+    }
+  } catch (e) {
+    pc.innerHTML = `<p style="color:#C92E2E">Errore caricamento preferenze.</p>`;
+  }
+
+  // match
+  const mc = document.getElementById('match-content');
+  try {
+    const r = await fetch('/api/compratore/me/match', {credentials:'include'});
+    const j = await r.json();
+    if (!j.matches || j.matches.length === 0) {
+      mc.innerHTML = `<p style="color:#666">Ancora nessun match. Il sistema cerca nuovi annunci ogni notte alle 3:00. Tornando domani vedrai le prime corrispondenze.</p>`;
+      return;
+    }
+    mc.innerHTML = `<div class="matches-grid">${j.matches.map(M => {
+      const newBadge = isNew(M.matched_at) ? '<span class="new-pill">NEW</span>' : '';
+      const url = M.url || '#';
+      const foto = M.foto_url || `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'><rect width='400' height='200' fill='%23f5f5f3'/><text x='200' y='110' text-anchor='middle' font-family='Arial' font-size='42' fill='%23ccc'>🏠</text></svg>`;
+      return `
+        <div class="match">
+          <img src="${foto}" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="match-body">
+            <div class="match-row">
+              <span class="score-pill">${M.match_score || 0}% match</span>
+              ${newBadge}
+            </div>
+            <div class="match-prezzo">${fmtPrezzo(M.prezzo)}</div>
+            <div class="match-addr">${M.indirizzo || M.zona || '—'}</div>
+            <div class="match-meta">
+              ${M.zona ? M.zona + ' · ' : ''}${M.tipo || ''}
+              ${M.mq ? ' · ' + M.mq + ' m²' : ''}
+              ${M.camere ? ' · ' + M.camere + ' camere' : ''}
+            </div>
+            <div class="match-foot">
+              <a class="btn btn-out" href="${url}" target="_blank" rel="noopener noreferrer" style="flex:1">Vedi annuncio →</a>
+            </div>
+          </div>
+        </div>`;
+    }).join('')}</div>`;
+  } catch (e) {
+    mc.innerHTML = `<p style="color:#C92E2E">Errore caricamento match: ${e.message}</p>`;
+  }
+}
+
+loadAll();
+</script>
+</body></html>

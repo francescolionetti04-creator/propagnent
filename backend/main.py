@@ -19,10 +19,14 @@ from models import Annuncio
 
 # ── Auth + Stripe + Privato ───────────────────────────────────────────────────
 from auth.routes import router as auth_router
-from auth.dependencies import require_auth, require_paid, require_privato, current_user, AuthRedirect
+from auth.dependencies import (
+    require_auth, require_paid, require_privato, require_compratore,
+    current_user, AuthRedirect,
+)
 from auth.users_db import public_user
 from services.stripe_svc import router as stripe_router, ensure_stripe_prices
 from privato.routes import router_priv as privato_router, router_agent as agente_router
+from compratore.routes import router as compratore_router
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 SCRAPER_DIR  = os.path.join(os.path.dirname(__file__), "..", "scraper")
@@ -54,6 +58,7 @@ app.include_router(auth_router)
 app.include_router(stripe_router)
 app.include_router(privato_router)
 app.include_router(agente_router)
+app.include_router(compratore_router)
 
 
 @app.exception_handler(AuthRedirect)
@@ -72,6 +77,46 @@ try:
         ensure_stripe_prices()
 except Exception as _se:
     print(f"[Stripe] bootstrap errore: {_se}")
+
+
+# ── APScheduler: match + email cron ──────────────────────────────────────────
+_scheduler = None
+
+
+@app.on_event("startup")
+async def _start_match_scheduler():
+    global _scheduler
+    if os.environ.get("DISABLE_MATCH_CRON") == "1":
+        print("[match] cron disabilitato via DISABLE_MATCH_CRON=1")
+        return
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from services.match_service import run_full_pipeline
+
+        sched = BackgroundScheduler(timezone="Europe/Rome", daemon=True)
+        # Ogni notte alle 03:00 Europe/Rome
+        sched.add_job(run_full_pipeline,
+                      CronTrigger(hour=3, minute=0),
+                      id="match_pipeline",
+                      replace_existing=True,
+                      max_instances=1,
+                      coalesce=True)
+        sched.start()
+        _scheduler = sched
+        print("[match] scheduler avviato — match pipeline 03:00 Europe/Rome")
+    except Exception as e:
+        print(f"[match] scheduler errore: {e}")
+
+
+@app.on_event("shutdown")
+async def _stop_match_scheduler():
+    global _scheduler
+    if _scheduler:
+        try:
+            _scheduler.shutdown(wait=False)
+        except Exception:
+            pass
 
 # Carica dati OMI al boot (seed se DB vuoto, ~0.1s)
 try:
@@ -458,6 +503,21 @@ def privato_nuovo_annuncio(user=Depends(require_privato)):
 @app.get("/privato/dashboard")
 def privato_dashboard(user=Depends(require_privato)):
     return _serve("privato_dashboard.html")
+
+
+@app.get("/compratore/onboarding")
+def compratore_onboarding(user=Depends(require_compratore)):
+    return _serve("compratore_onboarding.html")
+
+
+@app.get("/compratore/nuove-preferenze")
+def compratore_nuove_preferenze(user=Depends(require_compratore)):
+    return _serve("compratore_nuove_preferenze.html")
+
+
+@app.get("/compratore/dashboard")
+def compratore_dashboard(user=Depends(require_compratore)):
+    return _serve("compratore_dashboard.html")
 
 
 @app.get("/forgot-password")

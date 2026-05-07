@@ -151,6 +151,8 @@ def verify(token: str):
     role = user["role"]
     if role == "privato":
         dest = "/privato/onboarding"
+    elif role == "compratore":
+        dest = "/compratore/onboarding"
     elif role in ("agente", "consulente"):
         dest = "/app"  # require_paid eventualmente redirige a /pricing
     else:

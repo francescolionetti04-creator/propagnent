@@ -112,6 +112,48 @@ Clicca qui sotto per scegliere una nuova password:</p>
     return _send(to, "Reimposta la tua password HouseRadar", _wrap(body, "Reset password"))
 
 
+def send_compratore_match_email(to: str, nome: str | None,
+                                 match_count: int, top_matches: list,
+                                 lead_id: int | None = None) -> bool:
+    """top_matches: lista di dict con keys indirizzo/zona/tipo/mq/prezzo/url_originale."""
+    saluto = f"Ciao {nome}," if nome else "Ciao,"
+
+    def _eu(p):
+        try:
+            return f"€ {int(p):,}".replace(",", ".")
+        except Exception:
+            return "—"
+
+    cards = []
+    for m in (top_matches or [])[:5]:
+        url = m.get("url_originale") or m.get("url") or "https://houseradar.it/compratore/dashboard"
+        cards.append(f"""
+<a href="{url}" style="display:block;text-decoration:none;color:#1a1a1a;
+   background:#fff;border:1px solid #D3D1C7;border-radius:12px;padding:16px;margin:10px 0">
+  <div style="font-size:16px;font-weight:700;margin-bottom:4px">{m.get('indirizzo') or '—'}</div>
+  <div style="color:#666;font-size:13px;margin-bottom:6px">
+    {m.get('zona') or ''} · {m.get('tipo') or ''}
+    {(' · ' + str(m['mq']) + ' m²') if m.get('mq') else ''}
+    {(' · ' + str(m['camere']) + ' camere') if m.get('camere') else ''}
+  </div>
+  <div style="color:{_BLUE};font-size:18px;font-weight:800">{_eu(m.get('prezzo'))}</div>
+</a>""")
+    cards_html = "".join(cards) or '<p style="color:#666">Nessun match in evidenza.</p>'
+
+    body = f"""
+<h2 style="margin:0 0 12px;font-size:22px;font-weight:700">🏡 {match_count} nuovi annunci match per te</h2>
+<p>{saluto}</p>
+<p>Abbiamo trovato <strong>{match_count}</strong> nuovi annunci che corrispondono alle tue preferenze:</p>
+{cards_html}
+{_btn("https://houseradar.it/compratore/dashboard", "Vedi tutti i match")}
+<p style="font-size:12px;color:#888;margin-top:24px;text-align:center">
+  Non vuoi più ricevere queste email?
+  <a href="https://houseradar.it/compratore/dashboard" style="color:{_BLUE}">Disattiva dalle preferenze</a>
+</p>"""
+    return _send(to, f"🏡 {match_count} nuovi annunci match per te su HouseRadar",
+                 _wrap(body, f"{match_count} nuovi annunci match"))
+
+
 def send_welcome_email(to: str, role: str, nome: str | None = None) -> bool:
     saluto = f"Benvenuto {nome}!" if nome else "Benvenuto in HouseRadar!"
     role_msg = {

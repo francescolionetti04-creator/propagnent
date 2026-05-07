@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Le mie preferenze — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+:root{--blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;--green:#5DCAA5;--green-l:#E1F5EE;
+  --off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--border:#D3D1C7;--err:#C92E2E}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:var(--off);color:var(--dark);line-height:1.55;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:24px}
+a{color:var(--blue);text-decoration:none}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:22px;color:var(--blue);margin:24px 0 24px}
+.brand svg{width:36px;height:36px}
+.card{max-width:760px;width:100%;background:#fff;border-radius:18px;padding:40px 36px;
+  box-shadow:0 12px 40px rgba(0,0,0,.07);border:1px solid var(--border)}
+h1{font-size:28px;font-weight:800;margin-bottom:8px;letter-spacing:-.01em}
+.sub{color:var(--gray);margin-bottom:24px}
+label{display:block;margin:14px 0 6px;font-size:13px;font-weight:600;color:#333}
+input,select,textarea{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:10px;
+  font-size:15px;font-family:inherit;background:#fff;transition:all .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+textarea{resize:vertical;min-height:80px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.chk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:6px}
+.chk{position:relative;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;
+  cursor:pointer;transition:all .15s;font-size:14px;display:flex;align-items:center;gap:8px}
+.chk:hover{border-color:var(--blue)}
+.chk input{accent-color:var(--blue);cursor:pointer}
+.chk.checked{border-color:var(--blue);background:var(--blue-l);color:var(--blue);font-weight:600}
+.opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+.opt{position:relative;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;
+  cursor:pointer;transition:all .15s;font-size:14px;text-align:center}
+.opt:hover{border-color:var(--blue)}
+.opt input{position:absolute;opacity:0}
+.opt.checked{border-color:var(--blue);background:var(--blue-l);color:var(--blue);font-weight:600}
+.opt.urg-alta.checked{border-color:#EF9F27;background:#FFF7E8;color:#A45F12}
+.opt.urg-bassa.checked{border-color:#5DCAA5;background:var(--green-l);color:#1D9E75}
+.btn{width:100%;padding:14px 24px;border-radius:10px;font-weight:600;font-size:15px;
+  background:var(--blue);color:#fff;cursor:pointer;border:none;margin-top:24px;
+  transition:all .18s;font-family:inherit}
+.btn:hover{background:var(--blue-d);transform:translateY(-1px);box-shadow:0 6px 16px rgba(24,95,165,.2)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.msg{margin-top:14px;padding:11px 14px;border-radius:8px;font-size:14px;display:none}
+.msg.ok{background:var(--green-l);color:#0E5E3F;display:block}
+.msg.err{background:#FBE8E8;color:var(--err);display:block}
+.back{display:inline-block;margin-top:14px;font-size:14px;color:var(--gray)}
+.back:hover{color:var(--blue);text-decoration:underline}
+@media (max-width:600px){.row2,.row3,.opt-grid{grid-template-columns:1fr}.card{padding:28px 22px}}
+</style>
+</head>
+<body>
+
+<a href="/" class="brand">
+  <svg viewBox="0 0 100 100" fill="none">
+    <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+    <circle cx="73" cy="73" r="14" fill="#5DCAA5"/><circle cx="73" cy="73" r="6" fill="#fff"/>
+  </svg>HouseRadar
+</a>
+
+<div class="card">
+  <h1>Imposta le tue preferenze</h1>
+  <p class="sub">Definisci cosa stai cercando. Ti notificheremo ogni nuovo annuncio compatibile via email.</p>
+
+  <form id="form" novalidate>
+    <label>Province di interesse * (almeno 1)</label>
+    <div class="chk-grid" id="prov-grid">
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Livorno"> Livorno</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Pisa"> Pisa</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Firenze"> Firenze</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Siena"> Siena</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Arezzo"> Arezzo</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Lucca"> Lucca</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Grosseto"> Grosseto</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Pistoia"> Pistoia</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Prato"> Prato</label>
+      <label class="chk"><input type="checkbox" name="province_interesse" value="Massa-Carrara"> Massa-Carrara</label>
+    </div>
+
+    <label for="zona_libera">Zone specifiche (opzionale)</label>
+    <input type="text" id="zona_libera" name="zona_libera" placeholder="es. Antignano, Costa Toscana, vicino mare">
+
+    <label>Tipo di immobile (default: tutti)</label>
+    <div class="chk-grid">
+      <label class="chk"><input type="checkbox" name="tipo_immobile" value="appartamento" checked> Appartamento</label>
+      <label class="chk"><input type="checkbox" name="tipo_immobile" value="villa" checked> Villa</label>
+      <label class="chk"><input type="checkbox" name="tipo_immobile" value="attico" checked> Attico</label>
+      <label class="chk"><input type="checkbox" name="tipo_immobile" value="loft" checked> Loft</label>
+      <label class="chk"><input type="checkbox" name="tipo_immobile" value="monolocale" checked> Monolocale</label>
+      <label class="chk"><input type="checkbox" name="tipo_immobile" value="altro" checked> Altro</label>
+    </div>
+
+    <div class="row3">
+      <div>
+        <label for="mq_min">MQ min</label>
+        <input type="number" id="mq_min" name="mq_min" min="10" max="5000" placeholder="es. 60">
+      </div>
+      <div>
+        <label for="mq_max">MQ max</label>
+        <input type="number" id="mq_max" name="mq_max" min="10" max="5000" placeholder="es. 120">
+      </div>
+      <div>
+        <label for="camere_min">Camere min</label>
+        <input type="number" id="camere_min" name="camere_min" min="0" max="20" placeholder="es. 2">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label for="prezzo_min">Prezzo min (€)</label>
+        <input type="number" id="prezzo_min" name="prezzo_min" min="1000" placeholder="es. 100000">
+      </div>
+      <div>
+        <label for="prezzo_max">Prezzo max (€)</label>
+        <input type="number" id="prezzo_max" name="prezzo_max" min="1000" placeholder="es. 350000">
+      </div>
+    </div>
+
+    <label>Urgenza ricerca</label>
+    <div class="opt-grid">
+      <label class="opt urg-alta"><input type="radio" name="urgenza" value="alta">Alta</label>
+      <label class="opt urg-media"><input type="radio" name="urgenza" value="media" checked>Media</label>
+      <label class="opt urg-bassa"><input type="radio" name="urgenza" value="bassa">Bassa</label>
+    </div>
+
+    <label for="note_aggiuntive">Note aggiuntive</label>
+    <textarea id="note_aggiuntive" name="note_aggiuntive" placeholder="es. preferisco piano alto, no piano terra, vicino mare..."></textarea>
+
+    <button type="submit" class="btn" id="btn">Salva preferenze</button>
+    <div class="msg" id="msg"></div>
+  </form>
+  <a href="/compratore/dashboard" class="back">← Torna alla dashboard</a>
+</div>
+
+<script>
+// Visual feedback per checkbox & radio
+function syncChk(el){ el.classList.toggle('checked', el.querySelector('input').checked); }
+document.querySelectorAll('.chk').forEach(c => {
+  syncChk(c);
+  c.querySelector('input').addEventListener('change', () => syncChk(c));
+});
+document.querySelectorAll('.opt').forEach(o => {
+  if (o.querySelector('input').checked) o.classList.add('checked');
+  o.addEventListener('click', () => {
+    const name = o.querySelector('input').name;
+    document.querySelectorAll(`.opt input[name="${name}"]`).forEach(i => i.parentElement.classList.remove('checked'));
+    o.classList.add('checked');
+    o.querySelector('input').checked = true;
+  });
+});
+
+const form = document.getElementById('form'), msg = document.getElementById('msg'), btn = document.getElementById('btn');
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  msg.className = 'msg'; msg.textContent = '';
+
+  const fd = new FormData(form);
+  const province = fd.getAll('province_interesse');
+  const tipi     = fd.getAll('tipo_immobile');
+  if (province.length === 0) {
+    msg.className = 'msg err'; msg.textContent = 'Seleziona almeno una provincia.'; return;
+  }
+
+  const data = {
+    province_interesse: province,
+    zona_libera:        fd.get('zona_libera') || null,
+    tipo_immobile:      tipi.length ? tipi : null,
+    mq_min:             fd.get('mq_min')         ? parseInt(fd.get('mq_min'),10) : null,
+    mq_max:             fd.get('mq_max')         ? parseInt(fd.get('mq_max'),10) : null,
+    camere_min:         fd.get('camere_min')     ? parseInt(fd.get('camere_min'),10) : null,
+    prezzo_min:         fd.get('prezzo_min')     ? parseInt(fd.get('prezzo_min'),10) : null,
+    prezzo_max:         fd.get('prezzo_max')     ? parseInt(fd.get('prezzo_max'),10) : null,
+    urgenza:            fd.get('urgenza') || 'media',
+    note_aggiuntive:    fd.get('note_aggiuntive') || null,
+    email_match_attivo: true,
+  };
+
+  btn.disabled = true; btn.textContent = 'Salvataggio…';
+  try {
+    const r = await fetch('/api/compratore/lead', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Errore');
+    msg.className = 'msg ok'; msg.textContent = '✓ Preferenze salvate!';
+    setTimeout(() => location.href = '/compratore/dashboard?created=1', 600);
+  } catch (err) {
+    msg.className = 'msg err'; msg.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Salva preferenze';
+  }
+});
+</script>
+</body></html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Benvenuto — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+:root{--blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;--green:#5DCAA5;--green-l:#E1F5EE;
+  --off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--border:#D3D1C7}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:var(--off);color:var(--dark);line-height:1.55;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:24px}
+a{color:var(--blue);text-decoration:none}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:24px;color:var(--blue);margin:24px 0 32px}
+.brand svg{width:42px;height:42px}
+.card{max-width:640px;width:100%;background:#fff;border-radius:18px;padding:48px 44px;
+  box-shadow:0 12px 40px rgba(0,0,0,.08);border:1px solid var(--border);text-align:center}
+.eyebrow{display:inline-block;background:var(--green-l);color:#1D9E75;padding:6px 14px;
+  font-size:12px;font-weight:700;letter-spacing:.06em;border-radius:999px;margin-bottom:18px}
+h1{font-size:34px;font-weight:800;letter-spacing:-.01em;margin-bottom:14px;line-height:1.15}
+.sub{color:var(--gray);font-size:17px;margin-bottom:30px}
+.btn{display:inline-flex;align-items:center;justify-content:center;
+  padding:16px 32px;border-radius:12px;font-weight:600;font-size:16px;
+  background:var(--blue);color:#fff;text-decoration:none;transition:all .2s}
+.btn:hover{background:var(--blue-d);transform:translateY(-1px);box-shadow:0 8px 22px rgba(24,95,165,.20)}
+.skip{display:block;margin-top:20px;color:var(--gray);font-size:14px}
+.skip:hover{color:var(--blue);text-decoration:underline}
+.bullets{margin:30px auto;text-align:left;max-width:380px;color:#444;font-size:15px}
+.bullets li{padding:6px 0;list-style:none;display:flex;gap:10px;align-items:flex-start}
+.bullets li::before{content:'';flex-shrink:0;width:18px;height:18px;background:var(--green);border-radius:50%;margin-top:3px;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>");
+  background-size:14px;background-position:center;background-repeat:no-repeat}
+@media (max-width:520px){.card{padding:32px 24px}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<a href="/" class="brand">
+  <svg viewBox="0 0 100 100" fill="none">
+    <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+    <circle cx="73" cy="73" r="14" fill="#5DCAA5"/><circle cx="73" cy="73" r="6" fill="#fff"/>
+  </svg>HouseRadar
+</a>
+
+<div class="card">
+  <span class="eyebrow">COMPRATORE</span>
+  <h1 id="hello">Benvenuto! Iniziamo a cercare la casa giusta per te</h1>
+  <p class="sub">Imposta le tue preferenze e ti notificheremo via email ogni volta che esce un annuncio compatibile.</p>
+
+  <ul class="bullets">
+    <li>Ricevi alert email sui nuovi annunci match</li>
+    <li>Match AI tra le tue preferenze e gli annunci da 6 portali</li>
+    <li>Servizio gratuito al 100%</li>
+  </ul>
+
+  <a href="/compratore/nuove-preferenze" class="btn">Imposta le tue preferenze</a>
+  <a href="/compratore/dashboard" class="skip">Saltalo per ora →</a>
+</div>
+
+<script>
+fetch('/api/me', {credentials:'include'}).then(r=>r.json()).then(({user})=>{
+  if (user && user.nome) document.getElementById('hello').textContent =
+    `Benvenuto, ${user.nome}! Iniziamo a cercare la casa giusta per te`;
+});
+</script>
+</body></html>

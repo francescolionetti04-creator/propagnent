@@ -292,6 +292,51 @@ def init_db():
     except Exception:
         pass
 
+    # ── Tabella lead_compratori (preferenze ricerca casa) ────────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS lead_compratori (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            province_interesse TEXT NOT NULL,
+            zona_libera TEXT,
+            tipo_immobile TEXT,
+            mq_min INTEGER,
+            mq_max INTEGER,
+            camere_min INTEGER,
+            prezzo_min INTEGER,
+            prezzo_max INTEGER,
+            urgenza TEXT DEFAULT 'media',
+            note_aggiuntive TEXT,
+            email_match_attivo BOOLEAN DEFAULT TRUE,
+            status TEXT DEFAULT 'attivo',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_lead_c_user   ON lead_compratori(user_id)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_lead_c_status ON lead_compratori(status)"))
+    except Exception:
+        pass
+
+    # ── Tabella lead_match (annunci matchati al compratore) ──────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS lead_match (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_compratore_id INTEGER NOT NULL,
+            annuncio_id INTEGER NOT NULL,
+            match_score INTEGER DEFAULT 0,
+            notificato_via_email BOOLEAN DEFAULT FALSE,
+            created_at TEXT,
+            UNIQUE(lead_compratore_id, annuncio_id)
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_match_lead     ON lead_match(lead_compratore_id)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_match_notified ON lead_match(notificato_via_email)"))
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
 

@@ -59,3 +59,13 @@ def require_privato(request: Request):
     if user.get("role") != "privato":
         raise AuthRedirect("/app")
     return user
+
+
+def require_compratore(request: Request):
+    """Richiede auth + role='compratore'."""
+    user = _current_user_optional(request)
+    if not user:
+        raise AuthRedirect("/accedi?next=" + request.url.path)
+    if user.get("role") != "compratore":
+        raise AuthRedirect("/app")
+    return user
