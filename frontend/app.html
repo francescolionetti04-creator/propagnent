@@ -281,6 +281,105 @@ input[type=range]{width:100%;height:4px;accent-color:#185FA5;cursor:pointer}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   SPRINT 3 — SIDEBAR LAYOUT + MINI-STATS + STIMA + FILTRI AVANZATI
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --sb-w:260px;
+  --blue:#185FA5; --blue-d:#0F4275; --blue-l:#EDF4FC;
+  --green:#5DCAA5; --green-d:#1D9E75; --green-l:#E1F5EE;
+  --off:#f5f5f3; --gray:#666; --border:#D3D1C7;
+}
+
+/* Sidebar */
+.sidebar{
+  position:fixed; top:0; left:0; width:var(--sb-w); height:100vh;
+  background:#fff; border-right:1px solid var(--border);
+  display:flex; flex-direction:column; z-index:40; overflow-y:auto;
+  box-shadow:0 0 24px rgba(0,0,0,.03);
+  transition:transform .25s ease;
+}
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid var(--border)}
+.sb-brand{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--blue);font-size:17px;margin-bottom:14px}
+.sb-brand svg{width:28px;height:28px}
+.sb-user{display:flex;flex-direction:column;gap:4px}
+.sb-name{font-weight:700;font-size:14px;color:#1a1a1a}
+.sb-pills{display:flex;gap:6px;flex-wrap:wrap}
+.sb-pill{font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:999px;background:var(--blue-l);color:var(--blue)}
+.sb-pill.found{background:var(--green-l);color:var(--green-d);border:1px solid var(--green)}
+
+.sb-section{padding:14px 18px 6px}
+.sb-section h6{font-size:10px;letter-spacing:.10em;color:var(--gray);font-weight:700;text-transform:uppercase;margin-bottom:6px}
+.sb-link{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+  font-size:13.5px;color:#333;cursor:pointer;text-decoration:none;
+  transition:background .15s;margin-bottom:2px;border:none;background:transparent;width:100%;text-align:left;font-family:inherit;
+}
+.sb-link:hover{background:var(--off)}
+.sb-link.active{background:var(--blue-l);color:var(--blue);font-weight:600}
+.sb-link .cnt{margin-left:auto;background:var(--blue);color:#fff;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:8px;min-width:18px;text-align:center}
+.sb-link.muted{color:#aaa;cursor:not-allowed}
+.sb-link.muted:hover{background:transparent}
+.sb-link.muted small{margin-left:auto;font-size:10px;background:var(--off);color:#999;padding:2px 6px;border-radius:5px;font-weight:600}
+
+/* Main shift */
+body{margin-left:var(--sb-w)}
+@media (max-width:1024px){
+  body{margin-left:0}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:39;opacity:0;pointer-events:none;transition:opacity .25s}
+  .sb-overlay.open{opacity:1;pointer-events:auto}
+  .sb-toggle{display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;
+    background:#fff;border:1px solid var(--border);border-radius:9px;cursor:pointer;color:var(--blue);
+    position:fixed;top:18px;left:14px;z-index:38;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+  .topbar,.tabs,.stats-row,.search-panel{margin-left:0}
+  .stats-mini{margin-left:0}
+  body.has-sidebar-open{overflow:hidden}
+}
+.sb-toggle{display:none}
+.sb-toggle svg{width:22px;height:22px}
+
+/* Mini-stats topbar */
+.stats-mini{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
+  margin:0 1.5rem 1rem;padding-top:1.5rem;
+}
+.smini{
+  background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 18px;
+  box-shadow:0 4px 12px rgba(0,0,0,.05);
+}
+.smini .v{font-size:24px;font-weight:800;color:var(--blue);line-height:1.1}
+.smini .l{font-size:11px;color:var(--gray);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:4px}
+.smini .delta{font-size:12px;color:var(--green-d);font-weight:600;margin-top:3px}
+
+/* Stima vendita box (dentro card annuncio) */
+.stima-box{
+  margin:10px 0 8px;padding:11px 13px;
+  background:linear-gradient(135deg,var(--green-l) 0%,#fff 70%);
+  border:1px solid var(--green);border-radius:10px;font-size:12.5px;line-height:1.55;
+}
+.stima-box .row{display:flex;justify-content:space-between;gap:8px;margin:1px 0}
+.stima-box .lbl{color:var(--gray);font-weight:600}
+.stima-box .val{font-weight:700;color:#1a1a1a}
+.stima-box .conf{font-size:11px;color:var(--gray);margin-top:4px;font-style:italic}
+.stima-empty{margin:8px 0;padding:9px 11px;background:var(--off);border:1px dashed var(--border);border-radius:8px;font-size:12px;color:var(--gray);text-align:center}
+
+/* Filtri avanzati Sprint 3 (chip multi-select compatti) */
+.adv-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0}
+.adv-chip{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12.5px;
+  border-radius:999px;background:#fff;border:1px solid var(--border);color:var(--gray);
+  cursor:pointer;font-weight:600;transition:all .12s;font-family:inherit;
+}
+.adv-chip:hover{border-color:var(--blue);color:var(--blue)}
+.adv-chip.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue)}
+.adv-chip.on-amber{background:#FFF7E8;border-color:#EF9F27;color:#A45F12}
+.adv-chip.on-green{background:var(--green-l);border-color:var(--green);color:var(--green-d)}
+.adv-label{font-size:11px;color:var(--gray);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
+.adv-divider{width:1px;height:18px;background:var(--border);margin:0 4px}
+
+/* ═══════════════════════════════════════════════════════════════════════
    SPRINT 1 — WOW RESTYLE LAYER
    Spaziature più generose, ombre soft, hover lift, fade-in, radius 12px,
    tipografia migliorata, palette HouseRadar (blu + verde acqua).
@@ -355,6 +454,75 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
 </style>
 </head>
 <body>
+
+<!-- ═══ SIDEBAR + MOBILE TOGGLE (Sprint 3) ═══ -->
+<button class="sb-toggle" id="sbToggle" aria-label="Menu" onclick="toggleSidebar()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <line x1="4" y1="7"  x2="20" y2="7"/>
+    <line x1="4" y1="12" x2="20" y2="12"/>
+    <line x1="4" y1="17" x2="20" y2="17"/>
+  </svg>
+</button>
+<div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar(false)"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <a href="/" class="sb-brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+        <circle cx="73" cy="73" r="14" fill="#5DCAA5"/><circle cx="73" cy="73" r="6" fill="#fff"/>
+      </svg>
+      HouseRadar
+    </a>
+    <div class="sb-user">
+      <span class="sb-name" id="sb-name">…</span>
+      <div class="sb-pills">
+        <span class="sb-pill" id="sb-role">Agente</span>
+        <span class="sb-pill found" id="sb-founder" style="display:none">🌟 Founder</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <h6>Acquisizione</h6>
+    <button class="sb-link active" id="sb-tab-annunci" onclick="switchTab('annunci')">
+      🏠 Annunci privati <span class="cnt" id="cnt-priv">—</span>
+    </button>
+    <button class="sb-link" id="sb-tab-noescl" onclick="switchTab('annunci'); filterFonte('noescl')">
+      ⚠️ Non in esclusiva <span class="cnt" id="cnt-noescl">—</span>
+    </button>
+    <button class="sb-link" id="sb-tab-match" onclick="switchTab('match')">
+      🎯 Match Cliente
+    </button>
+    <button class="sb-link" id="sb-tab-valuta" onclick="switchTab('valuta')">
+      📊 Valutazione
+    </button>
+  </div>
+
+  <div class="sb-section">
+    <h6>Contatti</h6>
+    <button class="sb-link" id="sb-tab-leadp" onclick="switchTab('leadp')">
+      📥 Lead proprietari <span class="cnt" id="cnt-leadp">—</span>
+    </button>
+    <a class="sb-link muted" tabindex="-1">💬 Chat <small>Presto</small></a>
+    <a class="sb-link muted" tabindex="-1">📝 Valutazioni <small>Presto</small></a>
+  </div>
+
+  <div class="sb-section" style="margin-top:auto;border-top:1px solid var(--border);padding-top:14px">
+    <h6>Account</h6>
+    <a class="sb-link" id="sb-profilo" href="#">👤 Profilo pubblico</a>
+    <a class="sb-link muted" tabindex="-1">⚙️ Impostazioni <small>Presto</small></a>
+    <button class="sb-link" onclick="logoutHrSidebar()">🚪 Esci</button>
+  </div>
+</aside>
+
+<!-- Mini-stats topbar (Sprint 3) -->
+<div class="stats-mini" id="statsMini">
+  <div class="smini"><div class="v" id="ms-priv">—</div><div class="l">Privati oggi</div></div>
+  <div class="smini"><div class="v" id="ms-noescl">—</div><div class="l">Non in esclusiva</div></div>
+  <div class="smini"><div class="v" id="ms-leadp">—</div><div class="l">Lead proprietari (7gg)</div></div>
+  <div class="smini"><div class="v" id="ms-msg">0</div><div class="l">Messaggi nuovi</div></div>
+</div>
 
 <div class="app">
 
@@ -1221,6 +1389,7 @@ function cardHTML(d) {
           <div class="spec"><div class="spec-v">${d.mq && d.prezzo ? Math.round(d.prezzo/d.mq).toLocaleString('it-IT') + ' \u20ac' : '\u2014'}</div><div class="spec-l">\u20ac/m\u00b2</div></div>
         </div>
         ${getOmiLabel(d)}
+        <div class="stima-slot" data-stima-id="${id}"><div class="stima-empty">Calcolo stima vendita…</div></div>
         ${intel}
         <div class="card-footer">${footerFull}</div>
       </div>
@@ -1329,12 +1498,122 @@ function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
 }
 
+/* ========== SPRINT 3: SIDEBAR + MINI-STATS + STIMA ========== */
+function toggleSidebar(force){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sbOverlay');
+  const open = (force === undefined) ? !sb.classList.contains('open') : !!force;
+  sb.classList.toggle('open', open);
+  ov.classList.toggle('open', open);
+  document.body.classList.toggle('has-sidebar-open', open);
+}
+
+async function logoutHrSidebar(){
+  try { await fetch('/auth/logout', {method:'POST', credentials:'include'}); } catch {}
+  location.href = '/';
+}
+
+function filterFonte(fonte){
+  // collega con il filtro esistente per "fonte" dei chip nella search bar
+  try {
+    const sel = document.getElementById('f-fonte');
+    if (sel) { sel.value = fonte; if (typeof render === 'function') render(); }
+  } catch {}
+}
+
+async function loadSidebarUser(){
+  try {
+    const r = await fetch('/api/me', {credentials:'include'});
+    const u = (await r.json()).user;
+    if (!u) return;
+    document.getElementById('sb-name').textContent = u.nome || u.email;
+    document.getElementById('sb-role').textContent = u.role === 'consulente' ? 'Consulente' : 'Agente';
+    if (u.is_founder) document.getElementById('sb-founder').style.display = '';
+    const link = document.getElementById('sb-profilo');
+    if (link) link.href = `/profilo/${u.id}`;
+  } catch {}
+}
+
+async function loadMiniStats(){
+  try {
+    const r = await fetch('/api/agente/mini-stats', {credentials:'include'});
+    if (!r.ok) return;
+    const s = await r.json();
+    document.getElementById('ms-priv').textContent   = s.privati_oggi ?? '—';
+    document.getElementById('ms-noescl').textContent = s.non_esclusiva ?? '—';
+    document.getElementById('ms-leadp').textContent  = s.lead_proprietari_week ?? '—';
+    document.getElementById('ms-msg').textContent    = s.messaggi_nuovi ?? 0;
+    // contatori sidebar (riusano stesse fonti)
+    document.getElementById('cnt-priv').textContent   = s.privati_oggi ?? '—';
+    document.getElementById('cnt-noescl').textContent = s.non_esclusiva ?? '—';
+    document.getElementById('cnt-leadp').textContent  = s.lead_proprietari_week ?? '—';
+  } catch {}
+}
+
+const _stimaCache = {};
+async function popolaStima(annId, slot){
+  if (!slot) return;
+  if (_stimaCache[annId]) { _renderStima(slot, _stimaCache[annId]); return; }
+  try {
+    const r = await fetch(`/api/agente/stima/${annId}`, {credentials:'include'});
+    const j = await r.json();
+    _stimaCache[annId] = j;
+    _renderStima(slot, j);
+  } catch (e) {
+    slot.innerHTML = `<div class="stima-empty">Stima non disponibile</div>`;
+  }
+}
+
+function _renderStima(slot, j){
+  if (!j || !j.available) {
+    const msg = (j && j.reason) ? j.reason : 'Dati insufficienti per stima';
+    slot.innerHTML = `<div class="stima-empty">${msg}</div>`;
+    return;
+  }
+  const fmt = n => '€ ' + Number(n).toLocaleString('it-IT');
+  slot.innerHTML = `
+    <div class="stima-box">
+      <div class="row"><span class="lbl">💰 Probabile prezzo finale</span>
+        <span class="val">${fmt(j.prezzo_probabile)} <small style="color:#1D9E75">(${j.riduzione_pct}%)</small></span></div>
+      <div class="row"><span class="lbl">⏱ Tempo stimato vendita</span>
+        <span class="val">${j.tempo_giorni} giorni</span></div>
+      <div class="conf">📊 Confidenza ${j.confidenza_pct}% — ${j.campione_size} annunci simili in zona</div>
+    </div>`;
+}
+
+// Osservatore: ogni volta che si renderizzano le card, popoliamo le stime in batch
+function popolaTutteLeStime(){
+  document.querySelectorAll('.stima-slot[data-stima-id]').forEach(slot => {
+    if (slot.dataset.loaded === '1') return;
+    slot.dataset.loaded = '1';
+    popolaStima(slot.dataset.stimaId, slot);
+  });
+}
+// Hook su MutationObserver per le card dinamiche
+(function(){
+  const cards = document.getElementById('cards');
+  if (cards) {
+    new MutationObserver(() => popolaTutteLeStime()).observe(cards, {childList:true, subtree:false});
+  }
+  // Carica all'init
+  loadSidebarUser();
+  loadMiniStats();
+})();
+
 /* ========== TABS ========== */
 function switchTab(tab) {
   const isA = tab === 'annunci';
   const isM = tab === 'match';
   const isV = tab === 'valuta';
   const isL = tab === 'leadp';
+  // Sidebar active state
+  document.querySelectorAll('.sb-link[id^="sb-tab-"]').forEach(b => b.classList.remove('active'));
+  const sbMap = {annunci:'sb-tab-annunci', match:'sb-tab-match', valuta:'sb-tab-valuta', leadp:'sb-tab-leadp'};
+  const sbActive = document.getElementById(sbMap[tab]);
+  if (sbActive) sbActive.classList.add('active');
+  // Su mobile, chiudi sidebar dopo il click
+  if (window.innerWidth < 1024) toggleSidebar(false);
+  // Toggle vecchi tab (rimangono nascosti dal CSS sidebar, ma mantengono compatibilità per evitare bugs)
   document.getElementById('tab-annunci').classList.toggle('active', isA);
   document.getElementById('tab-match').classList.toggle('active', isM);
   document.getElementById('tab-valuta').classList.toggle('active', isV);

@@ -183,6 +183,64 @@ def contatta_lead(lead_id: int, user=Depends(require_paid)):
     }
 
 
+# ─── Sprint 3: mini-stats + stima vendita probabile ─────────────────────────
+
+@router_agent.get("/mini-stats")
+def mini_stats(user=Depends(require_paid)):
+    """4 contatori della top-bar dashboard."""
+    from datetime import datetime, timedelta
+    from database import get_conn as _gc, _cur as _gcur, _sql as _gsql
+    from privato.db import list_active_leads as _list_lp
+
+    today_iso = datetime.utcnow().date().isoformat()
+    week_iso  = (datetime.utcnow() - timedelta(days=7)).isoformat()
+
+    # Derivazione provincia agente
+    city = (user.get("city") or "").strip()
+    provincia_agente = city if any(p.lower() == city.lower() for p in PROVINCE) else None
+
+    conn = _gc(); cur = _gcur(conn)
+
+    # 1) Privati oggi (annunci scrapati con fonte='privato' inseriti oggi)
+    cur.execute(_gsql("""
+        SELECT COUNT(*) FROM annunci
+        WHERE fonte = 'privato' AND data_inserimento >= ?
+    """), (today_iso,))
+    privati_oggi = cur.fetchone()[0] or 0
+
+    # 2) Non in esclusiva totali (fonte='noescl')
+    cur.execute(_gsql("SELECT COUNT(*) FROM annunci WHERE fonte = 'noescl'"))
+    non_esclusiva = cur.fetchone()[0] or 0
+
+    conn.close()
+
+    # 3) Lead proprietari ultimi 7gg (filtra per provincia agente se nota)
+    if provincia_agente:
+        leads = [l for l in _list_lp(provincia_agente)
+                 if l.get("created_at", "") >= week_iso]
+    else:
+        leads = [l for l in _list_lp() if l.get("created_at", "") >= week_iso]
+    lead_proprietari_week = len(leads)
+
+    return {
+        "privati_oggi":          int(privati_oggi),
+        "non_esclusiva":         int(non_esclusiva),
+        "lead_proprietari_week": int(lead_proprietari_week),
+        "messaggi_nuovi":        0,  # placeholder Sprint 4
+        "provincia_agente":      provincia_agente,
+    }
+
+
+@router_agent.get("/stima/{annuncio_id}")
+def stima_endpoint(annuncio_id: int, user=Depends(require_paid)):
+    """Calcola stima vendita probabile per un annuncio."""
+    from services.stima_service import calcola_stima, get_annuncio_by_id
+    ann = get_annuncio_by_id(annuncio_id)
+    if not ann:
+        raise HTTPException(404, "Annuncio non trovato")
+    return calcola_stima(ann)
+
+
 # ─── Email helper inline (sfrutta wrapper di services.email) ────────────────
 
 def _send_privato_contattato_email(privato_email: str, privato_nome: Optional[str],

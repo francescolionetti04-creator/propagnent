@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Profilo agente — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+:root{--blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;--green:#5DCAA5;--green-l:#E1F5EE;
+  --off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--border:#D3D1C7}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:var(--off);color:var(--dark);line-height:1.55;min-height:100vh}
+a{color:var(--blue);text-decoration:none}
+.nav{background:#fff;border-bottom:1px solid var(--border);padding:14px 24px}
+.nav-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;color:var(--blue)}
+.brand svg{width:34px;height:34px}
+.nav-links a{margin-left:18px;color:var(--dark);font-weight:500;font-size:14px}
+.nav-links a:hover{color:var(--blue)}
+.wrap{max-width:780px;margin:0 auto;padding:40px 24px}
+.card{background:#fff;border-radius:18px;border:1px solid var(--border);padding:36px 32px;
+  box-shadow:0 12px 40px rgba(0,0,0,.06);margin-bottom:20px}
+.profile-head{display:flex;align-items:center;gap:24px;margin-bottom:20px}
+.avatar{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#185FA5,#5DCAA5);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:700;flex-shrink:0;
+  box-shadow:0 8px 24px rgba(24,95,165,.25)}
+.profile-name{font-size:26px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.profile-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.badge{display:inline-block;padding:4px 12px;font-size:12px;font-weight:700;letter-spacing:.04em;
+  border-radius:999px}
+.badge-role{background:var(--blue-l);color:var(--blue)}
+.badge-found{background:var(--green-l);color:#1D9E75;border:1px solid var(--green)}
+.profile-city{color:var(--gray);font-size:14px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:22px 0}
+.stat{background:var(--off);border-radius:12px;padding:14px 18px;text-align:center}
+.stat .v{font-size:22px;font-weight:800;color:var(--blue);line-height:1.1}
+.stat .l{font-size:11px;color:var(--gray);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.stat.muted .v{color:var(--gray);font-size:16px}
+
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;
+  border-radius:10px;font-weight:600;font-size:14.5px;cursor:pointer;text-decoration:none;
+  transition:all .18s;border:none;font-family:inherit}
+.btn-wa{background:#25D366;color:#fff}
+.btn-wa:hover{background:#1EBE5A;transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,211,102,.3)}
+.btn-out{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-out:hover{background:var(--blue-l)}
+
+h3{font-size:15px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{background:var(--blue-l);color:var(--blue);padding:6px 14px;border-radius:8px;font-size:14px;font-weight:600}
+.pill-green{background:var(--green-l);color:#1D9E75}
+
+.error{color:#C92E2E;padding:60px 30px;text-align:center;background:#fff;border-radius:14px}
+@media (max-width:600px){.profile-head{flex-direction:column;text-align:center;align-items:center}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="/" class="brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+        <circle cx="73" cy="73" r="14" fill="#5DCAA5"/><circle cx="73" cy="73" r="6" fill="#fff"/>
+      </svg>HouseRadar
+    </a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/pricing">Prezzi</a>
+      <a href="/accedi">Accedi</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div id="content"><p style="text-align:center;color:#888;padding:60px">Caricamento profilo…</p></div>
+</div>
+
+<script>
+function getUserIdFromPath(){
+  const m = location.pathname.match(/\/profilo\/(\d+)/);
+  return m ? m[1] : null;
+}
+
+function initials(nome, cognome){
+  const a = (nome || '').trim()[0] || '';
+  const b = (cognome || '').trim()[0] || '';
+  return (a + b).toUpperCase() || '👤';
+}
+
+function waHref(tel){
+  if (!tel) return '#';
+  const clean = String(tel).replace(/[^\d+]/g,'');
+  return `https://wa.me/${clean.replace(/^\+/, '')}`;
+}
+
+async function load(){
+  const uid = getUserIdFromPath();
+  const c = document.getElementById('content');
+  if (!uid) { c.innerHTML = '<div class="error">URL non valido</div>'; return; }
+  try {
+    const r = await fetch(`/api/profilo/${uid}`);
+    if (!r.ok) throw new Error((await r.json()).detail || 'Profilo non trovato');
+    const u = await r.json();
+    const nome = u.nome || '';
+    const cognome = u.cognome || '';
+    const displayName = (nome || cognome) ? `${nome} ${cognome}`.trim() : 'Agente HouseRadar';
+    const roleLabel = u.role === 'consulente' ? 'Consulente Immobiliare' : 'Agente Immobiliare';
+    c.innerHTML = `
+      <div class="card">
+        <div class="profile-head">
+          <div class="avatar">${initials(nome, cognome)}</div>
+          <div>
+            <div class="profile-name">${displayName}</div>
+            <div class="profile-meta">
+              <span class="badge badge-role">${roleLabel}</span>
+              ${u.is_founder ? '<span class="badge badge-found">🌟 Founder</span>' : ''}
+            </div>
+            <div class="profile-city" style="margin-top:6px">${u.city || 'Toscana'}</div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat muted"><div class="v">Nuovo</div><div class="l">Su HouseRadar</div></div>
+          <div class="stat muted"><div class="v">—</div><div class="l">Lead acquisiti</div></div>
+          <div class="stat muted"><div class="v">—</div><div class="l">Rating</div></div>
+          <div class="stat"><div class="v">100%</div><div class="l">Verificato</div></div>
+        </div>
+
+        <div class="actions">
+          ${u.telefono ? `<a class="btn btn-wa" target="_blank" rel="noopener" href="${waHref(u.telefono)}">
+            💬 Contatta su WhatsApp
+          </a>` : ''}
+          <button class="btn btn-out" disabled style="opacity:.7;cursor:not-allowed">
+            🏠 Vedi annunci attivi <small style="font-weight:400;margin-left:4px">(presto)</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📍 Le mie zone</h3>
+        <div class="pills">
+          ${u.city ? `<span class="pill">${u.city}</span>` : ''}
+          <span class="pill pill-green">Tutta la Toscana</span>
+        </div>
+      </div>
+
+      <div class="card" style="text-align:center;color:var(--gray)">
+        <p style="font-size:14px">Profilo verificato da HouseRadar · <a href="/">houseradar.it</a></p>
+      </div>`;
+  } catch (e) {
+    c.innerHTML = `<div class="card error">${e.message}</div>`;
+  }
+}
+load();
+</script>
+</body></html>

@@ -537,6 +537,24 @@ def api_me(request: Request):
     return JSONResponse({"user": public_user(user)})
 
 
+@app.get("/api/profilo/{user_id}")
+def api_profilo(user_id: int):
+    """Dati pubblici di un agente (no auth). Solo per role agente/consulente."""
+    from auth.users_db import get_user_by_id
+    u = get_user_by_id(user_id)
+    if not u or u.get("role") not in ("agente", "consulente"):
+        raise HTTPException(404, "Profilo non trovato")
+    return {
+        "id":         u["id"],
+        "nome":       u.get("nome"),
+        "cognome":    u.get("cognome"),
+        "role":       u.get("role"),
+        "city":       u.get("city"),
+        "is_founder": bool(u.get("is_founder")),
+        "telefono":   u.get("telefono"),  # serve per WhatsApp CTA
+    }
+
+
 @app.get("/signup")
 def signup():
     """Placeholder registrazione (Sprint 2)."""
@@ -547,6 +565,12 @@ def signup():
 def accedi():
     """Placeholder login (Sprint 2)."""
     return _serve("accedi.html")
+
+
+@app.get("/profilo/{user_id}")
+def profilo_pubblico(user_id: int):
+    """Pagina pubblica profilo agente — accessibile senza login."""
+    return _serve("profilo_pubblico.html")
 
 
 @app.get("/profilo")
