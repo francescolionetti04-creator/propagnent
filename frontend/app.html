@@ -184,6 +184,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .modal-close{flex:1;padding:9px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 .modal-close:hover{background:#0C447C}
 
+/* ========== MODAL AI SCRIPT (Sprint 4 Task A) ========== */
+.ai-modal{max-width:620px}
+.ai-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:.85rem}
+.ai-header h3{margin:0;font-size:16px;font-weight:700;color:#1a1a1a}
+.ai-sub{font-size:11px;color:#888;margin-top:3px}
+.ai-x{background:none;border:none;font-size:22px;line-height:1;color:#888;cursor:pointer;padding:0 4px}
+.ai-x:hover{color:#1a1a1a}
+.ai-body{font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;font-size:13px;line-height:1.65;color:#222;white-space:pre-wrap;background:#f9f9f7;border-radius:8px;padding:1rem;border:1px solid #e5e5e0;min-height:140px}
+.ai-spinner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:2rem 1rem;color:#666;font-size:13px}
+.ai-error{background:#FCEBEB;border:1px solid #F09595;color:#A32D2D;padding:.85rem 1rem;border-radius:8px;font-size:13px;line-height:1.5}
+.ai-actions{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap}
+.ai-btn{flex:1;min-width:130px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .12s}
+.ai-btn:disabled{opacity:.5;cursor:not-allowed}
+.ai-btn-copy{background:#E1F5EE;color:#0F6E56;border-color:#5DCAA5}
+.ai-btn-copy:hover:not(:disabled){background:#A3DCC8}
+.ai-btn-wa{background:#EAF3DE;color:#27500A;border-color:#97C459}
+.ai-btn-wa:hover:not(:disabled){background:#C0DD97}
+.ai-btn-regen{background:#185FA5;color:#fff;border-color:#185FA5}
+.ai-btn-regen:hover:not(:disabled){background:#0C447C}
+
 /* ========== OMI BADGE ========== */
 .omi-bar{font-size:11px;padding:3px 9px;border-radius:6px;margin:.45rem 0 0;display:inline-flex;align-items:center;gap:5px;font-weight:600}
 .omi-under{background:#E1F5EE;color:#0F6E56}
@@ -510,7 +530,7 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
 
   <div class="sb-section" style="margin-top:auto;border-top:1px solid var(--border);padding-top:14px">
     <h6>Account</h6>
-    <a class="sb-link" id="sb-profilo" href="#">👤 Profilo pubblico</a>
+    <a class="sb-link" id="sb-profilo" href="#" style="display:none">👤 Profilo pubblico</a>
     <a class="sb-link muted" tabindex="-1">⚙️ Impostazioni <small>Presto</small></a>
     <button class="sb-link" onclick="logoutHrSidebar()">🚪 Esci</button>
   </div>
@@ -988,6 +1008,32 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
   </div>
 </div>
 
+<!-- MODAL AI SCRIPT CHIAMATA (Sprint 4 Task A) -->
+<div class="modal-bg" id="ai-modal-bg" onclick="if(event.target===this)closeAIScript()">
+  <div class="modal ai-modal">
+    <div class="ai-header">
+      <div>
+        <h3 id="ai-modal-title">&#128222; Script Chiamata</h3>
+        <div class="ai-sub" id="ai-modal-sub"></div>
+      </div>
+      <button class="ai-x" onclick="closeAIScript()" aria-label="Chiudi">&times;</button>
+    </div>
+    <div id="ai-modal-content">
+      <div class="ai-spinner" id="ai-spinner">
+        <div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div>Generando script con AI&hellip;</div>
+      </div>
+      <div class="ai-body" id="ai-body" style="display:none"></div>
+      <div class="ai-error" id="ai-error" style="display:none"></div>
+    </div>
+    <div class="ai-actions">
+      <button class="ai-btn ai-btn-copy"  id="ai-btn-copy"  onclick="aiCopyScript()" disabled>&#128203; Copia testo</button>
+      <button class="ai-btn ai-btn-wa"    id="ai-btn-wa"    onclick="aiOpenWhatsApp()" disabled>&#128172; Apri WhatsApp</button>
+      <button class="ai-btn ai-btn-regen" id="ai-btn-regen" onclick="aiRegenScript()" disabled>&#8635; Rigenera</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // In produzione (Render) la pagina è servita da FastAPI stesso → path relativo ''.
 // In sviluppo locale via file:// o live-server → punta a localhost:8000.
@@ -1358,13 +1404,13 @@ function cardHTML(d) {
 
   const footerFull = isP ? `
     <button class="cf-btn cf-green" onclick="event.stopPropagation();showScript('whatsapp',${id})">&#128172; WhatsApp</button>
-    <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
+    <button class="cf-btn cf-outline" onclick="event.stopPropagation();openAIScript(${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showScript('esclusiva',${id})">+ Esclusiva</button>
     ${btnVedi}${btnReport}${btnCal}
     <span style="flex:1"></span>${portaleBadge}`
   : `
     <button class="cf-btn cf-amber" onclick="event.stopPropagation();showScript('conquista',${id})">&#127919; Conquista</button>
-    <button class="cf-btn cf-outline" onclick="event.stopPropagation();showScript('telefono',${id})">&#128222; Script</button>
+    <button class="cf-btn cf-outline" onclick="event.stopPropagation();openAIScript(${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showValuta(${id})">&#128161; Valuta</button>
     ${btnVedi}${btnReport}${btnCal}
     <span style="flex:1"></span>${portaleBadge}`;
@@ -1498,6 +1544,124 @@ function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
 }
 
+/* ========== AI SCRIPT CHIAMATA (Sprint 4 Task A) ========== */
+let _aiCurrentId = null;
+let _aiCurrentScript = '';
+let _aiCurrentAnnuncio = null;
+
+function _onlyDigits(s) { return (s || '').replace(/\D+/g, ''); }
+
+function openAIScript(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+  _aiCurrentId = id;
+  _aiCurrentScript = '';
+  _aiCurrentAnnuncio = d;
+
+  document.getElementById('ai-modal-title').innerHTML = '&#128222; Script Chiamata per ' + (d.indirizzo || '');
+  document.getElementById('ai-modal-sub').textContent =
+    [d.zona, d.tipo, d.mq ? d.mq + ' m²' : null, d.prezzo ? fmt(d.prezzo) : null].filter(Boolean).join(' · ');
+  document.getElementById('ai-modal-bg').classList.add('open');
+  _aiFetchScript();
+}
+
+function closeAIScript() {
+  document.getElementById('ai-modal-bg').classList.remove('open');
+  _aiCurrentId = null;
+  _aiCurrentScript = '';
+  _aiCurrentAnnuncio = null;
+}
+
+function _aiSetLoading() {
+  document.getElementById('ai-spinner').style.display = 'flex';
+  document.getElementById('ai-body').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('ai-btn-copy').disabled  = true;
+  document.getElementById('ai-btn-wa').disabled    = true;
+  document.getElementById('ai-btn-regen').disabled = true;
+}
+
+function _aiShowError(msg) {
+  document.getElementById('ai-spinner').style.display = 'none';
+  document.getElementById('ai-body').style.display = 'none';
+  const err = document.getElementById('ai-error');
+  err.textContent = msg;
+  err.style.display = 'block';
+  // Lascia attivo solo "Rigenera" per ritentare
+  document.getElementById('ai-btn-copy').disabled  = true;
+  document.getElementById('ai-btn-wa').disabled    = true;
+  document.getElementById('ai-btn-regen').disabled = false;
+}
+
+function _aiShowScript(text) {
+  _aiCurrentScript = text || '';
+  document.getElementById('ai-spinner').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  const body = document.getElementById('ai-body');
+  body.textContent = _aiCurrentScript;
+  body.style.display = 'block';
+  document.getElementById('ai-btn-copy').disabled  = false;
+  document.getElementById('ai-btn-wa').disabled    = !_aiCurrentScript;
+  document.getElementById('ai-btn-regen').disabled = false;
+}
+
+async function _aiFetchScript() {
+  if (!_aiCurrentId) return;
+  _aiSetLoading();
+  try {
+    const r = await fetch(`${API}/api/agente/script/${_aiCurrentId}`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!r.ok) {
+      let msg = 'Errore generazione script. Riprova tra qualche minuto.';
+      try {
+        const j = await r.json();
+        if (j && j.detail) msg = j.detail;
+      } catch {}
+      if (r.status === 401) msg = 'Sessione scaduta. Ricarica la pagina e accedi di nuovo.';
+      _aiShowError(msg);
+      return;
+    }
+    const j = await r.json();
+    _aiShowScript(j.script || '');
+  } catch (e) {
+    _aiShowError('Connessione fallita. Controlla la rete e riprova.');
+  }
+}
+
+function aiRegenScript() { _aiFetchScript(); }
+
+function aiCopyScript() {
+  if (!_aiCurrentScript) return;
+  navigator.clipboard.writeText(_aiCurrentScript).then(() => {
+    const btn = document.getElementById('ai-btn-copy');
+    const original = btn.innerHTML;
+    btn.innerHTML = '&#10003; Copiato!';
+    setTimeout(() => { btn.innerHTML = original; }, 2000);
+  });
+}
+
+function aiOpenWhatsApp() {
+  if (!_aiCurrentScript) return;
+  const d = _aiCurrentAnnuncio || {};
+  const tel = _onlyDigits(d.telefono || '');
+  const text = encodeURIComponent(_aiCurrentScript);
+  // Se l'annuncio ha telefono apriamo chat diretta, altrimenti share generico
+  const url = tel
+    ? `https://wa.me/${tel.startsWith('39') || tel.length < 10 ? tel : '39' + tel}?text=${text}`
+    : `https://wa.me/?text=${text}`;
+  window.open(url, '_blank', 'noopener');
+}
+
+// Chiusura su ESC per entrambi i modali
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('ai-modal-bg').classList.contains('open')) closeAIScript();
+    else if (document.getElementById('modal-bg').classList.contains('open')) closeModal();
+  }
+});
+
 /* ========== SPRINT 3: SIDEBAR + MINI-STATS + STIMA ========== */
 function toggleSidebar(force){
   const sb = document.getElementById('sidebar');
@@ -1530,7 +1694,14 @@ async function loadSidebarUser(){
     document.getElementById('sb-role').textContent = u.role === 'consulente' ? 'Consulente' : 'Agente';
     if (u.is_founder) document.getElementById('sb-founder').style.display = '';
     const link = document.getElementById('sb-profilo');
-    if (link) link.href = `/profilo/${u.id}`;
+    if (link) {
+      if (u.role === 'agente' || u.role === 'consulente') {
+        link.href = `/profilo/${u.id}`;
+        link.style.display = '';
+      } else {
+        link.style.display = 'none';
+      }
+    }
   } catch {}
 }
 
@@ -1672,6 +1843,7 @@ async function loadLeadPrivati() {
                 <span>${L.bagni ? L.bagni + ' bagni' : ''}</span>
               </div>
               ${L.descrizione ? `<p style="color:#555;font-size:13px;margin-top:8px">${L.descrizione}</p>` : ''}
+              <div style="margin-top:10px"><a href="/lead/${L.id}" style="font-size:13px;font-weight:600;color:#185FA5">Vedi dettagli →</a></div>
             </div>
             <div style="display:flex;align-items:center" data-lead-id="${L.id}">${contatto}</div>
           </div>

@@ -103,6 +103,18 @@ async function load(){
   if (!uid) { c.innerHTML = '<div class="error">URL non valido</div>'; return; }
   try {
     const r = await fetch(`/api/profilo/${uid}`);
+    if (r.status === 404) {
+      c.innerHTML = `
+        <div class="card" style="text-align:center;padding:50px 30px">
+          <div style="font-size:38px;margin-bottom:10px">👤</div>
+          <h2 style="font-size:20px;font-weight:800;margin-bottom:10px">Profilo non disponibile</h2>
+          <p style="color:var(--gray);font-size:15px;max-width:480px;margin:0 auto 18px">
+            Questo utente non ha un profilo pubblico. Solo agenti e consulenti hanno un profilo pubblico visibile ai potenziali clienti.
+          </p>
+          <a href="/" class="btn btn-out" style="display:inline-flex">← Torna alla home</a>
+        </div>`;
+      return;
+    }
     if (!r.ok) throw new Error((await r.json()).detail || 'Profilo non trovato');
     const u = await r.json();
     const nome = u.nome || '';

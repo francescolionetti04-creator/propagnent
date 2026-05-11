@@ -241,6 +241,128 @@ def stima_endpoint(annuncio_id: int, user=Depends(require_paid)):
     return calcola_stima(ann)
 
 
+@router_agent.get("/lead/{lead_id}")
+def lead_detail(lead_id: int, user=Depends(require_paid)):
+    """Dettaglio lead venditore + timeline contatti + stima vendita probabile."""
+    from services.stima_service import calcola_stima
+
+    lead = get_lead_by_id(lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead non trovato")
+
+    # Provincia gate (allineato con la route della pagina /lead/{id})
+    user_city = (user.get("city") or "").strip()
+    if any(p.lower() == user_city.lower() for p in PROVINCE):
+        if (lead.get("provincia") or "").lower() != user_city.lower():
+            raise HTTPException(403, "Lead non nella tua provincia")
+
+    contattati = list_contatti_set_for_agente(user["id"])
+    already_contacted = lead["id"] in contattati
+
+    contatti_desc = list_contatti_for_lead(lead_id)
+    # ASC = primo contatto in cima
+    contatti_asc = list(reversed(contatti_desc))
+    primo_agente_id = contatti_asc[0]["agente_id"] if contatti_asc else None
+
+    stima = calcola_stima({
+        "id":     None,
+        "prezzo": lead.get("prezzo_richiesto"),
+        "mq":     lead.get("mq"),
+        "zona":   lead.get("citta"),
+        "tipo":   lead.get("tipo_immobile"),
+    })
+
+    out = public_lead(lead, with_telefono=already_contacted)
+    out["already_contacted"] = already_contacted
+    out["contatti"]          = contatti_asc
+    out["primo_agente_id"]   = primo_agente_id
+    out["current_user_id"]   = user["id"]
+    out["stima"]             = stima
+    return out
+
+
+# ─── Sprint 4 Task A: Script Chiamata AI ────────────────────────────────────
+
+# Rate limit in-memory: { user_id: [unix_ts, ...] } — finestra 1h, max 10
+_SCRIPT_RL_WINDOW = 3600
+_SCRIPT_RL_MAX    = 10
+_script_rl: dict  = {}
+_script_rl_lock   = None
+
+
+def _rate_limit_script(user_id: int) -> Optional[int]:
+    """Ritorna None se ok, oppure i secondi di retry-after."""
+    import time
+    import threading
+    global _script_rl_lock
+    if _script_rl_lock is None:
+        _script_rl_lock = threading.Lock()
+    now = time.time()
+    with _script_rl_lock:
+        hist = [t for t in _script_rl.get(user_id, []) if now - t < _SCRIPT_RL_WINDOW]
+        if len(hist) >= _SCRIPT_RL_MAX:
+            retry = int(_SCRIPT_RL_WINDOW - (now - hist[0])) + 1
+            _script_rl[user_id] = hist
+            return max(1, retry)
+        hist.append(now)
+        _script_rl[user_id] = hist
+        return None
+
+
+def _log_script(agente_user_id: int, annuncio_id: int,
+                tokens_input: int, tokens_output: int, costo_eur: float) -> None:
+    from database import get_conn as _gc, _cur as _gcur, _sql as _gsql
+    try:
+        conn = _gc(); cur = _gcur(conn)
+        cur.execute(_gsql("""
+            INSERT INTO script_logs
+                (agente_user_id, annuncio_id, tokens_input, tokens_output, costo_eur)
+            VALUES (?, ?, ?, ?, ?)
+        """), (agente_user_id, annuncio_id, tokens_input, tokens_output, costo_eur))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print(f"[script_logs] log errore: {e}")
+
+
+@router_agent.post("/script/{annuncio_id}")
+def script_chiamata_ai(annuncio_id: int, user=Depends(require_paid)):
+    """
+    Genera uno script chiamata di 30-45 secondi con Claude Sonnet 4.5.
+    Rate limit: 10 generazioni/ora per agente.
+    """
+    retry_after = _rate_limit_script(user["id"])
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Hai raggiunto il limite di {_SCRIPT_RL_MAX} script/ora. "
+                   f"Riprova tra {retry_after // 60} min.",
+        )
+
+    from services.ai_script import genera_script_chiamata, AIScriptError
+    try:
+        out = genera_script_chiamata(annuncio_id, user)
+    except AIScriptError as e:
+        msg = str(e)
+        if "non trovato" in msg.lower():
+            raise HTTPException(404, "Annuncio non trovato")
+        # Errori Anthropic / configurazione → 503 con messaggio user-friendly
+        print(f"[script-ai] errore: {msg}")
+        raise HTTPException(
+            status_code=503,
+            detail="Servizio AI temporaneamente non disponibile. Riprova tra qualche minuto.",
+        )
+
+    _log_script(
+        agente_user_id = user["id"],
+        annuncio_id    = annuncio_id,
+        tokens_input   = out["tokens_input"],
+        tokens_output  = out["tokens_output"],
+        costo_eur      = out["costo_eur"],
+    )
+
+    return {"script": out["script"]}
+
+
 # ─── Email helper inline (sfrutta wrapper di services.email) ────────────────
 
 def _send_privato_contattato_email(privato_email: str, privato_nome: Optional[str],

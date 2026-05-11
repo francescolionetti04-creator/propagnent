@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Dettaglio lead — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23185FA5'/><path d='M16 5 L4 14 L4 28 L12 28 L12 20 L20 20 L20 28 L28 28 L28 14 Z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/><circle cx='24' cy='9' r='4' fill='%235DCAA5'/><circle cx='24' cy='9' r='2' fill='white'/></svg>">
+<style>
+:root{
+  --blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;
+  --green:#5DCAA5;--green-d:#1D9E75;--green-l:#E1F5EE;
+  --orange:#EF9F27;--orange-l:#FAEEDA;--orange-d:#A45F12;
+  --red:#C92E2E;--red-l:#FDECEC;
+  --off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--muted:#888;--border:#e5e5e0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--off);color:var(--dark);min-height:100vh;line-height:1.55}
+a{color:var(--blue);text-decoration:none}
+button{font-family:inherit}
+
+.nav{background:#fff;border-bottom:1px solid var(--border);padding:14px 24px}
+.nav-in{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--blue)}
+.brand .logo-icon{width:34px;height:34px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff}
+.nav-links a{margin-left:18px;color:var(--dark);font-weight:500;font-size:14px}
+.nav-links a:hover{color:var(--blue)}
+
+.wrap{max-width:980px;margin:0 auto;padding:28px 22px 80px}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--gray);margin-bottom:16px}
+.back:hover{color:var(--blue)}
+
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px 24px;box-shadow:0 4px 12px rgba(0,0,0,.04);margin-bottom:16px}
+h2{font-size:22px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+h3{font-size:13px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+
+.head-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:14px}
+.head-meta{color:var(--gray);font-size:14px;margin-top:4px}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.badge{display:inline-block;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:6px}
+.b-urg-alta{background:var(--orange-l);color:var(--orange-d);border:1px solid var(--orange)}
+.b-urg-media{background:var(--blue-l);color:var(--blue)}
+.b-urg-bassa{background:var(--green-l);color:var(--green-d);border:1px solid var(--green)}
+.b-tipo{background:#F1F1ED;color:#555}
+.b-contattato{background:var(--green-l);color:var(--green-d);border:1px solid var(--green)}
+.b-primo{background:#FFF7E8;color:var(--orange-d);border:1px solid var(--orange);font-weight:800}
+
+.grid-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
+.info{background:var(--off);border-radius:12px;padding:12px 14px}
+.info .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.info .v{font-size:18px;font-weight:700;margin-top:3px;color:var(--dark)}
+
+.descrizione{margin-top:16px;padding:14px 16px;background:var(--off);border-radius:12px;font-size:14px;color:#444;white-space:pre-wrap}
+
+/* Stima */
+.stima-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.stima-cell{background:var(--blue-l);border-radius:12px;padding:14px 16px;border:1px solid #D5E5F5}
+.stima-cell .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--blue-d);font-weight:700}
+.stima-cell .v{font-size:20px;font-weight:800;color:var(--blue);margin-top:3px}
+.stima-cell .s{font-size:12px;color:var(--gray);margin-top:2px}
+.stima-empty{padding:14px 16px;background:var(--off);border-radius:12px;color:var(--muted);font-size:14px}
+.conf{font-size:12px;color:var(--gray);margin-top:10px}
+
+/* Timeline */
+.tl{display:flex;flex-direction:column;gap:10px}
+.tl-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--off);border-radius:12px;border:1px solid var(--border)}
+.tl-row.is-me{background:var(--blue-l);border-color:#C9DCEF}
+.tl-row.is-primo{border-color:var(--orange)}
+.tl-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#185FA5,#5DCAA5);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.tl-main{flex:1;min-width:0}
+.tl-name{font-size:14px;font-weight:700;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tl-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.tl-empty{padding:18px;text-align:center;color:var(--muted);background:var(--off);border-radius:12px;font-size:14px}
+
+/* Actions */
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:10px;font-weight:600;font-size:14.5px;cursor:pointer;text-decoration:none;border:none;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-d)}
+.btn-wa{background:#25D366;color:#fff}
+.btn-wa:hover{background:#1EBE5A;transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,211,102,.3)}
+.btn-out{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-out:hover{background:var(--blue-l)}
+.btn-locked{position:relative;background:#F1F1ED;color:#999;border:1.5px solid var(--border);cursor:not-allowed}
+.btn-locked::after{content:'🔒';margin-left:2px}
+.btn-locked .blur{filter:blur(4px);user-select:none}
+
+.tel-box{background:var(--green-l);border:1px solid var(--green);color:#0E5E3F;padding:10px 14px;border-radius:10px;font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:10px}
+.tel-box button{background:#fff;border:1px solid var(--green);color:var(--green-d);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+
+.error{padding:60px 30px;text-align:center;background:#fff;border-radius:12px;color:var(--red)}
+
+@media (max-width:600px){
+  .wrap{padding:18px 14px 60px}
+  .card{padding:18px 16px;border-radius:12px}
+  h2{font-size:19px}
+  .stima-cell .v{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="/app" class="brand">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" width="20" height="20" fill="none">
+          <path d="M16 5 L4 14 L4 28 L12 28 L12 20 L20 20 L20 28 L28 28 L28 14 Z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="24" cy="9" r="4" fill="#5DCAA5"/><circle cx="24" cy="9" r="2" fill="#fff"/>
+        </svg>
+      </div>HouseRadar
+    </a>
+    <div class="nav-links">
+      <a href="/app">← Dashboard</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <a class="back" href="/app">← Torna ai lead</a>
+  <div id="content"><p style="text-align:center;color:#888;padding:60px">Caricamento lead…</p></div>
+</div>
+
+<script>
+const LEAD_ID = (location.pathname.match(/\/lead\/(\d+)/) || [])[1];
+
+const fmt = n => '€ ' + Number(n).toLocaleString('it-IT');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function initials(nome, cognome){
+  const a = (nome || '').trim()[0] || '';
+  const b = (cognome || '').trim()[0] || '';
+  return (a + b).toUpperCase() || '👤';
+}
+function fmtDate(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('it-IT', {day:'2-digit', month:'short', year:'numeric'}) +
+         ' · ' + d.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+}
+function waHref(tel){
+  if (!tel) return '#';
+  const clean = String(tel).replace(/[^\d+]/g,'');
+  return `https://wa.me/${clean.replace(/^\+/, '')}`;
+}
+
+function openScriptModal(){
+  // Placeholder: collegato dall'altro task Sprint 4
+  alert('Script Chiamata AI — in arrivo a breve.');
+}
+
+function renderUrgBadge(u){
+  const map = {alta:'Urgenza alta', media:'Urgenza media', bassa:'Urgenza bassa'};
+  return `<span class="badge b-urg-${u || 'media'}">${map[u] || 'Urgenza media'}</span>`;
+}
+
+function renderStima(s){
+  if (!s || !s.available) {
+    const why = (s && s.reason) ? s.reason : 'Dati insufficienti per stima';
+    return `<div class="stima-empty">${esc(why)}</div>`;
+  }
+  return `
+    <div class="stima-row">
+      <div class="stima-cell">
+        <div class="l">💰 Prezzo probabile</div>
+        <div class="v">${fmt(s.prezzo_probabile)}</div>
+        <div class="s">${s.riduzione_pct}% sul richiesto</div>
+      </div>
+      <div class="stima-cell">
+        <div class="l">⏱ Tempo medio vendita</div>
+        <div class="v">${s.tempo_giorni} gg</div>
+        <div class="s">mediana comparabili</div>
+      </div>
+      <div class="stima-cell">
+        <div class="l">📊 Confidenza</div>
+        <div class="v">${s.confidenza_pct}%</div>
+        <div class="s">${s.campione_size} annunci simili in zona</div>
+      </div>
+    </div>`;
+}
+
+function renderTimeline(contatti, primoId, meId){
+  if (!contatti || !contatti.length) {
+    return `<div class="tl-empty">Nessun agente ha ancora contattato questo lead. Potresti essere il primo!</div>`;
+  }
+  return `<div class="tl">` + contatti.map(c => {
+    const isMe    = c.agente_id === meId;
+    const isPrimo = c.agente_id === primoId;
+    const nome    = `${c.agente_nome || ''} ${c.agente_cognome || ''}`.trim() || (c.agente_email || 'Agente');
+    const cls = ['tl-row', isMe ? 'is-me' : '', isPrimo ? 'is-primo' : ''].filter(Boolean).join(' ');
+    return `
+      <div class="${cls}">
+        <div class="tl-avatar">${esc(initials(c.agente_nome, c.agente_cognome))}</div>
+        <div class="tl-main">
+          <div class="tl-name">
+            ${esc(nome)}${isMe ? ' <span class="badge b-contattato">Tu</span>' : ''}
+            ${isPrimo ? '<span class="badge b-primo">🥇 Primo contatto</span>' : ''}
+          </div>
+          <div class="tl-sub">${esc(c.agente_city || '—')} · ${esc(fmtDate(c.contattato_at))}</div>
+        </div>
+      </div>`;
+  }).join('') + `</div>`;
+}
+
+function renderActions(L){
+  const phoneHtml = L.already_contacted && L.telefono_privato
+    ? `<div class="tel-box">
+         📞 ${esc(L.telefono_privato)}
+         <button onclick="navigator.clipboard.writeText('${esc(L.telefono_privato)}').then(()=>this.textContent='✓ Copiato')">Copia</button>
+       </div>
+       <a class="btn btn-wa" target="_blank" rel="noopener" href="${waHref(L.telefono_privato)}">💬 Apri WhatsApp</a>`
+    : `<button class="btn btn-locked" onclick="contattaOra()">
+         <span class="blur">📞 +39 ••• ••• ••••</span>
+       </button>
+       <button class="btn btn-primary" onclick="contattaOra()">📞 Sblocca contatto</button>`;
+  return `
+    <div class="actions">
+      ${phoneHtml}
+      <button class="btn btn-out" onclick="openScriptModal()">✨ Script Chiamata AI</button>
+    </div>`;
+}
+
+async function contattaOra(){
+  if (!confirm('Vuoi contattare questo privato? Il privato riceverà una notifica via email.')) return;
+  try {
+    const r = await fetch(`/api/agente/contatta-lead/${LEAD_ID}`, {method:'POST', credentials:'include'});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Errore');
+    // Ricarica per mostrare telefono + nuova riga timeline
+    load();
+  } catch (e) {
+    alert('Errore: ' + e.message);
+  }
+}
+
+async function load(){
+  const c = document.getElementById('content');
+  if (!LEAD_ID) { c.innerHTML = '<div class="card error">URL non valido</div>'; return; }
+  try {
+    const r = await fetch(`/api/agente/lead/${LEAD_ID}`, {credentials:'include'});
+    if (!r.ok) {
+      let msg = 'Lead non disponibile';
+      try { msg = (await r.json()).detail || msg; } catch {}
+      throw new Error(msg);
+    }
+    const L = await r.json();
+
+    const indirizzo = L.indirizzo || '(indirizzo non specificato)';
+    const citta     = [L.citta, L.provincia].filter(Boolean).join(' — ');
+    const prezzo    = L.prezzo_richiesto ? fmt(L.prezzo_richiesto) : '—';
+
+    c.innerHTML = `
+      <div class="card">
+        <div class="head-row">
+          <div style="flex:1;min-width:240px">
+            <h2>${esc(indirizzo)}</h2>
+            <div class="head-meta">${esc(citta)}</div>
+            <div class="badges">
+              ${renderUrgBadge(L.urgenza)}
+              <span class="badge b-tipo">${esc(L.tipo_immobile || 'immobile')}</span>
+              ${L.already_contacted ? '<span class="badge b-contattato">✓ Già contattato</span>' : ''}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-info">
+          <div class="info"><div class="l">Prezzo richiesto</div><div class="v">${prezzo}</div></div>
+          <div class="info"><div class="l">Superficie</div><div class="v">${L.mq ? L.mq + ' m²' : '—'}</div></div>
+          <div class="info"><div class="l">Camere</div><div class="v">${L.camere ?? '—'}</div></div>
+          <div class="info"><div class="l">Bagni</div><div class="v">${L.bagni ?? '—'}</div></div>
+        </div>
+
+        ${L.descrizione ? `<div class="descrizione">${esc(L.descrizione)}</div>` : ''}
+
+        ${renderActions(L)}
+      </div>
+
+      <div class="card">
+        <h3>📊 Stima vendita probabile</h3>
+        ${renderStima(L.stima)}
+      </div>
+
+      <div class="card">
+        <h3>📞 Timeline contatti</h3>
+        ${renderTimeline(L.contatti, L.primo_agente_id, L.current_user_id)}
+      </div>
+    `;
+  } catch (e) {
+    c.innerHTML = `<div class="card error">${esc(e.message)}</div>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

@@ -337,6 +337,24 @@ def init_db():
     except Exception:
         pass
 
+    # ── Sprint 4 Task A: log generazioni Script Chiamata AI ──────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS script_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agente_user_id INTEGER NOT NULL,
+            annuncio_id INTEGER NOT NULL,
+            generato_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            tokens_input INTEGER DEFAULT 0,
+            tokens_output INTEGER DEFAULT 0,
+            costo_eur REAL DEFAULT 0
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_script_logs_agente ON script_logs(agente_user_id)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_script_logs_at     ON script_logs(generato_at)"))
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
 

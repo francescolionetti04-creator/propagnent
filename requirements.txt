@@ -21,3 +21,6 @@ pydantic[email]>=2.0.0
 stripe>=7.0.0
 resend>=0.8.0
 apscheduler>=3.10.0
+
+# Sprint 4 Task A: Killer App #1 — Script Chiamata AI (Claude Sonnet 4.5)
+anthropic>=0.40.0

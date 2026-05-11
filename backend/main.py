@@ -573,6 +573,20 @@ def profilo_pubblico(user_id: int):
     return _serve("profilo_pubblico.html")
 
 
+@app.get("/lead/{lead_id}")
+def lead_dettaglio_page(lead_id: int, user=Depends(require_paid)):
+    """Pagina dettaglio lead venditore — visibile solo agli agenti della stessa provincia."""
+    from privato.db import get_lead_by_id, PROVINCE
+    lead = get_lead_by_id(lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead non trovato")
+    user_city = (user.get("city") or "").strip()
+    if any(p.lower() == user_city.lower() for p in PROVINCE):
+        if (lead.get("provincia") or "").lower() != user_city.lower():
+            raise HTTPException(403, "Lead non nella tua provincia")
+    return _serve("lead_dettaglio.html")
+
+
 @app.get("/profilo")
 def profilo():
     """Pagina pubblica del profilo agente."""
