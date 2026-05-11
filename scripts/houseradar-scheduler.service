@@ -1,0 +1,18 @@
+[Unit]
+Description=HouseRadar Scraper Scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/propagnent
+Environment="SYNC_TOKEN=a7ae8da8-6464-4e2a-bde4-60ef0fc98533"
+Environment="HOUSERADAR_URL=https://houseradar.it"
+ExecStart=/usr/bin/python3 /root/propagnent/scraper/scheduler.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/houseradar-scheduler.log
+StandardError=append:/var/log/houseradar-scheduler.log
+
+[Install]
+WantedBy=multi-user.target

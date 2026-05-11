@@ -100,3 +100,30 @@ APP_BASE_URL=https://houseradar.it
 
 Founder = `is_founder=true` + `is_email_verified=true`. Bypassano paywall.
 Per il primo accesso: usa `/forgot-password` con la tua email.
+
+## VPS Setup (systemd)
+
+Il file `scripts/houseradar-scheduler.service` configura lo scheduler scraper come
+servizio systemd persistente sul VPS (auto-restart, log su `/var/log/houseradar-scheduler.log`).
+
+```bash
+# Una sola volta sul VPS (46.224.225.174):
+ssh root@46.224.225.174
+cd /root/propagnent
+git pull
+sudo cp scripts/houseradar-scheduler.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable houseradar-scheduler
+sudo systemctl start houseradar-scheduler
+sudo systemctl status houseradar-scheduler  # verifica che sia "active (running)"
+```
+
+Comandi utili dopo l'installazione:
+
+```bash
+sudo systemctl restart houseradar-scheduler        # riavvio (dopo git pull)
+sudo journalctl -u houseradar-scheduler -f         # log live via journal
+tail -f /var/log/houseradar-scheduler.log          # log file diretto
+sudo systemctl stop houseradar-scheduler           # ferma
+```
+
