@@ -355,6 +355,64 @@ def init_db():
     except Exception:
         pass
 
+    # ── Sprint 5.0: agenzie multi-account (ombrello) ─────────────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS agencies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_user_id INTEGER NOT NULL,
+            nome_agenzia TEXT,
+            piano TEXT DEFAULT 'agenzia',
+            max_account_inclusi INTEGER DEFAULT 3,
+            stripe_subscription_id TEXT,
+            stripe_seat_item_id TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_agencies_owner ON agencies(owner_user_id)"))
+    except Exception:
+        pass
+
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS agency_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agency_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            ruolo_in_agenzia TEXT DEFAULT 'agent',
+            invited_at TEXT,
+            accepted_at TEXT,
+            removed_at TEXT,
+            UNIQUE(agency_id, user_id)
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_agency_members_agency ON agency_members(agency_id)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_agency_members_user   ON agency_members(user_id)"))
+    except Exception:
+        pass
+
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS agency_invites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agency_id INTEGER NOT NULL,
+            invite_token TEXT UNIQUE NOT NULL,
+            email_invitato TEXT NOT NULL,
+            nome_invitato TEXT,
+            invited_at TEXT,
+            expires_at TEXT,
+            accepted_at TEXT,
+            accepted_by_user_id INTEGER,
+            cancelled_at TEXT
+        )
+    """))
+    try:
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_invites_token  ON agency_invites(invite_token)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_invites_agency ON agency_invites(agency_id)"))
+        cur.execute(_sql("CREATE INDEX IF NOT EXISTS idx_invites_email  ON agency_invites(email_invitato)"))
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
 

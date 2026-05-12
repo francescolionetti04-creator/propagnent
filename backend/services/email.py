@@ -154,6 +154,33 @@ def send_compratore_match_email(to: str, nome: str | None,
                  _wrap(body, f"{match_count} nuovi annunci match"))
 
 
+def send_agency_invite_email(
+    to: str,
+    link: str,
+    agency_name: str,
+    owner_name: str | None = None,
+    invitee_name: str | None = None,
+) -> bool:
+    saluto = f"Ciao {invitee_name}," if invitee_name else "Ciao,"
+    chi = owner_name or "Il titolare"
+    body = f"""
+<h2 style="margin:0 0 18px;font-size:22px;font-weight:700">Sei stato invitato in agenzia</h2>
+<p>{saluto}</p>
+<p>{chi} ti ha invitato a far parte di <strong>{agency_name or 'HouseRadar Agenzia'}</strong>
+su HouseRadar. Avrai accesso completo alla dashboard agenti, agli annunci aggregati
+e a tutti gli strumenti del piano Agenzia — senza pagare nulla.</p>
+{_btn(link, "Accetta l'invito")}
+<p style="font-size:13px;color:#666">
+  Se il bottone non funziona, copia questo link nel browser:<br>
+  <a href="{link}" style="color:{_BLUE};word-break:break-all">{link}</a>
+</p>
+<p style="font-size:13px;color:#666;margin-top:24px">
+  Il link è valido 14 giorni. Se non riconosci questo invito, ignora questa email.
+</p>"""
+    return _send(to, "Sei stato invitato in agenzia su HouseRadar",
+                 _wrap(body, f"Invito da {chi}"))
+
+
 def send_welcome_email(to: str, role: str, nome: str | None = None) -> bool:
     saluto = f"Benvenuto {nome}!" if nome else "Benvenuto in HouseRadar!"
     role_msg = {

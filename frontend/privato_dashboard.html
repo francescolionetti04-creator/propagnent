@@ -59,7 +59,21 @@ h1{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-.01em}
 .contatto .when{font-size:12px;color:var(--gray)}
 
 .flash{background:var(--green-l);color:#0E5E3F;padding:11px 14px;border-radius:10px;margin-bottom:18px;border:1px solid var(--green)}
-@media (max-width:600px){.topbar{flex-direction:column;align-items:flex-start}.lead-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:768px){
+  body{padding:14px}
+  .topbar{flex-direction:column;align-items:flex-start;padding:14px 16px}
+  .card{padding:18px 16px}
+  h1{font-size:22px}
+  .lead-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .lead-fld{padding:10px 12px}
+  .lead-fld .v{font-size:14px}
+  .actions{flex-direction:column}
+  .actions .btn{width:100%;min-height:42px}
+  .contatto{flex-direction:column;align-items:flex-start;gap:6px}
+}
+@media (max-width:420px){
+  .lead-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>

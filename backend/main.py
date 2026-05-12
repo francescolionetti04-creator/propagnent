@@ -27,6 +27,7 @@ from auth.users_db import public_user
 from services.stripe_svc import router as stripe_router, ensure_stripe_prices
 from privato.routes import router_priv as privato_router, router_agent as agente_router
 from compratore.routes import router as compratore_router
+from agency.routes import router as agency_router, auth_router as agency_auth_router
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 SCRAPER_DIR  = os.path.join(os.path.dirname(__file__), "..", "scraper")
@@ -59,6 +60,8 @@ app.include_router(stripe_router)
 app.include_router(privato_router)
 app.include_router(agente_router)
 app.include_router(compratore_router)
+app.include_router(agency_router)
+app.include_router(agency_auth_router)
 
 
 @app.exception_handler(AuthRedirect)
@@ -490,6 +493,18 @@ def app_dashboard(user=Depends(require_paid)):
     return _serve("app.html")
 
 
+@app.get("/app/team")
+def app_team(user=Depends(require_paid)):
+    """Gestione team agenzia (visibile solo agli owner — il frontend mostra 403 altrimenti)."""
+    return _serve("app_team.html")
+
+
+@app.get("/signup/invito/{token}")
+def signup_invito(token: str):
+    """Pagina pubblica accettazione invito agenzia."""
+    return _serve("signup_invito.html")
+
+
 @app.get("/privato/onboarding")
 def privato_onboarding(user=Depends(require_privato)):
     return _serve("privato_onboarding.html")
@@ -532,9 +547,20 @@ def reset_page():
 
 @app.get("/api/me")
 def api_me(request: Request):
-    """Ritorna l'utente corrente (None se non autenticato)."""
+    """Ritorna l'utente corrente (None se non autenticato).
+    Include flag `is_agency_owner` per mostrare la sezione AGENZIA in sidebar."""
     user = current_user(request)
-    return JSONResponse({"user": public_user(user)})
+    payload = public_user(user)
+    if payload:
+        try:
+            from agency.db import get_agency_by_owner
+            ag = get_agency_by_owner(user["id"])
+            payload["is_agency_owner"] = bool(ag)
+            payload["agency_id"] = ag["id"] if ag else None
+        except Exception:
+            payload["is_agency_owner"] = False
+            payload["agency_id"] = None
+    return JSONResponse({"user": payload})
 
 
 @app.get("/api/profilo/{user_id}")

@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Membri team — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+:root{--blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;--green:#5DCAA5;--green-d:#1D9E75;
+  --green-l:#E1F5EE;--off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--border:#D3D1C7;
+  --danger:#C92E2E;--danger-l:#FBEAEA;--warn:#EF9F27;--warn-l:#FAEEDA;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:var(--off);color:var(--dark);line-height:1.55;min-height:100vh}
+a{color:var(--blue);text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+
+.nav{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;
+  position:sticky;top:0;z-index:30}
+.nav-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--blue)}
+.brand svg{width:32px;height:32px}
+.nav-links a{margin-left:18px;color:var(--dark);font-weight:500;font-size:14px}
+.nav-links a:hover{color:var(--blue)}
+.nav-links .btn-back{background:var(--blue-l);color:var(--blue);padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600}
+
+.wrap{max-width:1100px;margin:0 auto;padding:32px 20px 60px}
+
+h1{font-size:30px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.sub{color:var(--gray);font-size:15px;margin-bottom:24px}
+
+.banner{background:linear-gradient(135deg,var(--blue),#246BB8);color:#fff;padding:20px 24px;
+  border-radius:14px;display:flex;justify-content:space-between;align-items:center;gap:14px;
+  flex-wrap:wrap;margin-bottom:24px;box-shadow:0 10px 30px rgba(24,95,165,.18)}
+.banner-stats{display:flex;gap:24px;flex-wrap:wrap}
+.banner-stat .v{font-size:24px;font-weight:800;line-height:1}
+.banner-stat .l{font-size:12px;opacity:.85;margin-top:3px;letter-spacing:.02em}
+.banner-cta{background:#fff;color:var(--blue);padding:11px 18px;border-radius:10px;font-weight:700;
+  font-size:14px;transition:transform .15s}
+.banner-cta:hover{transform:translateY(-1px)}
+
+.section{margin-bottom:24px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.section-head h2{font-size:18px;font-weight:700;letter-spacing:-.005em}
+.section-head .hint{font-size:13px;color:var(--gray)}
+
+.list{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #f0f0eb}
+.row:last-child{border-bottom:none}
+.avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#185FA5,#5DCAA5);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+.row-info{flex:1;min-width:0}
+.row-name{font-weight:600;font-size:15px}
+.row-meta{font-size:13px;color:var(--gray);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;
+  padding:3px 9px;border-radius:999px;text-transform:uppercase}
+.pill-owner{background:var(--green-l);color:var(--green-d)}
+.pill-agent{background:var(--blue-l);color:var(--blue)}
+.pill-pending{background:var(--warn-l);color:#7A5210}
+.row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  font-weight:600;font-size:13px;padding:8px 14px;border-radius:8px;transition:all .15s;border:none;cursor:pointer}
+.btn-out{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-out:hover{background:var(--blue-l)}
+.btn-danger{background:#fff;color:var(--danger);border:1.5px solid var(--danger)}
+.btn-danger:hover{background:var(--danger-l)}
+.btn-pri{background:var(--blue);color:#fff}
+.btn-pri:hover{background:var(--blue-d)}
+
+.empty{padding:30px;text-align:center;color:var(--gray);font-size:14px}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:440px;padding:28px;position:relative}
+.modal h3{font-size:20px;font-weight:800;margin-bottom:6px}
+.modal p{color:var(--gray);font-size:14px;margin-bottom:18px}
+.modal label{display:block;font-size:13px;font-weight:600;color:var(--dark);margin:14px 0 6px}
+.modal input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:9px;font-size:14.5px;outline:none;font-family:inherit}
+.modal input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #B5D4F440}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.modal-close{position:absolute;top:12px;right:14px;width:32px;height:32px;border-radius:8px;
+  font-size:20px;color:var(--gray);background:transparent}
+.modal-close:hover{background:var(--off)}
+.flash{padding:10px 14px;border-radius:8px;font-size:13.5px;margin-bottom:10px;display:none}
+.flash.ok{background:var(--green-l);color:var(--green-d);display:block}
+.flash.err{background:var(--danger-l);color:var(--danger);display:block}
+
+.error-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:60px 30px;text-align:center}
+.error-card .ico{font-size:42px;margin-bottom:10px}
+.error-card h2{font-size:22px;font-weight:800;margin-bottom:10px}
+.error-card p{color:var(--gray);max-width:480px;margin:0 auto 18px;font-size:15px}
+
+@media (max-width:600px){
+  .wrap{padding:20px 14px 40px}
+  h1{font-size:24px}
+  .banner{padding:16px;flex-direction:column;align-items:flex-start}
+  .banner-stats{gap:18px;width:100%}
+  .row{flex-wrap:wrap}
+  .row-actions{width:100%;justify-content:flex-end;margin-top:6px}
+  .nav-links a{margin-left:10px;font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="/" class="brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+        <circle cx="73" cy="73" r="14" fill="#5DCAA5"/><circle cx="73" cy="73" r="6" fill="#fff"/>
+      </svg>HouseRadar
+    </a>
+    <div class="nav-links">
+      <a href="/app" class="btn-back">← Dashboard</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div id="content">
+    <p style="text-align:center;color:var(--gray);padding:60px 0">Caricamento…</p>
+  </div>
+</div>
+
+<!-- Modal Invito -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <button class="modal-close" onclick="closeInviteModal()" aria-label="Chiudi">✕</button>
+    <h3>Invita un agente al team</h3>
+    <p>Riceverà un'email con un link sicuro per registrarsi. Non paga niente — l'account è incluso nel piano della tua agenzia.</p>
+    <div class="flash" id="flash"></div>
+    <label for="invEmail">Email agente *</label>
+    <input id="invEmail" type="email" placeholder="agente@example.com" autocomplete="off">
+    <label for="invNome">Nome (facoltativo)</label>
+    <input id="invNome" type="text" placeholder="Mario" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-out" onclick="closeInviteModal()">Annulla</button>
+      <button class="btn btn-pri" id="invSubmit" onclick="submitInvite()">Invia invito</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function initials(nome, cognome, email){
+  if (nome || cognome) {
+    return ((nome || '')[0] || '' + (cognome || '')[0] || '').toUpperCase() || (email || '?')[0].toUpperCase();
+  }
+  return (email || '?')[0].toUpperCase();
+}
+
+function fmtDate(iso){
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('it-IT', {day:'2-digit', month:'short', year:'numeric'}); }
+  catch { return iso; }
+}
+
+async function loadTeam(){
+  const c = $('content');
+  let r;
+  try {
+    r = await fetch('/api/agency/members', {credentials:'include'});
+  } catch(e) {
+    c.innerHTML = `<div class="error-card"><div class="ico">⚠️</div><h2>Errore di rete</h2><p>${e.message}</p></div>`;
+    return;
+  }
+  if (r.status === 403) {
+    c.innerHTML = `
+      <div class="error-card">
+        <div class="ico">🔒</div>
+        <h2>Solo i titolari di agenzia</h2>
+        <p>Questa pagina è riservata al titolare di un'agenzia. Per attivare un piano Agenzia
+        con 3 account inclusi (e seat extra a 100€/mese), vai al pricing.</p>
+        <a class="btn btn-pri" href="/pricing">Vedi piano Agenzia</a>
+        <a class="btn btn-out" href="/app" style="margin-left:8px">← Dashboard</a>
+      </div>`;
+    return;
+  }
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    c.innerHTML = `<div class="error-card"><div class="ico">⚠️</div><h2>Errore</h2><p>${j.detail || r.status}</p></div>`;
+    return;
+  }
+  const data = await r.json();
+  render(data);
+}
+
+function render(data){
+  const c = $('content');
+  const a = data.agency, ct = data.counters;
+
+  const membersHtml = (data.members || []).map(m => {
+    const name = [m.nome, m.cognome].filter(Boolean).join(' ') || m.email;
+    const isOwner = m.ruolo_in_agenzia === 'owner';
+    const pillCls = isOwner ? 'pill-owner' : 'pill-agent';
+    const pillLab = isOwner ? '👑 Titolare' : 'Agente';
+    const action = isOwner
+      ? ''
+      : `<button class="btn btn-danger" onclick="removeMember(${m.user_id}, '${(name||'').replace(/'/g,"&#39;")}')">Rimuovi</button>`;
+    return `
+      <div class="row">
+        <div class="avatar">${initials(m.nome, m.cognome, m.email)}</div>
+        <div class="row-info">
+          <div class="row-name">${name}</div>
+          <div class="row-meta">${m.email} ${m.city ? '· ' + m.city : ''}</div>
+        </div>
+        <span class="pill ${pillCls}">${pillLab}</span>
+        <div class="row-actions">${action}</div>
+      </div>`;
+  }).join('');
+
+  const invitesHtml = (data.invites || []).map(i => `
+    <div class="row">
+      <div class="avatar" style="background:#FAEEDA;color:#7A5210">📩</div>
+      <div class="row-info">
+        <div class="row-name">${i.email}</div>
+        <div class="row-meta">Inviato il ${fmtDate(i.invited_at)} · scade ${fmtDate(i.expires_at)}</div>
+      </div>
+      <span class="pill pill-pending">In attesa</span>
+      <div class="row-actions">
+        <button class="btn btn-out" onclick="cancelInvite(${i.id})">Annulla</button>
+      </div>
+    </div>`).join('');
+
+  c.innerHTML = `
+    <h1>Membri del team</h1>
+    <p class="sub">${a.nome_agenzia || 'La tua agenzia'} — piano <strong>${a.piano === 'su_misura' ? 'Su Misura' : 'Agenzia'}</strong></p>
+
+    <div class="banner">
+      <div class="banner-stats">
+        <div class="banner-stat"><div class="v">${ct.attivi}</div><div class="l">Account attivi</div></div>
+        <div class="banner-stat"><div class="v">${ct.inclusi}</div><div class="l">Inclusi nel piano</div></div>
+        <div class="banner-stat"><div class="v">${ct.extras}</div><div class="l">Extra fatturati</div></div>
+        <div class="banner-stat"><div class="v">€${ct.extras_eur_mese}</div><div class="l">Costo extra/mese</div></div>
+      </div>
+      <button class="banner-cta" onclick="openInviteModal()">+ Invita agente</button>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Membri attivi (${ct.attivi})</h2>
+        <span class="hint">${ct.extras > 0 ? `Stai pagando €${ct.extras_eur_mese}/mese di seat extra` : 'Tutti gli account sono inclusi nel piano'}</span>
+      </div>
+      <div class="list">
+        ${membersHtml || '<div class="empty">Nessun membro — invita il primo agente.</div>'}
+      </div>
+    </div>
+
+    <div class="section" id="inviti">
+      <div class="section-head">
+        <h2>Inviti pendenti (${ct.inviti_pendenti})</h2>
+        <span class="hint">Gli inviti scadono dopo 14 giorni</span>
+      </div>
+      <div class="list">
+        ${invitesHtml || '<div class="empty">Nessun invito in attesa.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────
+function openInviteModal(){
+  $('modalBg').classList.add('open');
+  $('flash').className = 'flash';
+  $('flash').textContent = '';
+  $('invEmail').value = '';
+  $('invNome').value = '';
+  setTimeout(()=>$('invEmail').focus(), 80);
+}
+function closeInviteModal(){
+  $('modalBg').classList.remove('open');
+}
+
+async function submitInvite(){
+  const email = $('invEmail').value.trim();
+  const nome  = $('invNome').value.trim();
+  const flash = $('flash');
+  const btn = $('invSubmit');
+  if (!email) {
+    flash.className = 'flash err';
+    flash.textContent = 'Inserisci un\'email valida';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Invio…';
+  try {
+    const r = await fetch('/api/agency/invite', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, nome: nome || null}),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      flash.className = 'flash err';
+      flash.textContent = j.detail || 'Errore invio invito';
+      return;
+    }
+    flash.className = 'flash ok';
+    flash.textContent = 'Invito inviato. L\'agente riceverà un\'email entro qualche minuto.';
+    setTimeout(()=>{ closeInviteModal(); loadTeam(); }, 1200);
+  } catch (e) {
+    flash.className = 'flash err';
+    flash.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Invia invito';
+  }
+}
+
+async function removeMember(user_id, name){
+  if (!confirm(`Rimuovere ${name} dal team?\n\nL'account verrà disattivato e, se in seat extra, il costo mensile verrà ridotto al prossimo ciclo Stripe.`)) return;
+  try {
+    const r = await fetch(`/api/agency/member/${user_id}`, {
+      method:'DELETE', credentials:'include',
+    });
+    const j = await r.json();
+    if (!r.ok) { alert(j.detail || 'Errore rimozione'); return; }
+    loadTeam();
+  } catch (e) { alert(e.message); }
+}
+
+async function cancelInvite(invite_id){
+  if (!confirm('Annullare questo invito?')) return;
+  try {
+    const r = await fetch(`/api/agency/invite/${invite_id}`, {
+      method:'DELETE', credentials:'include',
+    });
+    const j = await r.json();
+    if (!r.ok) { alert(j.detail || 'Errore'); return; }
+    loadTeam();
+  } catch (e) { alert(e.message); }
+}
+
+// Background overlay close
+document.getElementById('modalBg').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalBg')) closeInviteModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeInviteModal();
+});
+
+loadTeam();
+</script>
+</body></html>

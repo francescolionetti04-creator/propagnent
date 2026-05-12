@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Accetta invito — HouseRadar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
+<style>
+:root{--blue:#185FA5;--blue-d:#0F4275;--blue-l:#EDF4FC;--green:#5DCAA5;--green-l:#E1F5EE;
+  --off:#f5f5f3;--dark:#1a1a1a;--gray:#666;--border:#D3D1C7;--err:#C92E2E;--err-l:#FBEAEA}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  background:var(--off);color:var(--dark);line-height:1.55;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:24px 16px 40px}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:22px;color:var(--blue);margin:18px 0 22px}
+.brand svg{width:38px;height:38px}
+
+.card{max-width:520px;width:100%;background:#fff;border-radius:18px;padding:36px 32px;
+  box-shadow:0 12px 40px rgba(0,0,0,.07);border:1px solid var(--border)}
+
+.invite-head{background:linear-gradient(135deg,var(--blue-l),#fff);
+  border:1px solid var(--blue-l);border-radius:12px;padding:16px 18px;margin-bottom:22px}
+.invite-head h2{font-size:14px;color:var(--blue);font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.invite-head p{font-size:15px;color:var(--dark);font-weight:500}
+
+h1{font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:-.01em}
+.sub{color:var(--gray);margin-bottom:18px;font-size:14.5px}
+
+label{display:block;margin:13px 0 5px;font-size:13px;font-weight:600;color:#333}
+input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:10px;
+  font-size:15px;font-family:inherit;transition:border .15s,box-shadow .15s;background:#fff}
+input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+input[readonly]{background:var(--off);color:var(--gray)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.btn{width:100%;display:inline-flex;align-items:center;justify-content:center;
+  padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px;
+  margin-top:18px;border:none;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn-pri{background:var(--blue);color:#fff}
+.btn-pri:hover{background:var(--blue-d)}
+.btn-pri:disabled{opacity:.6;cursor:not-allowed}
+
+.flash{padding:11px 14px;border-radius:9px;font-size:13.5px;margin-top:12px;display:none}
+.flash.ok{background:var(--green-l);color:#1D6E55;display:block}
+.flash.err{background:var(--err-l);color:var(--err);display:block}
+
+.footer-link{text-align:center;margin-top:18px;font-size:14px;color:var(--gray)}
+
+.error-state{max-width:480px;width:100%;text-align:center;background:#fff;border-radius:14px;
+  border:1px solid var(--border);padding:50px 30px}
+.error-state .ico{font-size:42px;margin-bottom:10px}
+.error-state h2{font-size:20px;font-weight:800;margin-bottom:10px}
+.error-state p{color:var(--gray);margin-bottom:20px;font-size:15px}
+
+@media (max-width:520px){
+  .card{padding:26px 20px}
+  h1{font-size:20px}
+  .row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<a href="/" class="brand">
+  <svg viewBox="0 0 100 100" fill="none">
+    <path d="M50 18 L20 45 V82 H80 V45 Z" fill="#185FA5"/>
+    <circle cx="73" cy="73" r="14" fill="#5DCAA5"/><circle cx="73" cy="73" r="6" fill="#fff"/>
+  </svg>HouseRadar
+</a>
+
+<div id="content">
+  <p style="text-align:center;color:var(--gray);padding:60px 0">Verifica invito…</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function token(){
+  const m = location.pathname.match(/\/signup\/invito\/([A-Za-z0-9]+)/);
+  return m ? m[1] : null;
+}
+
+async function init(){
+  const t = token();
+  const c = $('content');
+  if (!t) {
+    c.innerHTML = errorState('Link non valido', 'Il link che hai aperto non è valido. Chiedi al titolare di rinviarti l\'invito.');
+    return;
+  }
+  let r;
+  try { r = await fetch(`/api/agency/invite/${t}`); }
+  catch(e){ c.innerHTML = errorState('Errore di rete', e.message); return; }
+  if (!r.ok) {
+    const j = await r.json().catch(()=>({}));
+    c.innerHTML = errorState('Invito scaduto o invalido', j.detail || 'Questo invito non è più valido. Chiedi al titolare di rinviartene uno nuovo.');
+    return;
+  }
+  const inv = await r.json();
+  renderForm(t, inv);
+}
+
+function errorState(title, msg){
+  return `
+    <div class="error-state">
+      <div class="ico">😕</div>
+      <h2>${title}</h2>
+      <p>${msg}</p>
+      <a class="btn btn-pri" href="/" style="display:inline-flex;width:auto">← Torna alla home</a>
+    </div>`;
+}
+
+function renderForm(t, inv){
+  const c = $('content');
+  c.innerHTML = `
+    <div class="card">
+      <div class="invite-head">
+        <h2>Invito da ${escapeHtml(inv.owner_name || 'Titolare')}</h2>
+        <p>Sei stato invitato a far parte di <strong>${escapeHtml(inv.agency_name)}</strong> su HouseRadar.</p>
+      </div>
+
+      <h1>Completa la registrazione</h1>
+      <p class="sub">Il tuo account è gratuito — l'agenzia paga per te. Avrai accesso a tutta la dashboard agenti.</p>
+
+      <form id="form" onsubmit="submitForm(event)">
+        <label for="email">Email (dall'invito)</label>
+        <input id="email" type="email" value="${escapeHtml(inv.email)}" readonly>
+
+        <div class="row">
+          <div>
+            <label for="nome">Nome *</label>
+            <input id="nome" type="text" value="${escapeHtml(inv.nome || '')}" required autocomplete="given-name">
+          </div>
+          <div>
+            <label for="cognome">Cognome *</label>
+            <input id="cognome" type="text" required autocomplete="family-name">
+          </div>
+        </div>
+
+        <label for="telefono">Telefono (per WhatsApp clienti)</label>
+        <input id="telefono" type="tel" autocomplete="tel" placeholder="+39 ...">
+
+        <label for="city">Città di lavoro</label>
+        <input id="city" type="text" autocomplete="address-level2" placeholder="Es. Livorno, Pisa, …">
+
+        <label for="password">Password * <small style="font-weight:400;color:var(--gray)">(min 8 caratteri)</small></label>
+        <input id="password" type="password" required minlength="8" autocomplete="new-password">
+
+        <div class="flash" id="flash"></div>
+        <button class="btn btn-pri" type="submit" id="btnSubmit">Crea account e accedi</button>
+      </form>
+
+      <p class="footer-link">Hai già un account? <a href="/accedi">Accedi</a></p>
+    </div>
+  `;
+  // store token for submit
+  window.__inv_token = t;
+}
+
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  const flash = $('flash');
+  const btn = $('btnSubmit');
+  flash.className = 'flash';
+  flash.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Creazione…';
+  const body = {
+    token:    window.__inv_token,
+    password: $('password').value,
+    nome:     $('nome').value.trim(),
+    cognome:  $('cognome').value.trim(),
+    telefono: $('telefono').value.trim() || null,
+    city:     $('city').value.trim() || null,
+  };
+  try {
+    const r = await fetch('/auth/signup-invite', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      flash.className = 'flash err';
+      flash.textContent = j.detail || 'Errore registrazione';
+      btn.disabled = false; btn.textContent = 'Crea account e accedi';
+      return;
+    }
+    flash.className = 'flash ok';
+    flash.textContent = 'Benvenuto! Ti reindirizzo alla dashboard…';
+    setTimeout(() => location.href = j.redirect || '/app', 800);
+  } catch(err) {
+    flash.className = 'flash err';
+    flash.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Crea account e accedi';
+  }
+}
+
+init();
+</script>
+</body></html>

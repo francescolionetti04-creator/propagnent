@@ -471,6 +471,58 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
 /* Filtri / chip più pulite */
 .fb-chip{transition:all .15s ease}
 .fb-chip:hover{transform:translateY(-1px)}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SPRINT 5.0 — MOBILE PASS (375px - 480px)
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width:640px){
+  .app{padding:1rem 12px 24px}
+  body{font-size:14.5px}
+  .topbar{padding:12px 14px !important;border-radius:12px}
+  .logo-name{font-size:15px}
+  .logo-sub{font-size:10px}
+  .live-badge{padding:4px 10px;font-size:11px}
+  .btn-refresh{padding:6px 12px;font-size:12px}
+  /* Mini-stats topbar 2x2 invece di 1col */
+  .stats-mini{
+    display:grid !important;grid-template-columns:1fr 1fr !important;
+    gap:8px;margin:0 12px 12px;padding-top:12px;
+  }
+  .smini{padding:10px 12px}
+  .smini .v{font-size:18px}
+  .smini .l{font-size:10px}
+  /* Search panel più compatto */
+  .search-panel{padding:12px;margin-bottom:12px}
+  .search-row{flex-direction:column;gap:8px}
+  .btn-search{width:100%;padding:12px}
+  /* Filtri: touch target ≥36px */
+  .fb-chip,.adv-chip{padding:8px 14px;font-size:13px;min-height:36px;
+    display:inline-flex;align-items:center}
+  .fb-label,.adv-label{font-size:11px;width:100%;margin-bottom:4px}
+  .adv-row{padding:6px 0}
+  /* Card annunci: stack verticale */
+  .lcard-inner{flex-direction:column}
+  .lcard-stripe{width:100%;height:4px}
+  .lcard-body{padding:14px}
+  .card-gallery{height:200px}
+  /* Score cards più compatte */
+  .scard-inner{flex-direction:row}
+  .sc-col{width:74px;padding:.7rem .3rem}
+  .sc-ring{width:52px;height:52px;font-size:17px}
+  .scard-body{padding:.7rem .8rem}
+  /* Bottoni card-footer impilati */
+  .card-footer{flex-direction:column;gap:6px}
+  .cf-btn,.btn-pdf,.btn-match{width:100%;min-height:40px;padding:11px}
+  /* Stima box font ridotto */
+  .stima-box{font-size:12px;padding:9px 11px}
+  /* h1/h2 ridotti */
+  h1{font-size:22px}
+  h2{font-size:18px}
+  /* Sidebar drawer: il toggle è già fisso top-left, sposta in alto in modo da non sovrapporsi a topbar */
+  .sb-toggle{top:auto;bottom:18px;left:14px;box-shadow:0 8px 22px rgba(0,0,0,.18) !important}
+  /* Card padding ridotto */
+  .card{padding:16px !important}
+}
 </style>
 </head>
 <body>
@@ -526,6 +578,12 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
     </button>
     <a class="sb-link muted" tabindex="-1">💬 Chat <small>Presto</small></a>
     <a class="sb-link muted" tabindex="-1">📝 Valutazioni <small>Presto</small></a>
+  </div>
+
+  <div class="sb-section" id="sb-agency-section" style="display:none">
+    <h6>Agenzia</h6>
+    <a class="sb-link" href="/app/team">👥 Membri team <span class="cnt" id="cnt-team">—</span></a>
+    <a class="sb-link" href="/app/team#inviti">💌 Inviti pendenti <span class="cnt" id="cnt-inv">—</span></a>
   </div>
 
   <div class="sb-section" style="margin-top:auto;border-top:1px solid var(--border);padding-top:14px">
@@ -1701,6 +1759,21 @@ async function loadSidebarUser(){
       } else {
         link.style.display = 'none';
       }
+    }
+    // Sezione AGENZIA — visibile solo se owner
+    if (u.is_agency_owner) {
+      const sec = document.getElementById('sb-agency-section');
+      if (sec) sec.style.display = '';
+      try {
+        const mr = await fetch('/api/agency/members', {credentials:'include'});
+        if (mr.ok) {
+          const data = await mr.json();
+          const cT = document.getElementById('cnt-team');
+          const cI = document.getElementById('cnt-inv');
+          if (cT) cT.textContent = `${data.counters.attivi}/${data.counters.inclusi}`;
+          if (cI) cI.textContent = data.counters.inviti_pendenti;
+        }
+      } catch {}
     }
   } catch {}
 }
