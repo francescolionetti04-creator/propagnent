@@ -27,6 +27,8 @@ class Annuncio:
     foto_url: Optional[str]       # prima foto (backward compat)
     foto_urls: List[str]          # tutte le foto (galleria)
     portale: Optional[str]        # "subito.it" / "idealista.it" / "immobiliare.it"
+    citta: Optional[str]          # Sprint 5.0.2 SX: comune normalizzato (es. "Cecina")
+    provincia: Optional[str]      # Sprint 5.0.2 SX: codice 2 lettere (LI/PI/...)
 
     @staticmethod
     def from_row(row: dict) -> "Annuncio":
@@ -71,6 +73,8 @@ class Annuncio:
             foto_url=foto_url,
             foto_urls=foto_urls,
             portale=row.get("portale"),
+            citta=row.get("citta"),
+            provincia=row.get("provincia"),
         )
 
     def to_dict(self) -> dict:
@@ -97,4 +101,6 @@ class Annuncio:
             "foto_url": self.foto_url,
             "foto_urls": self.foto_urls,
             "portale": self.portale,
+            "citta": self.citta,
+            "provincia": self.provincia,
         }

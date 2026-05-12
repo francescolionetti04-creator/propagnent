@@ -24,7 +24,18 @@ import json
 import time
 import random
 import sqlite3
+import sys
 from datetime import datetime
+
+# Import normalizza_annuncio (citta + provincia)
+_BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+try:
+    from geo.comuni_toscana import normalizza_annuncio
+except Exception:
+    def normalizza_annuncio(indirizzo, zona=None):  # fallback no-op
+        return None, None
 
 
 HEADERS_CHROME = {
@@ -242,14 +253,16 @@ def salva_annunci_db(annunci: list, db_path: str, portale: str) -> int:
         zona = determina_zona(titolo, a.get("provincia_hint", ""))
         tipo = a.get("tipo") or determina_tipo(titolo)
         intel = genera_intel(fonte, 0, ins, len(agenzie_list))
+        citta_n, provincia_n = normalizza_annuncio(indirizzo, zona)
 
         cur.execute("""
             INSERT INTO annunci (
                 indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                 prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                 intel_privato, intel_warning, ai_insight,
-                is_nuovo, data_inserimento, url_originale, foto_url, portale
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                is_nuovo, data_inserimento, url_originale, foto_url, portale,
+                citta, provincia
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             indirizzo, 1 if preciso else 0, zona, tipo,
             a.get("mq"), a.get("camere"), a.get("prezzo"),
@@ -259,6 +272,7 @@ def salva_annunci_db(annunci: list, db_path: str, portale: str) -> int:
             None,
             intel["intel_privato"], intel["intel_warning"], intel["ai_insight"],
             1, ora, url, a.get("foto_url"), portale,
+            citta_n, provincia_n,
         ))
         nuovi += 1
 

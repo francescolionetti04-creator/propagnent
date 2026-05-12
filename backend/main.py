@@ -14,6 +14,7 @@ from database import (
     init_db, get_annunci, get_stats, get_alert,
     get_omi_zone_map, upsert_sync_annunci, get_comparabili,
     get_conn, _cur, _sql,
+    get_zone_disponibili,  # Sprint 5.0.2 SX
 )
 from models import Annuncio
 
@@ -42,6 +43,33 @@ try:
     _seed_founders()
 except Exception as _seed_err:
     print(f"[Seed] errore founders: {_seed_err}")
+
+
+# ── Sprint 5.0.2 SX: migration one-shot citta+provincia ──────────────────────
+def _app_config_get(key: str):
+    conn = get_conn(); cur = _cur(conn)
+    cur.execute(_sql("SELECT value FROM app_config WHERE key = ?"), (key,))
+    row = cur.fetchone(); conn.close()
+    if not row:
+        return None
+    return row[0] if not isinstance(row, dict) else row.get("value")
+
+
+def _app_config_set(key: str, value: str):
+    conn = get_conn(); cur = _cur(conn)
+    cur.execute(_sql("DELETE FROM app_config WHERE key = ?"), (key,))
+    cur.execute(_sql("INSERT INTO app_config (key, value) VALUES (?, ?)"), (key, value))
+    conn.commit(); conn.close()
+
+
+try:
+    if _app_config_get("ANNUNCI_NORMALIZZATI") != "1":
+        from scripts.normalize_annunci_geo import run as _norm_annunci
+        _norm_annunci()
+        _app_config_set("ANNUNCI_NORMALIZZATI", "1")
+        print("[Boot] annunci normalizzati con citta+provincia (one-shot)")
+except Exception as _norm_err:
+    print(f"[Boot] normalize_annunci_geo errore: {_norm_err}")
 
 
 app = FastAPI(title="HouseRadar", version="2.1.0")
@@ -177,13 +205,19 @@ def _popola_db_in_background():
 
 @app.get("/annunci")
 def annunci(
-    zona: Optional[str] = Query(None),
-    tipo: Optional[str] = Query(None),
-    fonte: Optional[str] = Query(None),
-    sort: Optional[str] = Query("new"),
+    zona: Optional[str]      = Query(None),
+    tipo: Optional[str]      = Query(None),
+    fonte: Optional[str]     = Query(None),
+    sort: Optional[str]      = Query("new"),
     prezzo_max: Optional[int] = Query(None),
+    provincia: Optional[str] = Query(None),   # Sprint 5.0.2 SX: LI/PI/FI/...
+    citta: Optional[str]     = Query(None),
+    q: Optional[str]         = Query(None),    # ricerca testo libera
 ):
-    rows = get_annunci(zona=zona, tipo=tipo, fonte=fonte, sort=sort, prezzo_max=prezzo_max)
+    rows = get_annunci(
+        zona=zona, tipo=tipo, fonte=fonte, sort=sort, prezzo_max=prezzo_max,
+        provincia=provincia, citta=citta, q=q,
+    )
     result = [Annuncio.from_row(r).to_dict() for r in rows]
     return JSONResponse(content=result)
 
@@ -543,6 +577,13 @@ def forgot_page():
 @app.get("/reset-password")
 def reset_page():
     return _serve("reset-password.html")
+
+
+@app.get("/api/agente/zone-disponibili")
+def api_zone_disponibili(user=Depends(require_paid)):
+    """Sprint 5.0.2 SX: province + città con count, per dropdown cascade frontend.
+    Solo provincia/città con almeno 1 annuncio. Calcolato live dal DB."""
+    return JSONResponse(content=get_zone_disponibili())
 
 
 @app.get("/api/me")

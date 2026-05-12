@@ -8,6 +8,7 @@ import os
 import sqlite3
 import json
 import re
+import sys
 import time
 import random
 import urllib.request
@@ -16,6 +17,16 @@ import http.cookiejar
 from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "backend", "propagnent.db")
+
+# Import normalizza_annuncio (Sprint 5.0.2 SX)
+_BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+try:
+    from geo.comuni_toscana import normalizza_annuncio
+except Exception:
+    def normalizza_annuncio(indirizzo, zona=None):
+        return None, None
 
 # Tutte le 10 province toscane × paginazione dinamica fino a MAX_PAGES.
 # Con esegui_scraper esce dal loop pagine appena trova una pagina vuota.
@@ -311,14 +322,16 @@ def salva_nel_db(annunci_raw: list) -> int:
         zona = determina_zona(titolo, a.get("provincia_hint", ""))
         tipo = determina_tipo(titolo)
         intel = genera_intel(fonte, 0, ins, len(agenzie_list))
+        citta_n, provincia_n = normalizza_annuncio(indirizzo, zona)
 
         cur.execute("""
             INSERT INTO annunci (
                 indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                 prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                 intel_privato, intel_warning, ai_insight,
-                is_nuovo, data_inserimento, url_originale, portale
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                is_nuovo, data_inserimento, url_originale, portale,
+                citta, provincia
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             indirizzo, preciso, zona, tipo,
             a.get("mq"), a.get("camere"), a.get("prezzo"),
@@ -327,7 +340,8 @@ def salva_nel_db(annunci_raw: list) -> int:
             ins if fonte == "privato" else None,
             None,
             intel["intel_privato"], intel["intel_warning"], intel["ai_insight"],
-            True, ora.isoformat(), url, "idealista.it"
+            True, ora.isoformat(), url, "idealista.it",
+            citta_n, provincia_n,
         ))
         nuovi += 1
 

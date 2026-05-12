@@ -15,10 +15,21 @@ import json
 import re
 import random
 import sqlite3
+import sys
 import time
 from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "backend", "propagnent.db")
+
+# Import normalizza_annuncio (Sprint 5.0.2 SX)
+_BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+try:
+    from geo.comuni_toscana import normalizza_annuncio
+except Exception:
+    def normalizza_annuncio(indirizzo, zona=None):
+        return None, None
 
 # Parametri per le chiamate all'API interna di Subito.it (Hades)
 # r = region (9 = Toscana). NON filtriamo per city_id → tutta la Toscana.
@@ -181,14 +192,16 @@ def salva_annunci(annunci_raw: list) -> int:
             fonte = fonte_raw
 
         intel = genera_intel(fonte, a.get("giorni_online", 0), a.get("inserzionista", ""), len(agenzie_list))
+        citta_n, provincia_n = normalizza_annuncio(a.get("indirizzo"), a.get("zona"))
 
         cur.execute("""
             INSERT INTO annunci (
                 indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                 prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                 intel_privato, intel_warning, ai_insight,
-                is_nuovo, data_inserimento, url_originale, foto_url, portale
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                is_nuovo, data_inserimento, url_originale, foto_url, portale,
+                citta, provincia
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             a.get("indirizzo"), a.get("indirizzo_preciso", False),
             a.get("zona"), a.get("tipo", "Appartamento"),
@@ -201,7 +214,8 @@ def salva_annunci(annunci_raw: list) -> int:
             intel["intel_privato"], intel["intel_warning"], intel["ai_insight"],
             a.get("is_nuovo", True),
             ora.isoformat(), url,
-            a.get("foto_url"), "subito.it"
+            a.get("foto_url"), "subito.it",
+            citta_n, provincia_n,
         ))
         nuovi += 1
 

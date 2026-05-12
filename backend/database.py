@@ -163,17 +163,31 @@ def init_db():
         for col_def in [
             "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS foto_url TEXT",
             "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS portale TEXT",
+            # Sprint 5.0.2 SX: campi geografici normalizzati
+            "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS citta VARCHAR(100) DEFAULT NULL",
+            "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS provincia VARCHAR(2) DEFAULT NULL",
         ]:
             cur.execute(col_def)
     else:
         for col_def in [
             "ALTER TABLE annunci ADD COLUMN foto_url TEXT",
             "ALTER TABLE annunci ADD COLUMN portale TEXT",
+            "ALTER TABLE annunci ADD COLUMN citta TEXT",
+            "ALTER TABLE annunci ADD COLUMN provincia TEXT",
         ]:
             try:
                 cur.execute(col_def)
             except Exception:
                 pass  # colonna già presente
+    # Indici geo (idempotenti)
+    for idx_def in [
+        "CREATE INDEX IF NOT EXISTS idx_annunci_citta     ON annunci(citta)",
+        "CREATE INDEX IF NOT EXISTS idx_annunci_provincia ON annunci(provincia)",
+    ]:
+        try:
+            cur.execute(_sql(idx_def))
+        except Exception:
+            pass
 
     # Rimuove annunci di esempio (Verona/Garda) da versioni precedenti
     cur.execute(_sql(
@@ -608,7 +622,15 @@ def get_comparabili(zona: str, tipo: str, mq=None, limit: int = 5) -> list:
     return rows
 
 
-def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
+def get_annunci(zona=None, tipo=None, fonte=None, sort="new",
+                prezzo_max=None, provincia=None, citta=None, q=None):
+    """Filtri:
+      - zona: legacy (LIKE su zona/indirizzo) — mantenuto per compatibilità
+      - tipo, fonte, prezzo_max, sort: invariati
+      - provincia: codice 2 lettere (LI/PI/FI/...) — match esatto
+      - citta: nome comune (es. "Cecina") — match esatto
+      - q: ricerca testo libera su indirizzo OR zona OR citta (case-insensitive)
+    """
     conn = get_conn()
     cur = _cur(conn)
 
@@ -628,6 +650,19 @@ def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
         query += " AND prezzo <= ?"
         params.append(prezzo_max)
 
+    # Sprint 5.0.2 SX: filtri geografici normalizzati
+    if provincia:
+        query += " AND provincia = ?"
+        params.append(provincia.upper())
+    if citta:
+        query += " AND lower(citta) = lower(?)"
+        params.append(citta)
+    if q:
+        like = f"%{q.strip()}%"
+        # case-insensitive: usiamo lower() (SQLite + Postgres compatibili)
+        query += " AND (lower(indirizzo) LIKE lower(?) OR lower(zona) LIKE lower(?) OR lower(citta) LIKE lower(?))"
+        params += [like, like, like]
+
     sort_map = {
         "new":        "giorni_online ASC",
         "priv":       "CASE WHEN fonte='privato' THEN 0 ELSE 1 END ASC, giorni_online ASC",
@@ -641,6 +676,46 @@ def get_annunci(zona=None, tipo=None, fonte=None, sort="new", prezzo_max=None):
     rows = [_to_dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
+
+
+def get_zone_disponibili() -> dict:
+    """Per dropdown cascade frontend: province + città per provincia con counter.
+    Sprint 5.0.2 SX.
+    """
+    conn = get_conn(); cur = _cur(conn)
+    cur.execute(_sql("""
+        SELECT provincia, citta, COUNT(*) AS n
+        FROM annunci
+        WHERE provincia IS NOT NULL AND citta IS NOT NULL
+        GROUP BY provincia, citta
+        ORDER BY provincia, citta
+    """))
+    rows = cur.fetchall()
+    conn.close()
+
+    # Importa nomi province
+    try:
+        from geo.comuni_toscana import PROVINCE_TOSCANA
+    except Exception:
+        PROVINCE_TOSCANA = {}
+
+    province_counter = {}
+    citta_per_prov = {}
+    for r in rows:
+        prov = r[0] if not isinstance(r, dict) else r["provincia"]
+        cit  = r[1] if not isinstance(r, dict) else r["citta"]
+        n    = r[2] if not isinstance(r, dict) else r["n"]
+        province_counter[prov] = province_counter.get(prov, 0) + int(n)
+        citta_per_prov.setdefault(prov, []).append({"nome": cit, "count": int(n)})
+
+    province = [
+        {"codice": p, "nome": PROVINCE_TOSCANA.get(p, p), "count": province_counter[p]}
+        for p in sorted(province_counter.keys())
+    ]
+    return {
+        "province":           province,
+        "citta_per_provincia": citta_per_prov,
+    }
 
 
 def get_stats():
@@ -732,13 +807,25 @@ def upsert_sync_annunci(annunci: list) -> dict:
                    a.get("giorni_online"), a.get("foto_url"), url))
             aggiornati += 1
         else:
+            # Sprint 5.0.2 SX: normalizza citta+provincia (se non già forniti)
+            citta_n = a.get("citta")
+            provincia_n = a.get("provincia")
+            if not citta_n or not provincia_n:
+                try:
+                    from geo.comuni_toscana import normalizza_annuncio
+                    c2, p2 = normalizza_annuncio(a.get("indirizzo"), a.get("zona"))
+                    citta_n = citta_n or c2
+                    provincia_n = provincia_n or p2
+                except Exception:
+                    pass
             cur.execute(_sql("""
                 INSERT INTO annunci (
                     indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                     prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                     intel_privato, intel_warning, ai_insight,
-                    is_nuovo, data_inserimento, url_originale, foto_url, portale
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    is_nuovo, data_inserimento, url_originale, foto_url, portale,
+                    citta, provincia
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """), (
                 a.get("indirizzo"), a.get("indirizzo_preciso", False),
                 a.get("zona"), a.get("tipo", "Appartamento"),
@@ -754,6 +841,7 @@ def upsert_sync_annunci(annunci: list) -> dict:
                 url,
                 a.get("foto_url"),
                 a.get("portale", "idealista.it"),
+                citta_n, provincia_n,
             ))
             inseriti += 1
 

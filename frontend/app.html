@@ -927,23 +927,17 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
   <!-- SEARCH -->
   <div class="search-panel" id="annunci-search">
     <div class="search-row">
-      <input type="text" id="q" placeholder="Filtra per zona, tipo, indirizzo..." oninput="render()" />
-      <button class="btn-search" onclick="render()">Cerca</button>
+      <input type="text" id="q" placeholder="🔍 Cerca indirizzo, via o località" oninput="onChangeQ()" />
+      <button class="btn-search" onclick="reloadFromServer()">Cerca</button>
     </div>
     <div class="filter-bar">
       <span class="fb-label">Provincia:</span>
       <select id="f-provincia" class="fb-select" onchange="onChangeProvincia()">
         <option value="">Tutte le province</option>
-        <option value="livorno">Livorno</option>
-        <option value="pisa">Pisa</option>
-        <option value="firenze">Firenze</option>
-        <option value="siena">Siena</option>
-        <option value="arezzo">Arezzo</option>
-        <option value="lucca">Lucca</option>
-        <option value="grosseto">Grosseto</option>
-        <option value="pistoia">Pistoia</option>
-        <option value="prato">Prato</option>
-        <option value="massa-carrara">Massa-Carrara</option>
+      </select>
+      <span class="fb-label">Città:</span>
+      <select id="f-citta" class="fb-select" onchange="onChangeCitta()" disabled>
+        <option value="">Tutte le città</option>
       </select>
       <div class="fb-sep"></div>
       <span class="fb-label">Mostra:</span>
@@ -977,65 +971,6 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
         <option>Rustico</option>
         <option>Monolocale</option>
       </select>
-      <span class="fb-label">Zona:</span>
-      <select class="fb-select" id="f-zona" onchange="render()">
-        <option value="">Tutte</option>
-        <optgroup label="Provincia di Livorno">
-          <option value="Livorno">Livorno</option>
-          <option value="Collesalvetti">Collesalvetti</option>
-          <option value="Rosignano Marittimo">Rosignano Marittimo</option>
-          <option value="Cecina">Cecina</option>
-          <option value="Castagneto Carducci">Castagneto Carducci</option>
-          <option value="Bibbona">Bibbona</option>
-          <option value="Campiglia Marittima">Campiglia Marittima</option>
-          <option value="Piombino">Piombino</option>
-          <option value="Suvereto">Suvereto</option>
-          <option value="Sassetta">Sassetta</option>
-          <option value="Monteverdi Marittimo">Monteverdi Marittimo</option>
-          <option value="Portoferraio">Portoferraio</option>
-          <option value="Campo nell'Elba">Campo nell'Elba</option>
-          <option value="Marciana">Marciana</option>
-          <option value="Marciana Marina">Marciana Marina</option>
-          <option value="Capoliveri">Capoliveri</option>
-          <option value="Porto Azzurro">Porto Azzurro</option>
-          <option value="Rio">Rio</option>
-          <option value="Capraia Isola">Capraia Isola</option>
-        </optgroup>
-        <optgroup label="Provincia di Pisa">
-          <option value="Pisa">Pisa</option>
-          <option value="Cascina">Cascina</option>
-          <option value="San Giuliano Terme">San Giuliano Terme</option>
-          <option value="Vecchiano">Vecchiano</option>
-          <option value="Calci">Calci</option>
-          <option value="Vicopisano">Vicopisano</option>
-          <option value="Buti">Buti</option>
-          <option value="Calcinaia">Calcinaia</option>
-          <option value="Pontedera">Pontedera</option>
-          <option value="Ponsacco">Ponsacco</option>
-          <option value="Casciana Terme Lari">Casciana Terme Lari</option>
-          <option value="Palaia">Palaia</option>
-          <option value="Lajatico">Lajatico</option>
-          <option value="Terricciola">Terricciola</option>
-          <option value="Chianni">Chianni</option>
-          <option value="Peccioli">Peccioli</option>
-          <option value="Volterra">Volterra</option>
-          <option value="Pomarance">Pomarance</option>
-          <option value="Montecatini Val di Cecina">Montecatini Val di Cecina</option>
-          <option value="Castelnuovo Val di Cecina">Castelnuovo Val di Cecina</option>
-          <option value="Santa Maria a Monte">Santa Maria a Monte</option>
-          <option value="Montopoli in Val d'Arno">Montopoli in Val d'Arno</option>
-          <option value="San Miniato">San Miniato</option>
-          <option value="Fucecchio (parte)">Fucecchio (parte)</option>
-          <option value="Bientina">Bientina</option>
-          <option value="Capannoli">Capannoli</option>
-          <option value="Santo Pietro Belvedere">Santo Pietro Belvedere</option>
-          <option value="Fauglia">Fauglia</option>
-          <option value="Crespina Lorenzana">Crespina Lorenzana</option>
-          <option value="Riparbella">Riparbella</option>
-          <option value="Montescudaio">Montescudaio</option>
-          <option value="Guardistallo">Guardistallo</option>
-        </optgroup>
-      </select>
     </div>
   </div>
 
@@ -1055,7 +990,7 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
 
   <!-- RESULTS -->
   <div class="results-header">
-    <div class="results-title">Trovati <span id="cnt-tot">—</span> annunci</div>
+    <div class="results-title">🏠 <span id="cnt-tot">—</span> annunci trovati</div>
     <button class="btn-wa-share" onclick="condividiProfilo()">📤 Condividi profilo su WhatsApp</button>
     <div class="legend">
       <span><span class="leg-dot" style="background:#E1F5EE;border:1px solid #5DCAA5"></span>Privato</span>
@@ -1064,7 +999,11 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
   </div>
 
   <div id="spinner" class="spinner"><span class="dot"></span><span class="dot"></span><span class="dot"></span><br><br>Caricamento annunci...</div>
-  <div class="empty" id="empty" style="display:none">Nessun annuncio trovato con i filtri selezionati.</div>
+  <div class="empty" id="empty" style="display:none">
+    <div style="font-size:38px;margin-bottom:8px">🔍</div>
+    Nessun annuncio trovato con questi filtri.<br>
+    <span style="font-size:13px;color:#aaa">Prova a rimuovere qualche filtro o cerca con un termine più generico.</span>
+  </div>
   <div class="cards" id="cards"></div>
 
 </div>
@@ -1134,7 +1073,12 @@ let allData = [];
 let showPriv = true, showNoescl = true, showAg = false;
 let showSubito = true, showIdealista = true, showImm = true;
 let showCasa = true, showWiki = true, showTec = true;
-let provinciaFilter = "";  // "" = tutte le province
+// Sprint 5.0.2 SX: filtri geo server-side
+let provinciaFilter = "";  // codice 2 lettere (LI/PI/FI/...), "" = tutte
+let cittaFilter = "";      // nome comune, "" = tutte
+let qFilter = "";          // ricerca testo libera
+let _qDebounce = null;
+let zoneDisponibili = null;  // cache /api/agente/zone-disponibili
 let omiData = {};  // {zona: {min, max, anno, semestre}}
 
 /* ========== GALLERIA FOTO ========== */
@@ -1206,7 +1150,8 @@ function openAnnuncio(url, e) {
 async function init() {
   await loadStats();
   await loadAlert();
-  await loadAnnunci();
+  // Sprint 5.0.2 SX: carica zone-disponibili in parallelo agli annunci
+  await Promise.all([loadAnnunci(), loadZoneDisponibili()]);
   loadOMI();  // non-blocking: aggiorna i badge quando arriva
 }
 
@@ -1267,14 +1212,91 @@ async function loadAnnunci() {
   document.getElementById('spinner').style.display = 'block';
   document.getElementById('cards').innerHTML = '';
   document.getElementById('empty').style.display = 'none';
+  // Sprint 5.0.2 SX: passa filtri server-side
+  const params = new URLSearchParams();
+  if (provinciaFilter) params.set('provincia', provinciaFilter);
+  if (cittaFilter)     params.set('citta',     cittaFilter);
+  if (qFilter)         params.set('q',         qFilter);
+  const url = `${API}/annunci${params.toString() ? '?' + params.toString() : ''}`;
   try {
-    const r = await fetch(`${API}/annunci`);
+    const r = await fetch(url);
     allData = await r.json();
     render();
   } catch(e) {
     document.getElementById('spinner').style.display = 'none';
     document.getElementById('cards').innerHTML = '<div class="empty">Errore connessione al server.<br>Se sei in locale: <code>cd backend &amp;&amp; uvicorn main:app --port 8000</code></div>';
   }
+}
+
+// Sprint 5.0.2 SX: popola dropdown cascade da /api/agente/zone-disponibili
+async function loadZoneDisponibili() {
+  try {
+    const r = await fetch(`${API}/api/agente/zone-disponibili`, {credentials:'include'});
+    if (!r.ok) return;
+    zoneDisponibili = await r.json();
+    const provSel = document.getElementById('f-provincia');
+    if (!provSel) return;
+    // Conserva "Tutte le province"
+    provSel.innerHTML = '<option value="">Tutte le province</option>';
+    (zoneDisponibili.province || []).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.codice;
+      o.textContent = `${p.nome} (${p.count})`;
+      provSel.appendChild(o);
+    });
+    populateCittaDropdown();
+  } catch(e) {
+    console.warn('[zone-disponibili] errore:', e);
+  }
+}
+
+function populateCittaDropdown() {
+  const cittaSel = document.getElementById('f-citta');
+  if (!cittaSel) return;
+  cittaSel.innerHTML = '<option value="">Tutte le città</option>';
+  if (!provinciaFilter || !zoneDisponibili) {
+    cittaSel.disabled = true;
+    cittaSel.value = '';
+    cittaFilter = '';
+    return;
+  }
+  cittaSel.disabled = false;
+  const lista = (zoneDisponibili.citta_per_provincia || {})[provinciaFilter] || [];
+  lista.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.nome;
+    o.textContent = `${c.nome} (${c.count})`;
+    cittaSel.appendChild(o);
+  });
+  // Se cittaFilter corrente non è più valida, resetta
+  if (cittaFilter && !lista.some(c => c.nome === cittaFilter)) {
+    cittaFilter = '';
+    cittaSel.value = '';
+  } else if (cittaFilter) {
+    cittaSel.value = cittaFilter;
+  }
+}
+
+function reloadFromServer() {
+  // Wrapper esplicito (es. click "Cerca") — ricarica dal server
+  loadAnnunci();
+}
+
+function onChangeCitta() {
+  const el = document.getElementById('f-citta');
+  cittaFilter = el ? el.value : '';
+  loadAnnunci();
+}
+
+function onChangeQ() {
+  const el = document.getElementById('q');
+  const newQ = el ? el.value.trim() : '';
+  // Debounce 300ms
+  if (_qDebounce) clearTimeout(_qDebounce);
+  _qDebounce = setTimeout(() => {
+    qFilter = newQ;
+    loadAnnunci();
+  }, 300);
 }
 
 async function avviaScraper() {
@@ -1307,7 +1329,10 @@ function toggleF(f) {
 function onChangeProvincia() {
   const el = document.getElementById('f-provincia');
   provinciaFilter = el ? el.value : "";
-  render();
+  // Reset città quando cambia la provincia
+  cittaFilter = "";
+  populateCittaDropdown();
+  loadAnnunci();
 }
 
 function togglePortale(p) {
@@ -1322,10 +1347,10 @@ function togglePortale(p) {
 
 function render() {
   document.getElementById('spinner').style.display = 'none';
-  const q = document.getElementById('q').value.toLowerCase();
   const tipo = document.getElementById('f-tipo').value;
-  const zona = document.getElementById('f-zona').value;
   const sort = document.getElementById('f-sort').value;
+  // Sprint 5.0.2 SX: provincia/citta/q sono filtrati SERVER-SIDE in /annunci.
+  // Qui filtriamo solo fonte/portale/tipo (client-side) per evitare round-trip.
 
   let data = allData.filter(d => {
     if (d.fonte === 'privato' && !showPriv) return false;
@@ -1337,19 +1362,7 @@ function render() {
     if (d.portale === 'casa.it'        && !showCasa)      return false;
     if (d.portale === 'wikicasa.it'    && !showWiki)      return false;
     if (d.portale === 'tecnocasa.it'   && !showTec)       return false;
-    if (provinciaFilter) {
-      const pf = provinciaFilter.toLowerCase();
-      const blob = ((d.zona || "") + " " + (d.indirizzo || "")).toLowerCase();
-      // Match il nome provincia o il pattern "<Provincia> Provincia"
-      if (!blob.includes(pf) && !blob.includes(pf.replace("-", " "))) return false;
-    }
     if (tipo && d.tipo !== tipo) return false;
-    if (zona) {
-      const zL = zona.toLowerCase();
-      if (!(d.zona      && d.zona.toLowerCase().includes(zL)) &&
-          !(d.indirizzo && d.indirizzo.toLowerCase().includes(zL))) return false;
-    }
-    if (q && !d.indirizzo.toLowerCase().includes(q) && !(d.zona||'').toLowerCase().includes(q) && !d.tipo.toLowerCase().includes(q)) return false;
     return true;
   });
 
