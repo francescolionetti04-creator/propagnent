@@ -579,14 +579,85 @@ def api_profilo(user_id: int):
     if not u or u.get("role") not in ("agente", "consulente"):
         raise HTTPException(404, "Profilo non trovato")
     return {
-        "id":         u["id"],
-        "nome":       u.get("nome"),
-        "cognome":    u.get("cognome"),
-        "role":       u.get("role"),
-        "city":       u.get("city"),
-        "is_founder": bool(u.get("is_founder")),
-        "telefono":   u.get("telefono"),  # serve per WhatsApp CTA
+        "id":              u["id"],
+        "nome":            u.get("nome"),
+        "cognome":         u.get("cognome"),
+        "role":            u.get("role"),
+        "city":            u.get("city"),
+        "is_founder":      bool(u.get("is_founder")),
+        "telefono":        u.get("telefono"),
+        "email":           u.get("email"),
+        "bio_pubblica":    u.get("bio_pubblica"),
+        "created_at":      u.get("created_at"),
+        "count_recensioni": 0,  # placeholder finché non c'è tabella recensioni
     }
+
+
+# ── PUT bio pubblica (auth) ──────────────────────────────────────────────────
+@app.put("/api/profilo/bio")
+async def api_profilo_bio_update(request: Request, user=Depends(require_auth)):
+    from auth.users_db import set_bio_pubblica
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    bio = (body.get("bio") or "").strip()
+    if len(bio) > 200:
+        raise HTTPException(400, "Bio troppo lunga (max 200 caratteri)")
+    set_bio_pubblica(user["id"], bio or None)
+    return {"success": True, "bio": bio or None}
+
+
+# ── Rate limit in-memory per contatti profilo pubblico (5/giorno per IP) ─────
+import time as _time
+_CONTATTA_RL: dict = {}  # ip -> [timestamps]
+_CONTATTA_LIMIT = 5
+_CONTATTA_WINDOW = 86400  # 24h
+
+def _contatta_rate_check(ip: str) -> bool:
+    now = _time.time()
+    lst = [t for t in _CONTATTA_RL.get(ip, []) if now - t < _CONTATTA_WINDOW]
+    if len(lst) >= _CONTATTA_LIMIT:
+        _CONTATTA_RL[ip] = lst
+        return False
+    lst.append(now)
+    _CONTATTA_RL[ip] = lst
+    return True
+
+
+@app.post("/api/profilo/{user_id}/contatta")
+async def api_profilo_contatta(user_id: int, request: Request):
+    """Form contatto pubblico → email all'agente via Resend.
+    Rate limit 5 invii/giorno per IP."""
+    from auth.users_db import get_user_by_id
+    from services.email import send_profilo_contatta_email
+
+    ip = request.client.host if request.client else "unknown"
+    if not _contatta_rate_check(ip):
+        raise HTTPException(429, "Troppi invii — riprova domani.")
+
+    target = get_user_by_id(user_id)
+    if not target or target.get("role") not in ("agente", "consulente"):
+        raise HTTPException(404, "Profilo non trovato")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    nome      = (body.get("nome") or "").strip()[:120]
+    telefono  = (body.get("telefono") or "").strip()[:40]
+    messaggio = (body.get("messaggio") or "").strip()[:500]
+    if not nome or not messaggio:
+        raise HTTPException(400, "Nome e messaggio sono obbligatori.")
+
+    send_profilo_contatta_email(
+        to=target["email"],
+        nome_agente=(target.get("nome") or "") + " " + (target.get("cognome") or ""),
+        nome_mittente=nome,
+        telefono_mittente=telefono or None,
+        messaggio=messaggio,
+    )
+    return {"success": True}
 
 
 @app.get("/signup")

@@ -45,8 +45,32 @@ a{color:var(--blue);text-decoration:none}
   transition:all .18s;border:none;font-family:inherit}
 .btn-wa{background:#25D366;color:#fff}
 .btn-wa:hover{background:#1EBE5A;transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,211,102,.3)}
+.btn-tel{background:var(--blue);color:#fff}
+.btn-tel:hover{background:var(--blue-d);transform:translateY(-1px);box-shadow:0 6px 16px rgba(24,95,165,.3)}
+.btn-mail{background:#F4A33A;color:#fff}
+.btn-mail:hover{background:#D9881E;transform:translateY(-1px);box-shadow:0 6px 16px rgba(244,163,58,.3)}
 .btn-out{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
 .btn-out:hover{background:var(--blue-l)}
+.btn-block{background:var(--blue);color:#fff;width:100%}
+.btn-block:hover{background:var(--blue-d)}
+
+/* Bio */
+.bio-box{background:var(--blue-l);border:1px solid #B5D4F4;border-radius:10px;padding:14px 18px;
+  font-size:14.5px;color:#0C447C;line-height:1.55;margin-top:18px}
+
+/* Form contatto */
+.contact-form{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.contact-form label{font-size:13px;font-weight:600;color:#333}
+.contact-form input,.contact-form textarea{
+  width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:9px;
+  font-size:14.5px;font-family:inherit;background:#fff;transition:border .15s,box-shadow .15s}
+.contact-form input:focus,.contact-form textarea:focus{
+  outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.contact-form textarea{min-height:110px;resize:vertical}
+.contact-form .counter{font-size:11.5px;color:var(--gray);text-align:right;margin-top:-6px}
+.contact-form .msg{padding:11px 14px;border-radius:8px;font-size:14px;display:none}
+.contact-form .msg.ok{display:block;background:var(--green-l);color:#0E5E3F;border:1px solid var(--green)}
+.contact-form .msg.err{display:block;background:#FBE8E8;color:#C92E2E;border:1px solid #C92E2E}
 
 h3{font-size:15px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
 .pills{display:flex;flex-wrap:wrap;gap:8px}
@@ -97,6 +121,18 @@ function waHref(tel){
   return `https://wa.me/${clean.replace(/^\+/, '')}`;
 }
 
+const MESI_IT = ['gennaio','febbraio','marzo','aprile','maggio','giugno',
+                 'luglio','agosto','settembre','ottobre','novembre','dicembre'];
+function fmtMembroDal(iso){
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return `${MESI_IT[d.getMonth()]} ${d.getFullYear()}`;
+}
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 async function load(){
   const uid = getUserIdFromPath();
   const c = document.getElementById('content');
@@ -121,48 +157,146 @@ async function load(){
     const cognome = u.cognome || '';
     const displayName = (nome || cognome) ? `${nome} ${cognome}`.trim() : 'Agente HouseRadar';
     const roleLabel = u.role === 'consulente' ? 'Consulente Immobiliare' : 'Agente Immobiliare';
+
+    // Calcolo "Membro dal" + età account
+    const membroDal = fmtMembroDal(u.created_at);
+    let giorniAccount = null;
+    if (u.created_at){
+      const d = new Date(u.created_at);
+      if (!isNaN(d.getTime())) giorniAccount = (Date.now() - d.getTime()) / 86400000;
+    }
+    const accountVecchio = giorniAccount !== null && giorniAccount >= 30;
+    const nRec = Number(u.count_recensioni || 0);
+
+    // Stats: nascondi blocchi inutili per account < 30 giorni
+    const statsHtml = accountVecchio ? `
+      <div class="stats">
+        <div class="stat"><div class="v" style="font-size:14px">${membroDal || '—'}</div><div class="l">Membro da</div></div>
+        <div class="stat"><div class="v" style="font-size:14px">Attivo</div><div class="l">Su HouseRadar</div></div>
+        ${nRec >= 3
+          ? `<div class="stat"><div class="v">100%</div><div class="l">Rating</div></div>
+             <div class="stat"><div class="v" style="font-size:14px">✓</div><div class="l">Verificato</div></div>`
+          : `<div class="stat"><div class="v" style="font-size:14px">✓</div><div class="l">Verificato</div></div>`
+        }
+      </div>` : `
+      <div class="stats">
+        ${nRec >= 3
+          ? `<div class="stat"><div class="v">100%</div><div class="l">Rating</div></div>
+             <div class="stat"><div class="v" style="font-size:14px">✓</div><div class="l">Verificato</div></div>`
+          : `<div class="stat"><div class="v" style="font-size:14px">✓</div><div class="l">Verificato</div></div>`
+        }
+      </div>`;
+
+    // Contatti diretti — solo se popolati
+    const telClean = u.telefono ? String(u.telefono).replace(/[^\d+]/g,'') : '';
+    const waNum    = telClean.replace(/^\+/, '');
+    const contattiBtn = [];
+    if (u.telefono) contattiBtn.push(`<a class="btn btn-tel" href="tel:${escapeHtml(u.telefono)}">📞 Telefono</a>`);
+    if (u.email)    contattiBtn.push(`<a class="btn btn-mail" href="mailto:${escapeHtml(u.email)}">✉️ Email</a>`);
+    if (u.telefono) contattiBtn.push(`<a class="btn btn-wa" target="_blank" rel="noopener" href="https://wa.me/${waNum}">💬 WhatsApp</a>`);
+
+    const contattiCard = contattiBtn.length ? `
+      <div class="card">
+        <h3>📞 Contatti diretti</h3>
+        <div class="actions" style="margin-top:6px">
+          ${contattiBtn.join('')}
+        </div>
+      </div>` : '';
+
+    // Bio
+    const bio = (u.bio_pubblica || '').trim();
+    const bioCard = bio ? `
+      <div class="card">
+        <h3>👤 Su di me</h3>
+        <div class="bio-box">${escapeHtml(bio)}</div>
+      </div>` : '';
+
     c.innerHTML = `
       <div class="card">
         <div class="profile-head">
           <div class="avatar">${initials(nome, cognome)}</div>
           <div>
-            <div class="profile-name">${displayName}</div>
+            <div class="profile-name">${escapeHtml(displayName)}</div>
             <div class="profile-meta">
               <span class="badge badge-role">${roleLabel}</span>
               ${u.is_founder ? '<span class="badge badge-found">🌟 Founder</span>' : ''}
             </div>
-            <div class="profile-city" style="margin-top:6px">${u.city || 'Toscana'}</div>
+            <div class="profile-city" style="margin-top:6px">${escapeHtml(u.city || 'Toscana')}</div>
           </div>
         </div>
 
-        <div class="stats">
-          <div class="stat muted"><div class="v">Nuovo</div><div class="l">Su HouseRadar</div></div>
-          <div class="stat muted"><div class="v">—</div><div class="l">Lead acquisiti</div></div>
-          <div class="stat muted"><div class="v">—</div><div class="l">Rating</div></div>
-          <div class="stat"><div class="v">100%</div><div class="l">Verificato</div></div>
-        </div>
-
-        <div class="actions">
-          ${u.telefono ? `<a class="btn btn-wa" target="_blank" rel="noopener" href="${waHref(u.telefono)}">
-            💬 Contatta su WhatsApp
-          </a>` : ''}
-          <button class="btn btn-out" disabled style="opacity:.7;cursor:not-allowed">
-            🏠 Vedi annunci attivi <small style="font-weight:400;margin-left:4px">(presto)</small>
-          </button>
-        </div>
+        ${statsHtml}
       </div>
+
+      ${contattiCard}
+      ${bioCard}
 
       <div class="card">
         <h3>📍 Le mie zone</h3>
         <div class="pills">
-          ${u.city ? `<span class="pill">${u.city}</span>` : ''}
+          ${u.city ? `<span class="pill">${escapeHtml(u.city)}</span>` : ''}
           <span class="pill pill-green">Tutta la Toscana</span>
         </div>
+      </div>
+
+      <div class="card">
+        <h3>✉️ Invia richiesta a ${escapeHtml(nome || displayName)}</h3>
+        <form id="contactForm" class="contact-form" novalidate>
+          <div>
+            <label for="cf-nome">Il tuo nome *</label>
+            <input type="text" id="cf-nome" name="nome" required maxlength="120" autocomplete="name">
+          </div>
+          <div>
+            <label for="cf-tel">Il tuo telefono</label>
+            <input type="tel" id="cf-tel" name="telefono" maxlength="40" autocomplete="tel">
+          </div>
+          <div>
+            <label for="cf-msg">Messaggio *</label>
+            <textarea id="cf-msg" name="messaggio" required maxlength="500"></textarea>
+            <div class="counter"><span id="cf-count">0</span>/500</div>
+          </div>
+          <div class="msg" id="cf-out"></div>
+          <button type="submit" class="btn btn-block" id="cf-btn">Invia richiesta</button>
+        </form>
       </div>
 
       <div class="card" style="text-align:center;color:var(--gray)">
         <p style="font-size:14px">Profilo verificato da HouseRadar · <a href="/">houseradar.it</a></p>
       </div>`;
+
+    // Bind form
+    const form = document.getElementById('contactForm');
+    const out  = document.getElementById('cf-out');
+    const btn  = document.getElementById('cf-btn');
+    const msgF = document.getElementById('cf-msg');
+    const cnt  = document.getElementById('cf-count');
+    msgF.addEventListener('input', () => { cnt.textContent = msgF.value.length; });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      out.className = 'msg'; out.textContent = '';
+      const data = Object.fromEntries(new FormData(form).entries());
+      if (!data.nome || !data.messaggio) {
+        out.className = 'msg err'; out.textContent = 'Compila nome e messaggio.'; return;
+      }
+      btn.disabled = true; btn.textContent = 'Invio…';
+      try {
+        const r = await fetch(`/api/profilo/${uid}/contatta`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(data),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.detail || 'Errore invio');
+        out.className = 'msg ok';
+        out.textContent = `✓ Richiesta inviata, ${nome || displayName} ti contatterà al più presto`;
+        form.reset(); cnt.textContent = '0';
+      } catch (err) {
+        out.className = 'msg err'; out.textContent = err.message;
+      } finally {
+        btn.disabled = false; btn.textContent = 'Invia richiesta';
+      }
+    });
   } catch (e) {
     c.innerHTML = `<div class="card error">${e.message}</div>`;
   }

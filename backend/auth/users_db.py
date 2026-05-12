@@ -166,6 +166,13 @@ def set_subscription(
         _update(user_id, **fields)
 
 
+def set_bio_pubblica(user_id: int, bio: Optional[str]):
+    """Aggiorna bio_pubblica (max 200 char). None = cancella."""
+    if bio is not None:
+        bio = str(bio).strip()[:200] or None
+    _update(user_id, bio_pubblica=bio)
+
+
 def find_user_by_stripe_customer(customer_id: str) -> Optional[dict]:
     conn = get_conn()
     cur = _cur(conn)

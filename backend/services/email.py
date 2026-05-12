@@ -198,3 +198,34 @@ def send_welcome_email(to: str, role: str, nome: str | None = None) -> bool:
   Hai domande? Rispondi a questa email — saremo felici di aiutarti.
 </p>"""
     return _send(to, "Benvenuto in HouseRadar 👋", _wrap(body, "Benvenuto"))
+
+
+def send_profilo_contatta_email(
+    to: str,
+    nome_agente: str,
+    nome_mittente: str,
+    telefono_mittente: str | None,
+    messaggio: str,
+) -> bool:
+    """Notifica all'agente: un visitatore del profilo pubblico ha inviato un messaggio."""
+    import html as _html
+    saluto = f"Ciao {nome_agente.strip()}," if nome_agente.strip() else "Ciao,"
+    tel_html = (f'<p><strong>Telefono:</strong> '
+                f'<a href="tel:{_html.escape(telefono_mittente)}" '
+                f'style="color:{_BLUE}">{_html.escape(telefono_mittente)}</a></p>') \
+                if telefono_mittente else ""
+    body = f"""
+<h2 style="margin:0 0 18px;font-size:22px;font-weight:700">📞 Nuova richiesta dal tuo profilo pubblico</h2>
+<p>{saluto}</p>
+<p>Hai ricevuto una nuova richiesta di contatto tramite il tuo profilo pubblico su HouseRadar.</p>
+<div style="background:#f5f5f3;border:1px solid #D3D1C7;border-radius:10px;padding:16px;margin:18px 0">
+  <p><strong>Nome:</strong> {_html.escape(nome_mittente)}</p>
+  {tel_html}
+  <p style="margin-top:10px"><strong>Messaggio:</strong></p>
+  <p style="white-space:pre-wrap;color:#333">{_html.escape(messaggio)}</p>
+</div>
+<p style="font-size:13px;color:#666;margin-top:24px">
+  Rispondi direttamente a questo contatto — non lasciare che la concorrenza ti freghi il lead!
+</p>"""
+    return _send(to, f"📞 Nuova richiesta da {nome_mittente} su HouseRadar",
+                 _wrap(body, "Nuova richiesta profilo"))
