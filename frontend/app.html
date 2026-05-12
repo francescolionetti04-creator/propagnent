@@ -204,6 +204,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .ai-btn-regen{background:#185FA5;color:#fff;border-color:#185FA5}
 .ai-btn-regen:hover:not(:disabled){background:#0C447C}
 
+/* ========== MODAL WELCOME TUTORIAL (Sprint 5.0.2) ========== */
+.welcome-modal{max-width:640px;padding:1.6rem}
+.welcome-modal h3{margin:0 0 .35rem;font-size:18px;font-weight:700;color:#1a1a1a}
+.welcome-sub{font-size:13px;color:#666;margin-bottom:1rem;line-height:1.5}
+.welcome-video{position:relative;width:100%;padding-bottom:56.25%;background:#f0f0ec;border:1px solid #e5e5e0;border-radius:10px;overflow:hidden}
+.welcome-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f0f0ec}
+.welcome-video .welcome-video-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px;font-weight:600;pointer-events:none;text-align:center;padding:1rem}
+.welcome-actions{display:flex;flex-direction:column;gap:8px;margin-top:1.1rem;align-items:stretch}
+.welcome-btn-primary{padding:11px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.welcome-btn-primary:hover{background:#0C447C}
+.welcome-btn-skip{background:none;border:none;color:#888;font-size:12px;cursor:pointer;text-decoration:underline;padding:4px}
+.welcome-btn-skip:hover{color:#555}
+
 /* ========== OMI BADGE ========== */
 .omi-bar{font-size:11px;padding:3px 9px;border-radius:6px;margin:.45rem 0 0;display:inline-flex;align-items:center;gap:5px;font-weight:600}
 .omi-under{background:#E1F5EE;color:#0F6E56}
@@ -350,14 +363,16 @@ body{margin-left:var(--sb-w)}
   .sidebar.open{transform:translateX(0)}
   .sb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:39;opacity:0;pointer-events:none;transition:opacity .25s}
   .sb-overlay.open{opacity:1;pointer-events:auto}
-  .sb-toggle{display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;
-    background:#fff;border:1px solid var(--border);border-radius:9px;cursor:pointer;color:var(--blue);
-    position:fixed;top:18px;left:14px;z-index:38;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+  .sb-toggle{display:inline-flex !important;width:44px;height:44px;padding:12px;align-items:center;justify-content:center;
+    background:#fff;border:1px solid var(--border);border-radius:10px;cursor:pointer;color:#185FA5;
+    position:fixed;top:14px;left:14px;z-index:38;box-shadow:0 4px 12px rgba(0,0,0,.08)}
   .topbar,.tabs,.stats-row,.search-panel{margin-left:0}
   .stats-mini{margin-left:0}
   body.has-sidebar-open{overflow:hidden}
 }
-.sb-toggle{display:none}
+@media (min-width:1025px){
+  .sb-toggle{display:none !important}
+}
 .sb-toggle svg{width:22px;height:22px}
 
 /* Mini-stats topbar */
@@ -518,8 +533,8 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
   /* h1/h2 ridotti */
   h1{font-size:22px}
   h2{font-size:18px}
-  /* Sidebar drawer: il toggle è già fisso top-left, sposta in alto in modo da non sovrapporsi a topbar */
-  .sb-toggle{top:auto;bottom:18px;left:14px;box-shadow:0 8px 22px rgba(0,0,0,.18) !important}
+  /* Sidebar drawer: toggle fisso top-left con tap target ≥44x44 */
+  .sb-toggle{top:14px;bottom:auto;left:14px;box-shadow:0 8px 22px rgba(0,0,0,.18) !important}
   /* Card padding ridotto */
   .card{padding:16px !important}
 }
@@ -1055,6 +1070,23 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
 </div>
 
 <!-- MODAL SCRIPT -->
+<!-- MODAL WELCOME TUTORIAL (Sprint 5.0.2) -->
+<div class="modal-bg" id="welcome-modal-bg" onclick="if(event.target===this)welcomeSkip()">
+  <div class="modal welcome-modal">
+    <h3 id="welcome-title">&#128075; Benvenuto in HouseRadar!</h3>
+    <div class="welcome-sub">Guarda questo video di 90 secondi per capire come usare il prodotto.</div>
+    <div class="welcome-video">
+      <!-- TODO: sostituire src con URL Loom quando il video è pronto -->
+      <iframe id="welcome-video-iframe" src="about:blank" title="Video tutorial HouseRadar" allowfullscreen></iframe>
+      <div class="welcome-video-overlay">Video tutorial in arrivo</div>
+    </div>
+    <div class="welcome-actions">
+      <button class="welcome-btn-primary" onclick="welcomeConfirm()">&#10003; Ho capito, vai alla dashboard</button>
+      <button class="welcome-btn-skip" onclick="welcomeSkip()">Salta per ora (lo rivedrò più tardi)</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h3 id="modal-title"></h3>
@@ -1715,10 +1747,30 @@ function aiOpenWhatsApp() {
 // Chiusura su ESC per entrambi i modali
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (document.getElementById('ai-modal-bg').classList.contains('open')) closeAIScript();
+    if (document.getElementById('welcome-modal-bg').classList.contains('open')) welcomeSkip();
+    else if (document.getElementById('ai-modal-bg').classList.contains('open')) closeAIScript();
     else if (document.getElementById('modal-bg').classList.contains('open')) closeModal();
   }
 });
+
+/* ========== WELCOME TUTORIAL MODAL (Sprint 5.0.2) ========== */
+function maybeShowWelcomeTutorial(u){
+  if (!u) return;
+  if (u.tutorial_visto) return;
+  if (u.is_founder) return;
+  if (!['trialing','active'].includes(u.subscription_status)) return;
+  const nome = (u.nome || u.email || '').split('@')[0];
+  const t = document.getElementById('welcome-title');
+  if (t) t.innerHTML = '&#128075; Benvenuto in HouseRadar, ' + nome + '!';
+  document.getElementById('welcome-modal-bg').classList.add('open');
+}
+function welcomeSkip(){
+  document.getElementById('welcome-modal-bg').classList.remove('open');
+}
+async function welcomeConfirm(){
+  try { await fetch('/api/agente/tutorial-visto', {method:'POST', credentials:'include'}); } catch {}
+  welcomeSkip();
+}
 
 /* ========== SPRINT 3: SIDEBAR + MINI-STATS + STIMA ========== */
 function toggleSidebar(force){
@@ -1748,6 +1800,7 @@ async function loadSidebarUser(){
     const r = await fetch('/api/me', {credentials:'include'});
     const u = (await r.json()).user;
     if (!u) return;
+    maybeShowWelcomeTutorial(u);
     document.getElementById('sb-name').textContent = u.nome || u.email;
     document.getElementById('sb-role').textContent = u.role === 'consulente' ? 'Consulente' : 'Agente';
     if (u.is_founder) document.getElementById('sb-founder').style.display = '';

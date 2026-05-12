@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Prezzi — HouseRadar</title>
-<meta name="description" content="HouseRadar: 197€/mese per agenti indipendenti, 397€/mese per agenzie (3 account inclusi, +100€/mese per ogni account extra). 14 giorni gratis su tutti i piani.">
+<meta name="description" content="HouseRadar: 197€/mese per agenti indipendenti, 397€/mese per agenzie (3 account inclusi, +100€/mese per ogni account extra). 7 giorni gratis su tutti i piani.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='70' cy='70' r='20' fill='%235DCAA5'/><path d='M50 25 L25 50 V80 H75 V50 Z' fill='%23185FA5'/></svg>">
 <style>
 :root{
@@ -38,8 +38,10 @@ button{font-family:inherit;cursor:pointer;border:none}
 .nav-menu{display:flex;gap:32px;align-items:center}
 .nav-menu a{font-size:15px;color:var(--dark);font-weight:500;transition:color .15s}
 .nav-menu a:hover,.nav-menu a.active{color:var(--blue)}
-.nav-cta{display:flex;gap:10px;align-items:center}
+.nav-cta{display:flex;gap:14px;align-items:center}
 .nav-cta .btn{width:auto;padding:11px 22px}
+.nav-login{font-size:15px;color:var(--dark);font-weight:500;transition:color .15s;padding:8px 4px}
+.nav-login:hover{color:var(--blue)}
 .hamburger{
   display:none;background:none;border:none;width:42px;height:42px;
   align-items:center;justify-content:center;color:var(--blue);cursor:pointer;
@@ -187,15 +189,13 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
       HouseRadar
     </a>
     <div class="nav-menu">
-      <a href="/">Home</a>
       <a href="/#funzionalita">Funzionalità</a>
       <a href="/pricing" class="active">Prezzi</a>
-      <a href="/#chi-siamo">Chi Siamo</a>
-      <a href="/#blog">Blog</a>
+      <a href="/#chi-siamo">Chi siamo</a>
     </div>
     <div class="nav-cta">
-      <a href="/accedi" class="btn btn-out">Accedi</a>
-      <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis</a>
+      <a href="/accedi" class="nav-login">Accedi</a>
+      <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis 7 giorni</a>
     </div>
     <button class="hamburger" aria-label="Apri menu" onclick="openDrawer()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
@@ -222,22 +222,20 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
     <button class="drawer-close" aria-label="Chiudi menu" onclick="closeDrawer()">✕</button>
   </div>
   <nav class="drawer-links">
-    <a href="/" onclick="closeDrawer()">Home</a>
     <a href="/#funzionalita" onclick="closeDrawer()">Funzionalità</a>
     <a href="/pricing" class="active" onclick="closeDrawer()">Prezzi</a>
-    <a href="/#chi-siamo" onclick="closeDrawer()">Chi Siamo</a>
-    <a href="/#blog" onclick="closeDrawer()">Blog</a>
+    <a href="/#chi-siamo" onclick="closeDrawer()">Chi siamo</a>
+    <a href="/accedi" onclick="closeDrawer()">Accedi</a>
   </nav>
   <div class="drawer-cta">
-    <a href="/accedi" class="btn btn-out">Accedi</a>
-    <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis</a>
+    <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis 7 giorni</a>
   </div>
 </aside>
 
 <section class="head">
   <div class="container">
     <h1>Un piano per ogni esigenza</h1>
-    <p>14 giorni gratis su tutti i piani. Nessuna carta richiesta.</p>
+    <p>7 giorni gratis su tutti i piani. Nessuna carta richiesta.</p>
     <div class="toggle">
       <div class="tg-pill">
         <button id="tgM" class="on" onclick="setBilling('m')">Mensile</button>
@@ -251,47 +249,51 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
   <div class="container">
     <div class="tiers">
 
-      <!-- TIER 1: SOLO -->
+      <!-- TIER 1: AGENTE -->
       <div class="tier">
-        <h3>Solo</h3>
-        <p class="sub">Per l'agente indipendente che vuole acquisire più mandati</p>
+        <h3>Agente</h3>
+        <p class="sub">Per l'agente indipendente · 1 account</p>
         <div>
           <span class="price"><span class="cur">€</span><span data-m="197" data-y="164" id="p-solo">197</span></span>
           <span class="per">/mese</span>
         </div>
         <p class="eq" id="eq-solo">&nbsp;</p>
         <ul>
-          <li>1 agente</li>
-          <li>2 città a scelta</li>
-          <li>Annunci illimitati da tutti i portali</li>
-          <li>Filtri privati e non in esclusiva</li>
-          <li>Report PDF di valutazione illimitati</li>
-          <li>Stime OMI Agenzia delle Entrate</li>
+          <li>Dashboard con annunci aggregati da 6 portali (Subito, Casa.it, Idealista, Immobiliare, Tecnocasa, Wikicasa)</li>
+          <li>Aggiornamento ogni 2 ore (~400 nuovi annunci/giorno)</li>
+          <li>Stima Vendita Probabile con AI (prezzo realistico vs richiesto)</li>
+          <li>Script Chiamata AI personalizzato (Claude Sonnet 4.5)</li>
+          <li>Auto-Acquisizione WhatsApp (link wa.me/ con messaggio AI pre-scritto)</li>
+          <li>Chat AI Personale (4 modalità: Script, Email, Descrizione, Strategia)</li>
+          <li>Lead Privati e Compratori dal modulo HouseRadar</li>
+          <li>Profilo pubblico verificato (vetrina per clienti)</li>
+          <li>Filtri avanzati per zona, prezzo, mq, urgenza</li>
+          <li>Email alert per nuovi annunci importanti</li>
+          <li>Analytics personali (chiamate, visite, conversioni)</li>
           <li>Supporto via email</li>
         </ul>
-        <a href="#" class="btn btn-out" data-checkout="solo">Inizia 14 giorni gratis</a>
+        <a href="#" class="btn btn-out" data-checkout="solo">Inizia 7 giorni gratis</a>
       </div>
 
       <!-- TIER 2: AGENZIA (featured) -->
       <div class="tier featured">
         <span class="tier-badge">Più scelto</span>
         <h3>Agenzia</h3>
-        <p class="sub">Include 3 account agente — il titolare invita i collaboratori dalla dashboard</p>
+        <p class="sub">3 account inclusi · il titolare invita i collaboratori dalla dashboard</p>
         <div>
           <span class="price"><span class="cur">€</span><span data-m="397" data-y="331" id="p-ag">397</span></span>
           <span class="per">/mese</span>
         </div>
         <p class="eq" id="eq-ag">&nbsp;</p>
         <ul>
-          <li><strong>3 account agenti inclusi</strong></li>
-          <li>Account aggiuntivi: <strong>+100€/mese</strong> cadauno</li>
-          <li>Tutta la Toscana</li>
-          <li>Tutto del piano Solo</li>
-          <li>Dashboard agenzia con assegnazione lead</li>
-          <li>Logo agenzia sui report PDF</li>
-          <li>Export CSV/Excel · Supporto prioritario</li>
+          <li>Tutto del piano Agente per ogni account collegato</li>
+          <li>Dashboard centralizzata multi-account</li>
+          <li>Inviti illimitati dalla dashboard team (3 inclusi, poi +100€/mese per account extra)</li>
+          <li>Logo agenzia nei report e stime PDF</li>
+          <li>Export CSV/Excel di annunci, lead e attività</li>
+          <li>Supporto prioritario via email</li>
         </ul>
-        <a href="#" class="btn btn-pri" data-checkout="agenzia">Inizia 14 giorni gratis</a>
+        <a href="#" class="btn btn-pri" data-checkout="agenzia">Inizia 7 giorni gratis</a>
       </div>
 
       <!-- TIER 3: SU MISURA -->
@@ -304,13 +306,12 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
         <p class="per">&nbsp;</p>
         <p class="eq">&nbsp;</p>
         <ul>
-          <li>Numero illimitato di agenti</li>
-          <li>Tutta Italia</li>
-          <li>Onboarding e training dedicato</li>
-          <li>Custom branding completo</li>
-          <li>API e integrazioni gestionali</li>
+          <li>Tutto del piano Agenzia</li>
+          <li>Onboarding dedicato per il team</li>
+          <li>Integrazione CRM (HubSpot, Salesforce) su richiesta</li>
+          <li>White label dominio personalizzato</li>
+          <li>API access per integrazioni custom</li>
           <li>Account manager dedicato</li>
-          <li>SLA contrattuale</li>
         </ul>
         <a href="mailto:info@houseradar.it" class="btn btn-out">Contattaci</a>
       </div>
@@ -318,7 +319,7 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px;margin-top:60px}
     </div>
 
     <p class="bot-note">
-      <strong>14 giorni di prova gratuita</strong> su tutti i piani · Disdici quando vuoi · Pagamento sicuro con Stripe
+      <strong>7 giorni di prova gratuita</strong> su tutti i piani · Disdici quando vuoi · Pagamento sicuro con Stripe
     </p>
   </div>
 </section>

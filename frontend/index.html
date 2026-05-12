@@ -39,7 +39,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .nav-menu{display:flex;gap:32px;align-items:center}
 .nav-menu a{font-size:15px;color:var(--dark);font-weight:500;transition:color .15s}
 .nav-menu a:hover{color:var(--blue)}
-.nav-cta{display:flex;gap:10px;align-items:center}
+.nav-cta{display:flex;gap:14px;align-items:center}
+.nav-login{font-size:15px;color:var(--dark);font-weight:500;transition:color .15s;padding:8px 4px}
+.nav-login:hover{color:var(--blue)}
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   padding:11px 22px;border-radius:10px;font-weight:600;font-size:15px;
@@ -276,15 +278,13 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
       HouseRadar
     </a>
     <div class="nav-menu" id="navMenu">
-      <a href="/">Home</a>
       <a href="/#funzionalita">Funzionalità</a>
       <a href="/pricing">Prezzi</a>
-      <a href="/#chi-siamo">Chi Siamo</a>
-      <a href="/#blog">Blog</a>
+      <a href="/#chi-siamo">Chi siamo</a>
     </div>
     <div class="nav-cta" id="navCta">
-      <a href="/accedi" class="btn btn-out">Accedi</a>
-      <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis</a>
+      <a href="/accedi" class="nav-login">Accedi</a>
+      <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis 7 giorni</a>
     </div>
     <button class="hamburger" id="hbBtn" aria-label="Apri menu" onclick="openDrawer()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
@@ -311,15 +311,13 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
     <button class="drawer-close" aria-label="Chiudi menu" onclick="closeDrawer()">✕</button>
   </div>
   <nav class="drawer-links">
-    <a href="/" onclick="closeDrawer()">Home</a>
     <a href="/#funzionalita" onclick="closeDrawer()">Funzionalità</a>
     <a href="/pricing" onclick="closeDrawer()">Prezzi</a>
-    <a href="/#chi-siamo" onclick="closeDrawer()">Chi Siamo</a>
-    <a href="/#blog" onclick="closeDrawer()">Blog</a>
+    <a href="/#chi-siamo" onclick="closeDrawer()">Chi siamo</a>
+    <a href="/accedi" onclick="closeDrawer()">Accedi</a>
   </nav>
   <div class="drawer-cta">
-    <a href="/accedi" class="btn btn-out">Accedi</a>
-    <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis</a>
+    <a href="/signup?role=agente" class="btn btn-pri">Inizia gratis 7 giorni</a>
   </div>
 </aside>
 
@@ -331,7 +329,7 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
       <h1 class="hero-h">Trova prima della concorrenza i tuoi <span class="accent">prossimi mandati</span></h1>
       <p class="hero-sub">HouseRadar aggrega in tempo reale gli annunci di privati e non-in-esclusiva da 6 portali immobiliari. Tutto in una sola dashboard, con AI integrata.</p>
       <div class="hero-cta">
-        <a href="/signup?role=agente" class="btn btn-pri btn-lg">Inizia gratis 14 giorni</a>
+        <a href="/signup?role=agente" class="btn btn-pri btn-lg">Inizia gratis 7 giorni</a>
       </div>
       <p class="hero-mini">Nessuna carta richiesta · Disdici quando vuoi</p>
     </div>
@@ -374,7 +372,7 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
           <li>AI personale per ogni acquisizione</li>
           <li>Stime OMI Agenzia Entrate integrate</li>
         </ul>
-        <a href="/signup?role=agente" class="btn btn-pri">Inizia 14 giorni gratis</a>
+        <a href="/signup?role=agente" class="btn btn-pri">Inizia 7 giorni gratis</a>
       </div>
 
       <div class="role green">
@@ -466,23 +464,11 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
   </div>
 </section>
 
-<!-- ═══════════════ TESTIMONIANZE ═══════════════ -->
-<section class="sec-off">
-  <div class="container">
-    <div class="sec-head">
-      <h2>Cosa dicono gli agenti che usano HouseRadar</h2>
-    </div>
-    <div class="testi-empty">
-      <p>Le prime testimonianze arriveranno presto. Sii tra i primi a provare HouseRadar e raccontaci la tua esperienza.</p>
-    </div>
-  </div>
-</section>
-
 <!-- ═══════════════ CTA FINALE ═══════════════ -->
 <section class="cta-final">
   <div class="container">
     <h2>Pronto a trovare il tuo prossimo mandato?</h2>
-    <p>Inizia oggi con 14 giorni gratis. Nessuna carta richiesta.</p>
+    <p>Inizia oggi con 7 giorni gratis. Nessuna carta richiesta.</p>
     <a href="/signup?role=agente" class="btn btn-white btn-lg">Inizia gratis</a>
   </div>
 </section>
@@ -508,8 +494,8 @@ footer{background:#0E2F4F;color:#fff;padding:56px 0 28px}
         <a href="/">Home</a>
         <a href="/#funzionalita">Funzionalità</a>
         <a href="/pricing">Prezzi</a>
-        <a href="/#chi-siamo">Chi Siamo</a>
-        <a href="/#blog">Blog</a>
+        <a href="/#chi-siamo">Chi siamo</a>
+        <a href="/accedi">Accedi</a>
       </div>
       <div>
         <h5>Legal</h5>

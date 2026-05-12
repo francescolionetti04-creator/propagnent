@@ -32,7 +32,7 @@ STRIPE_SECRET     = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PUB        = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 WEBHOOK_SECRET    = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 APP_BASE_URL      = os.environ.get("APP_BASE_URL", "https://houseradar.it").rstrip("/")
-TRIAL_DAYS        = 14
+TRIAL_DAYS        = 7
 
 router = APIRouter(prefix="/api/stripe", tags=["stripe"])
 

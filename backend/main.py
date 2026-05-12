@@ -563,6 +563,14 @@ def api_me(request: Request):
     return JSONResponse({"user": payload})
 
 
+@app.post("/api/agente/tutorial-visto")
+def api_tutorial_visto(user=Depends(require_auth)):
+    """Marca il video tutorial onboarding come visto per l'utente corrente."""
+    from auth.users_db import _update
+    _update(user["id"], tutorial_visto=1)
+    return {"success": True}
+
+
 @app.get("/api/profilo/{user_id}")
 def api_profilo(user_id: int):
     """Dati pubblici di un agente (no auth). Solo per role agente/consulente."""

@@ -186,12 +186,15 @@ def public_user(u: Optional[dict]) -> Optional[dict]:
         "email":               u["email"],
         "nome":                u.get("nome"),
         "cognome":             u.get("cognome"),
+        "telefono":            u.get("telefono"),
         "role":                u["role"],
         "city":                u.get("city"),
         "is_founder":          bool(u.get("is_founder")),
         "is_email_verified":   bool(u.get("is_email_verified")),
         "subscription_status": u.get("subscription_status") or "none",
         "trial_ends_at":       u.get("trial_ends_at"),
+        "tutorial_visto":      bool(u.get("tutorial_visto")),
+        "bio_pubblica":        u.get("bio_pubblica"),
     }
 
 

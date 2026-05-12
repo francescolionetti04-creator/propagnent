@@ -240,6 +240,30 @@ def init_db():
     except Exception:
         pass
 
+    # Sprint 5.0.2: colonna tutorial_visto per modal welcome onboarding
+    if IS_PG:
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_visto BOOLEAN DEFAULT FALSE")
+        except Exception:
+            pass
+    else:
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN tutorial_visto BOOLEAN DEFAULT 0")
+        except Exception:
+            pass  # colonna già presente
+
+    # Sprint 5.0.2: bio_pubblica (max 200 caratteri) per profilo pubblico agenti
+    if IS_PG:
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio_pubblica VARCHAR(200) DEFAULT NULL")
+        except Exception:
+            pass
+    else:
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN bio_pubblica VARCHAR(200) DEFAULT NULL")
+        except Exception:
+            pass  # colonna già presente
+
     # ── Tabella app_config (key-value) ───────────────────────────────────
     cur.execute(_sql("""
         CREATE TABLE IF NOT EXISTS app_config (
