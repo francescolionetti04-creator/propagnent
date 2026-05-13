@@ -188,3 +188,57 @@ Endpoints aggiornati Sprint 5.1:
 - `POST /api/agente/whatsapp/invia` body ora ha `telefono` opzionale; se assente,
   fallback su `annuncio.telefono` del DB.
 
+## Test Sprint 5.1.1 — UX refinement WhatsApp
+
+Obiettivo: il bottone WhatsApp deve apparire solo dove ha davvero senso e con
+uno styling che comunichi al volo se l'agente farà 1 click o se dovrà inserire
+il numero a mano. Il help text dello STEP 0 non deve mai mostrare "errori"
+prima che l'utente abbia interagito col campo.
+
+Differenziazione bottoni per tipo annuncio:
+1. Vai su `/app`, scrolla la lista delle card annunci.
+2. Verifica i bottoni nel footer di ogni card a seconda del tipo:
+   - **Annuncio AGENZIA** (badge grigio "Agenzia"): **NESSUN** bottone
+     WhatsApp. Se l'annuncio ha un `telefono` nel DB, compare invece
+     **"📞 Chiama"** (cf-blue) che apre `tel:<numero>`. Se non c'è telefono,
+     il bottone Chiama è omesso del tutto.
+   - **Annuncio PRIVATO CON telefono** (badge verde "Privato"): bottone
+     **"💬 WhatsApp Auto"** in verde tenue **pieno**, con font-weight 600 e
+     leggera ombra (classe `cf-prominent` aggiuntiva).
+   - **Annuncio PRIVATO SENZA telefono** (badge verde "Privato", tel mancante):
+     bottone **"💬 WhatsApp"** in stile **outline** (bordo verde HouseRadar
+     #0F6E56, sfondo trasparente, testo verde) — comunica visivamente che
+     "richiede un passaggio in più".
+   - **Annuncio NO ESCLUSIVA** (badge arancio): nessun WhatsApp,
+     comportamento Conquista/Script/Valuta invariato + eventuale Chiama se
+     telefono presente.
+3. **Hover desktop** sul bottone "💬 WhatsApp" outline → appare il tooltip
+   nativo `Telefono non in database — sarà richiesto inserimento manuale`.
+4. Click sul bottone outline → si apre il modal WhatsApp Auto direttamente
+   sullo **STEP 0** (numero non disponibile).
+5. Click sul bottone "💬 WhatsApp Auto" pieno → modal va dritto allo spinner
+   "Verifico annuncio…" e poi alla generazione AI (flusso Sprint 5 invariato).
+
+Fix help text STEP 0 (stato touched):
+6. Riapri lo STEP 0 (click sul bottone outline di un annuncio privato senza
+   telefono):
+   - **Stato iniziale** (input vuoto, mai toccato): help text grigio
+     **"Formato: numero italiano con o senza prefisso +39"**. NON deve
+     comparire "Inserisci un numero" rosso.
+   - Pulsante "✓ Genera messaggio" disabilitato.
+7. Digita `0` → help **"I numeri fissi non supportano WhatsApp"** ROSSO.
+8. Digita `333 12` → help **"Numero troppo corto"** ROSSO.
+9. Digita `333 1234567 1234567` → help **"Numero troppo lungo"** ROSSO.
+10. Digita `333 1234567` (valido) → help **"✓ Verrà usato: +39 333 1234567"**
+    verde, pulsante abilitato.
+11. **Cancella tutto** dal campo (Ctrl+A → Backspace): l'input torna vuoto e
+    il help text torna **grigio neutro** "Formato: numero italiano con o senza
+    prefisso +39" (non rosso!). Pulsante disabilitato.
+12. Chiudi e riapri il modal: il touched torna a `false`, il help è di nuovo
+    quello iniziale grigio.
+
+Vincoli rispettati:
+- Backend Sprint 5/5.1 invariato (endpoint, validazione, DB).
+- Nessuna modifica a scraper, scheduler, index/pricing/profilo_pubblico.
+- Retro-compatibilità: privato con telefono → flusso Sprint 5 diretto.
+

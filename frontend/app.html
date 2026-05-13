@@ -166,6 +166,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .cf-amber{background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
 .cf-amber:hover{background:#FAC775}
 
+/* Sprint 5.1.1 — bottoni differenziati WhatsApp */
+.cf-prominent{font-weight:600;box-shadow:0 2px 4px rgba(15,110,86,0.15)}
+.cf-green-outline{background:transparent !important;border:1.5px solid #0F6E56 !important;color:#0F6E56 !important}
+.cf-green-outline:hover{background:rgba(15,110,86,0.08) !important}
+
 /* ========== SPINNER ========== */
 .spinner{display:none;text-align:center;padding:3rem;color:#888;font-size:14px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#185FA5;margin:0 3px;animation:blink 1s infinite}
@@ -1153,8 +1158,8 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
         </a>
         <label class="wa-step0-label" for="wa-manual-phone">Numero del privato</label>
         <input type="tel" id="wa-manual-phone" placeholder="+39 333 1234567" autocomplete="off"
-               class="wa-input-phone" oninput="_waValidateManualPhone()">
-        <div class="wa-phone-help" id="wa-phone-help">Formato: numero italiano con prefisso +39</div>
+               class="wa-input-phone" oninput="_waValidateManualPhone(true)">
+        <div class="wa-phone-help" id="wa-phone-help">Formato: numero italiano con o senza prefisso +39</div>
       </div>
 
       <div id="wa-editor" style="display:none">
@@ -1647,8 +1652,19 @@ function cardHTML(d) {
     ? `<span class="portale-badge ${pm.cls}" onclick="event.stopPropagation()" title="Portale sorgente">${pm.label}</span>`
     : '';
 
+  // Sprint 5.1.1 — bottoni differenziati per tipo annuncio e presenza telefono
+  const hasPhone = !!(d.telefono && d.telefono.toString().trim().length > 5);
+  const waBtn = isP
+    ? (hasPhone
+        ? `<button class="cf-btn cf-green cf-prominent" onclick="event.stopPropagation();openWhatsAppAuto(${id})">&#128172; WhatsApp Auto</button>`
+        : `<button class="cf-btn cf-green-outline" title="Telefono non in database — sarà richiesto inserimento manuale" onclick="event.stopPropagation();openWhatsAppAuto(${id})">&#128172; WhatsApp</button>`)
+    : '';
+  const callBtn = (!isP && hasPhone)
+    ? `<button class="cf-btn cf-blue" onclick="event.stopPropagation();window.location.href='tel:${d.telefono}'">&#128222; Chiama</button>`
+    : '';
+
   const footerFull = isP ? `
-    <button class="cf-btn cf-green" onclick="event.stopPropagation();openWhatsAppAuto(${id})">&#128172; WhatsApp Auto</button>
+    ${waBtn}
     <button class="cf-btn cf-outline" onclick="event.stopPropagation();openAIScript(${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showScript('esclusiva',${id})">+ Esclusiva</button>
     ${btnVedi}${btnReport}${btnCal}
@@ -1656,6 +1672,7 @@ function cardHTML(d) {
   : `
     <button class="cf-btn cf-amber" onclick="event.stopPropagation();showScript('conquista',${id})">&#127919; Conquista</button>
     <button class="cf-btn cf-outline" onclick="event.stopPropagation();openAIScript(${id})">&#128222; Script</button>
+    ${callBtn}
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showValuta(${id})">&#128161; Valuta</button>
     ${btnVedi}${btnReport}${btnCal}
     <span style="flex:1"></span>${portaleBadge}`;
@@ -1908,6 +1925,7 @@ let _waPhoneError = '';
 // Sprint 5.1: stato STEP 0 (numero inserito manualmente)
 let _waManualPhone = '';      // raw input (es. "333 1234567" o "+39...")
 let _waUsedManual  = false;   // true se per il messaggio corrente è stato usato un numero manuale
+let _waPhoneTouched = false;  // Sprint 5.1.1: false fino al primo input dell'utente in STEP 0
 
 /** Normalizza un numero per wa.me:
  *  - rimuove tutti i caratteri non numerici
@@ -1947,6 +1965,7 @@ function openWhatsAppAuto(id) {
   _waPhoneError = '';
   _waManualPhone = '';
   _waUsedManual  = false;
+  _waPhoneTouched = false;
 
   document.getElementById('wa-modal-title').innerHTML =
     '&#128172; WhatsApp Auto — ' + (d.indirizzo || '');
@@ -1966,6 +1985,7 @@ function closeWAAuto() {
   _waPhoneError = '';
   _waManualPhone = '';
   _waUsedManual  = false;
+  _waPhoneTouched = false;
   // Ripulisci STEP 0 per riapertura pulita
   const step0 = document.getElementById('wa-step0');
   if (step0) step0.style.display = 'none';
@@ -2026,26 +2046,37 @@ function _waShowStep0(urlOriginale) {
   setTimeout(() => input.focus(), 50);
 }
 
-function _waValidateManualPhone() {
+function _waValidateManualPhone(fromInput) {
+  if (fromInput) _waPhoneTouched = true;
+
   const input = document.getElementById('wa-manual-phone');
   const help  = document.getElementById('wa-phone-help');
   const btn   = document.getElementById('wa-step0-continue');
   const val   = (input.value || '').trim();
   _waManualPhone = val;
 
-  if (!val) {
-    help.textContent = 'Inserisci un numero';
+  const setNeutral = () => {
+    help.textContent = 'Formato: numero italiano con o senza prefisso +39';
+    help.className   = 'wa-phone-help';
+    btn.disabled     = true;
+  };
+  const setErr = (msg) => {
+    if (!_waPhoneTouched) return setNeutral();
+    help.textContent = msg;
     help.className   = 'wa-phone-help wa-phone-help-err';
     btn.disabled     = true;
+  };
+
+  // Vuoto → sempre neutro (sia iniziale che dopo cancellazione)
+  if (!val) {
+    setNeutral();
     return;
   }
 
   // Controlli pre-normalizzazione per messaggi mirati
   const digits = val.replace(/\D+/g, '');
   if (!digits) {
-    help.textContent = 'Inserisci un numero valido';
-    help.className   = 'wa-phone-help wa-phone-help-err';
-    btn.disabled     = true;
+    setErr('Inserisci un numero valido');
     return;
   }
   // numero fisso (inizia con 0 dopo rimozione prefisso 00/+39)
@@ -2053,29 +2084,21 @@ function _waValidateManualPhone() {
   if (core.startsWith('00')) core = core.slice(2);
   if (core.startsWith('39')) core = core.slice(2);
   if (core.startsWith('0')) {
-    help.textContent = 'I numeri fissi non supportano WhatsApp';
-    help.className   = 'wa-phone-help wa-phone-help-err';
-    btn.disabled     = true;
+    setErr('I numeri fissi non supportano WhatsApp');
     return;
   }
   if (digits.length < 9) {
-    help.textContent = 'Numero troppo corto';
-    help.className   = 'wa-phone-help wa-phone-help-err';
-    btn.disabled     = true;
+    setErr('Numero troppo corto');
     return;
   }
   if (digits.length > 13) {
-    help.textContent = 'Numero troppo lungo';
-    help.className   = 'wa-phone-help wa-phone-help-err';
-    btn.disabled     = true;
+    setErr('Numero troppo lungo');
     return;
   }
 
   const r = normalizzaTelefono(val);
   if (r.error || !r.numero) {
-    help.textContent = r.error || 'Numero non valido';
-    help.className   = 'wa-phone-help wa-phone-help-err';
-    btn.disabled     = true;
+    setErr(r.error || 'Numero non valido');
     return;
   }
 
