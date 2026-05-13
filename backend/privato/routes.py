@@ -395,8 +395,27 @@ def _rate_limit_wa(user_id: int) -> Optional[int]:
 
 class WhatsAppInviaIn(BaseModel):
     annuncio_id: int
-    telefono:    str
+    telefono:    Optional[str] = None  # Sprint 5.1: opzionale, fallback su annuncio.telefono
     messaggio:   str
+
+
+def _wa_normalize_it_phone(tel: str) -> Optional[str]:
+    """Replica server-side della validazione frontend normalizzaTelefono().
+    Ritorna il numero "puro" (solo cifre, con prefisso 39) o None se non valido per WhatsApp."""
+    if not tel:
+        return None
+    n = "".join(ch for ch in str(tel) if ch.isdigit())
+    if not n:
+        return None
+    if n.startswith("00"):
+        n = n[2:]
+    if n.startswith("39"):
+        return n if 11 <= len(n) <= 13 else None
+    if n.startswith("3") and 9 <= len(n) <= 11:
+        return "39" + n
+    if n.startswith("0"):
+        return None  # numero fisso
+    return n
 
 
 class WhatsAppStatusIn(BaseModel):
@@ -405,8 +424,17 @@ class WhatsAppStatusIn(BaseModel):
 
 
 @router_agent.post("/whatsapp/genera/{annuncio_id}")
-def whatsapp_genera(annuncio_id: int, user=Depends(require_paid)):
-    """Genera messaggio WhatsApp AI per un annuncio. Non salva nel DB."""
+def whatsapp_genera(annuncio_id: int,
+                    telefono: Optional[str] = Query(None),
+                    user=Depends(require_paid)):
+    """Genera messaggio WhatsApp AI per un annuncio. Non salva nel DB.
+
+    Sprint 5.1: accetta `?telefono=` opzionale per consentire all'agente di
+    inserire manualmente un numero quando l'annuncio nel DB non lo possiede.
+    Se l'annuncio non ha telefono e non ne viene passato uno, ritorna 400 con
+    detail={error:"no_phone", url_originale: ...} così il frontend può mostrare
+    il modal STEP 0 di inserimento manuale.
+    """
     retry_after = _rate_limit_wa(user["id"])
     if retry_after is not None:
         raise HTTPException(
@@ -415,8 +443,70 @@ def whatsapp_genera(annuncio_id: int, user=Depends(require_paid)):
                    f"Riprova tra {retry_after // 60} min.",
         )
 
-    from services.ai_whatsapp import genera_messaggio_whatsapp, AIWhatsAppError
+    from services.stima_service import get_annuncio_by_id
+    ann = get_annuncio_by_id(annuncio_id)
+    if not ann:
+        raise HTTPException(404, "Annuncio non trovato")
+
+    telefono_manual = (telefono or "").strip()
+    telefono_db     = (ann.get("telefono") or "").strip()
+    telefono_eff    = telefono_manual or telefono_db
+
+    if not telefono_eff:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error":         "no_phone",
+                "detail":        "Questo annuncio non ha un numero di telefono. "
+                                 "Inseriscilo manualmente.",
+                "url_originale": ann.get("url_originale") or "",
+            },
+        )
+
+    if telefono_manual:
+        norm = _wa_normalize_it_phone(telefono_manual)
+        if not norm:
+            raise HTTPException(
+                status_code=400,
+                detail="Numero non valido per WhatsApp. Inserisci un cellulare italiano.",
+            )
+
+    from services.ai_whatsapp import (
+        genera_messaggio_whatsapp, AIWhatsAppError,
+        _build_prompt, _stima_costo_eur, CLAUDE_MODEL,
+    )
+    from services.stima_service import calcola_stima
+
     try:
+        if telefono_manual:
+            # Bypass del check telefono nel servizio: l'annuncio non ha numero in DB
+            # ma l'agente ne ha fornito uno manualmente. Riusiamo gli helper del
+            # servizio per garantire identico comportamento di generazione.
+            stima  = calcola_stima(ann)
+            prompt = _build_prompt(ann, stima, user or {})
+
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise AIWhatsAppError("ANTHROPIC_API_KEY non configurata sul server")
+
+            from anthropic import Anthropic
+            client = Anthropic(api_key=api_key)
+            resp = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=300,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            parts = []
+            for block in (resp.content or []):
+                t = getattr(block, "text", None)
+                if t:
+                    parts.append(t)
+            messaggio = "\n".join(parts).strip()
+            if not messaggio:
+                raise AIWhatsAppError("Risposta vuota dall'API")
+
+            return {"messaggio": messaggio, "telefono": telefono_manual}
+
         out = genera_messaggio_whatsapp(annuncio_id, user)
     except AIWhatsAppError as e:
         msg = str(e)
@@ -430,6 +520,12 @@ def whatsapp_genera(annuncio_id: int, user=Depends(require_paid)):
             status_code=503,
             detail="Servizio AI temporaneamente non disponibile. Riprova tra qualche minuto.",
         )
+    except Exception as e:
+        print(f"[whatsapp-ai] errore inatteso: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Servizio AI temporaneamente non disponibile. Riprova tra qualche minuto.",
+        )
 
     return {
         "messaggio": out["messaggio"],
@@ -439,7 +535,12 @@ def whatsapp_genera(annuncio_id: int, user=Depends(require_paid)):
 
 @router_agent.post("/whatsapp/invia")
 def whatsapp_invia(body: WhatsAppInviaIn, user=Depends(require_paid)):
-    """Salva il messaggio come 'inviato' (ottimistico, prima del click WhatsApp)."""
+    """Salva il messaggio come 'inviato' (ottimistico, prima del click WhatsApp).
+
+    Sprint 5.1: se body.telefono non viene fornito, fallback su annuncio.telefono.
+    Il telefono effettivamente salvato è quello usato per contattare il privato
+    (manuale se fornito dall'agente, altrimenti quello del DB).
+    """
     from database import get_conn as _gc, _cur as _gcur, _sql as _gsql
 
     telefono  = (body.telefono or "").strip()
@@ -449,10 +550,15 @@ def whatsapp_invia(body: WhatsAppInviaIn, user=Depends(require_paid)):
 
     conn = _gc(); cur = _gcur(conn)
     try:
-        cur.execute(_gsql("SELECT id FROM annunci WHERE id = ?"), (body.annuncio_id,))
-        if not cur.fetchone():
+        cur.execute(_gsql("SELECT id, telefono FROM annunci WHERE id = ?"),
+                    (body.annuncio_id,))
+        row = cur.fetchone()
+        if not row:
             conn.close()
             raise HTTPException(404, "Annuncio non trovato")
+        if not telefono:
+            ann_tel = row[1] if not isinstance(row, dict) else row.get("telefono")
+            telefono = (ann_tel or "").strip()
 
         cur.execute(_gsql("""
             INSERT INTO whatsapp_messages

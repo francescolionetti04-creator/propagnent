@@ -204,6 +204,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 .ai-btn-regen{background:#185FA5;color:#fff;border-color:#185FA5}
 .ai-btn-regen:hover:not(:disabled){background:#0C447C}
 
+/* ========== WHATSAPP STEP 0 — inserimento manuale numero (Sprint 5.1) ========== */
+.wa-step0{padding:.4rem 0 .2rem;text-align:center}
+.wa-step0-icon{font-size:34px;line-height:1;margin-bottom:.4rem}
+.wa-step0-title{margin:0 0 .35rem;font-size:16px;font-weight:700;color:#1a1a1a}
+.wa-step0-desc{margin:0 auto 1rem;font-size:13px;line-height:1.55;color:#555;max-width:440px}
+.wa-link-original{display:inline-block;margin-bottom:1.1rem;padding:9px 14px;border-radius:8px;background:#EAF1F9;color:#185FA5;border:1px solid #B9D2EA;font-size:13px;font-weight:600;text-decoration:none;transition:all .12s}
+.wa-link-original:hover{background:#185FA5;color:#fff}
+.wa-step0-label{display:block;text-align:left;font-size:12px;font-weight:600;color:#1a1a1a;margin:0 0 6px}
+.wa-input-phone{width:100%;box-sizing:border-box;font-size:16px;padding:12px 14px;border:1px solid #d9d9d3;border-radius:8px;background:#fff;color:#1a1a1a;outline:none;transition:border-color .12s,box-shadow .12s}
+.wa-input-phone:focus{border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.15)}
+.wa-phone-help{font-size:12px;color:#888;margin-top:6px;text-align:left;min-height:18px}
+.wa-phone-help-ok{color:#0F6E56;font-weight:600}
+.wa-phone-help-err{color:#d33;font-weight:600}
+
+/* ========== WHATSAPP INFO BANNER (Sprint 5.1) ========== */
+.wa-info-banner{position:relative;background:#EAF1F9;border:1px solid #B9D2EA;color:#0C447C;padding:12px 38px 12px 14px;border-radius:8px;font-size:13px;line-height:1.55;margin:0 0 16px}
+.wa-info-banner strong{color:#0C447C}
+.wa-banner-close{position:absolute;top:6px;right:8px;background:none;border:none;font-size:18px;line-height:1;color:#185FA5;cursor:pointer;padding:4px 6px;border-radius:4px}
+.wa-banner-close:hover{background:rgba(24,95,165,.12)}
+
 /* ========== MODAL WELCOME TUTORIAL (Sprint 5.0.2) ========== */
 .welcome-modal{max-width:640px;padding:1.6rem}
 .welcome-modal h3{margin:0 0 .35rem;font-size:18px;font-weight:700;color:#1a1a1a}
@@ -913,6 +933,12 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
     <div class="val-card">
       <div class="val-title">💬 I tuoi messaggi WhatsApp inviati</div>
       <div class="val-sub">Traccia chi hai contattato. Aggiorna lo status quando hai una risposta.</div>
+      <div class="wa-info-banner" id="wa-info-banner" style="display:none">
+        💡 <strong>Suggerimento:</strong> Se un annuncio non ha telefono, clicca comunque
+        "💬 WhatsApp Auto" — potrai inserire manualmente il numero che trovi sull'annuncio
+        originale del portale.
+        <button class="wa-banner-close" onclick="dismissWABanner()" aria-label="Chiudi">×</button>
+      </div>
       <div style="margin:14px 0 18px;display:flex;gap:8px;flex-wrap:wrap" id="wa-filters">
         <button class="tab-btn active" data-wa-filter="tutti"        onclick="setWAFilter('tutti')">Tutti <span class="wa-fcnt" data-c="tutti">0</span></button>
         <button class="tab-btn"        data-wa-filter="inviato"      onclick="setWAFilter('inviato')">🔵 Inviati <span class="wa-fcnt" data-c="inviato">0</span></button>
@@ -1111,8 +1137,26 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
     <div id="wa-modal-content">
       <div class="ai-spinner" id="wa-spinner">
         <div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-        <div>Generando messaggio con AI&hellip;</div>
+        <div id="wa-spinner-label">Generando messaggio con AI&hellip;</div>
       </div>
+
+      <!-- Sprint 5.1: STEP 0 — inserimento manuale numero quando l'annuncio non ne ha uno -->
+      <div id="wa-step0" class="wa-step0" style="display:none">
+        <div class="wa-step0-icon">&#128222;</div>
+        <h3 class="wa-step0-title">Numero non disponibile</h3>
+        <p class="wa-step0-desc">
+          Questo annuncio non ha un telefono nel nostro database.
+          Trova il numero sull'annuncio originale del portale e incollalo qui sotto.
+        </p>
+        <a id="wa-step0-link" href="#" target="_blank" rel="noopener" class="wa-link-original">
+          &#128279; Apri annuncio originale &#x2197;
+        </a>
+        <label class="wa-step0-label" for="wa-manual-phone">Numero del privato</label>
+        <input type="tel" id="wa-manual-phone" placeholder="+39 333 1234567" autocomplete="off"
+               class="wa-input-phone" oninput="_waValidateManualPhone()">
+        <div class="wa-phone-help" id="wa-phone-help">Formato: numero italiano con prefisso +39</div>
+      </div>
+
       <div id="wa-editor" style="display:none">
         <textarea id="wa-text" rows="12"
           style="width:100%;box-sizing:border-box;padding:.85rem 1rem;border:1px solid #e5e5e0;border-radius:8px;background:#f9f9f7;font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;font-size:13px;line-height:1.65;color:#222;resize:vertical;min-height:200px"
@@ -1124,6 +1168,10 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
       <div class="ai-error" id="wa-error" style="display:none"></div>
     </div>
     <div class="ai-actions">
+      <!-- STEP 0 actions -->
+      <button class="ai-btn ai-btn-copy" id="wa-step0-cancel" onclick="closeWAAuto()" style="display:none">Annulla</button>
+      <button class="ai-btn ai-btn-wa"   id="wa-step0-continue" onclick="genWAWithManualPhone()" disabled style="display:none">&#10003; Genera messaggio</button>
+      <!-- Generated message actions -->
       <button class="ai-btn ai-btn-copy"  id="wa-btn-copy"  onclick="waCopyText()" disabled>&#128203; Copia testo</button>
       <button class="ai-btn ai-btn-wa"    id="wa-btn-open"  onclick="waOpenWhatsApp()" disabled>&#128241; Apri WhatsApp</button>
       <button class="ai-btn ai-btn-regen" id="wa-btn-regen" onclick="waRegen()" disabled>&#8635; Rigenera</button>
@@ -1857,6 +1905,9 @@ let _waCurrentAnnuncio = null;
 let _waTelefonoRaw = '';
 let _waTelefonoNorm = '';
 let _waPhoneError = '';
+// Sprint 5.1: stato STEP 0 (numero inserito manualmente)
+let _waManualPhone = '';      // raw input (es. "333 1234567" o "+39...")
+let _waUsedManual  = false;   // true se per il messaggio corrente è stato usato un numero manuale
 
 /** Normalizza un numero per wa.me:
  *  - rimuove tutti i caratteri non numerici
@@ -1894,6 +1945,8 @@ function openWhatsAppAuto(id) {
   _waTelefonoRaw = '';
   _waTelefonoNorm = '';
   _waPhoneError = '';
+  _waManualPhone = '';
+  _waUsedManual  = false;
 
   document.getElementById('wa-modal-title').innerHTML =
     '&#128172; WhatsApp Auto — ' + (d.indirizzo || '');
@@ -1911,16 +1964,126 @@ function closeWAAuto() {
   _waTelefonoRaw = '';
   _waTelefonoNorm = '';
   _waPhoneError = '';
+  _waManualPhone = '';
+  _waUsedManual  = false;
+  // Ripulisci STEP 0 per riapertura pulita
+  const step0 = document.getElementById('wa-step0');
+  if (step0) step0.style.display = 'none';
+  const input = document.getElementById('wa-manual-phone');
+  if (input) input.value = '';
 }
 
 function _waSetLoading() {
-  document.getElementById('wa-spinner').style.display = 'flex';
+  const sp = document.getElementById('wa-spinner');
+  const lab = document.getElementById('wa-spinner-label');
+  if (lab) lab.innerHTML = 'Generando messaggio con AI&hellip;';
+  sp.style.display = 'flex';
+  document.getElementById('wa-step0').style.display = 'none';
   document.getElementById('wa-editor').style.display = 'none';
   document.getElementById('wa-error').style.display = 'none';
   document.getElementById('wa-warn').style.display = 'none';
+  // STEP 0 buttons hidden
+  document.getElementById('wa-step0-cancel').style.display   = 'none';
+  document.getElementById('wa-step0-continue').style.display = 'none';
+  // Generated message buttons visible (but disabled until ready)
+  document.getElementById('wa-btn-copy').style.display  = '';
+  document.getElementById('wa-btn-open').style.display  = '';
+  document.getElementById('wa-btn-regen').style.display = '';
   document.getElementById('wa-btn-copy').disabled  = true;
   document.getElementById('wa-btn-open').disabled  = true;
   document.getElementById('wa-btn-regen').disabled = true;
+}
+
+function _waShowStep0(urlOriginale) {
+  // Stato modal: mostra solo lo STEP 0 di inserimento manuale telefono
+  document.getElementById('wa-spinner').style.display = 'none';
+  document.getElementById('wa-editor').style.display  = 'none';
+  document.getElementById('wa-error').style.display   = 'none';
+  document.getElementById('wa-warn').style.display    = 'none';
+  document.getElementById('wa-step0').style.display   = 'block';
+
+  // Action buttons: solo Annulla + Genera
+  document.getElementById('wa-step0-cancel').style.display   = '';
+  document.getElementById('wa-step0-continue').style.display = '';
+  document.getElementById('wa-step0-continue').disabled      = true;
+  document.getElementById('wa-btn-copy').style.display  = 'none';
+  document.getElementById('wa-btn-open').style.display  = 'none';
+  document.getElementById('wa-btn-regen').style.display = 'none';
+
+  // Link annuncio originale
+  const link = document.getElementById('wa-step0-link');
+  if (urlOriginale) {
+    link.href = urlOriginale;
+    link.style.display = '';
+  } else {
+    link.style.display = 'none';
+  }
+
+  // Reset input + help
+  const input = document.getElementById('wa-manual-phone');
+  input.value = _waManualPhone || '';
+  _waValidateManualPhone();
+  setTimeout(() => input.focus(), 50);
+}
+
+function _waValidateManualPhone() {
+  const input = document.getElementById('wa-manual-phone');
+  const help  = document.getElementById('wa-phone-help');
+  const btn   = document.getElementById('wa-step0-continue');
+  const val   = (input.value || '').trim();
+  _waManualPhone = val;
+
+  if (!val) {
+    help.textContent = 'Inserisci un numero';
+    help.className   = 'wa-phone-help wa-phone-help-err';
+    btn.disabled     = true;
+    return;
+  }
+
+  // Controlli pre-normalizzazione per messaggi mirati
+  const digits = val.replace(/\D+/g, '');
+  if (!digits) {
+    help.textContent = 'Inserisci un numero valido';
+    help.className   = 'wa-phone-help wa-phone-help-err';
+    btn.disabled     = true;
+    return;
+  }
+  // numero fisso (inizia con 0 dopo rimozione prefisso 00/+39)
+  let core = digits;
+  if (core.startsWith('00')) core = core.slice(2);
+  if (core.startsWith('39')) core = core.slice(2);
+  if (core.startsWith('0')) {
+    help.textContent = 'I numeri fissi non supportano WhatsApp';
+    help.className   = 'wa-phone-help wa-phone-help-err';
+    btn.disabled     = true;
+    return;
+  }
+  if (digits.length < 9) {
+    help.textContent = 'Numero troppo corto';
+    help.className   = 'wa-phone-help wa-phone-help-err';
+    btn.disabled     = true;
+    return;
+  }
+  if (digits.length > 13) {
+    help.textContent = 'Numero troppo lungo';
+    help.className   = 'wa-phone-help wa-phone-help-err';
+    btn.disabled     = true;
+    return;
+  }
+
+  const r = normalizzaTelefono(val);
+  if (r.error || !r.numero) {
+    help.textContent = r.error || 'Numero non valido';
+    help.className   = 'wa-phone-help wa-phone-help-err';
+    btn.disabled     = true;
+    return;
+  }
+
+  // OK: mostra preview formato pulito
+  const pretty = '+' + r.numero.slice(0, 2) + ' ' + r.numero.slice(2, 5) + ' ' + r.numero.slice(5);
+  help.textContent = '✓ Verrà usato: ' + pretty;
+  help.className   = 'wa-phone-help wa-phone-help-ok';
+  btn.disabled     = false;
 }
 
 function _waShowError(msg) {
@@ -1972,32 +2135,72 @@ function waUpdateCount() {
   document.getElementById('wa-counter').textContent = len + ' caratteri';
 }
 
-async function _waFetch() {
+async function _waFetch(manualPhone) {
   if (!_waCurrentId) return;
   _waSetLoading();
+  // Spinner più breve per la verifica iniziale (UX)
+  if (!manualPhone) {
+    const lab = document.getElementById('wa-spinner-label');
+    if (lab) lab.textContent = 'Verifico annuncio…';
+  }
   try {
-    const r = await fetch(`${API}/api/agente/whatsapp/genera/${_waCurrentId}`, {
+    let url = `${API}/api/agente/whatsapp/genera/${_waCurrentId}`;
+    if (manualPhone) url += `?telefono=${encodeURIComponent(manualPhone)}`;
+    const r = await fetch(url, {
       method: 'POST',
       credentials: 'include',
     });
     if (!r.ok) {
       let msg = 'Errore generazione messaggio. Riprova tra qualche minuto.';
+      let detailObj = null;
       try {
         const j = await r.json();
-        if (j && j.detail) msg = j.detail;
+        if (j && j.detail) {
+          if (typeof j.detail === 'object') {
+            detailObj = j.detail;
+            msg = j.detail.detail || msg;
+          } else {
+            msg = j.detail;
+          }
+        }
       } catch {}
+      // Sprint 5.1: caso "no_phone" → STEP 0 inserimento manuale
+      if (r.status === 400 && detailObj && detailObj.error === 'no_phone') {
+        _waUsedManual = true;
+        _waShowStep0(detailObj.url_originale ||
+                     (_waCurrentAnnuncio && _waCurrentAnnuncio.url_originale) || '');
+        return;
+      }
       if (r.status === 401) msg = 'Sessione scaduta. Ricarica la pagina e accedi di nuovo.';
       _waShowError(msg);
       return;
     }
     const j = await r.json();
+    _waUsedManual = !!manualPhone;
     _waShowMessage(j.messaggio || '', j.telefono || '');
   } catch (e) {
     _waShowError('Connessione fallita. Controlla la rete e riprova.');
   }
 }
 
-function waRegen() { _waFetch(); }
+function genWAWithManualPhone() {
+  const r = normalizzaTelefono(_waManualPhone || '');
+  if (r.error || !r.numero) return;
+  // Inviamo al backend il numero normalizzato (puro cifre con prefisso 39)
+  _waFetch('+' + r.numero);
+}
+
+function waRegen() {
+  // Se siamo nella modalità manuale, rigenera col telefono inserito
+  if (_waUsedManual && _waManualPhone) {
+    const r = normalizzaTelefono(_waManualPhone);
+    if (!r.error && r.numero) {
+      _waFetch('+' + r.numero);
+      return;
+    }
+  }
+  _waFetch();
+}
 
 function waCopyText() {
   const text = document.getElementById('wa-text').value || '';
@@ -2096,7 +2299,23 @@ function _waTimeAgo(iso) {
   return d.toLocaleDateString('it-IT');
 }
 
+function _waShowInfoBanner() {
+  // Sprint 5.1: mostra banner informativo se non già dismesso
+  try {
+    if (localStorage.getItem('wa_banner_dismissed') === '1') return;
+  } catch {}
+  const b = document.getElementById('wa-info-banner');
+  if (b) b.style.display = '';
+}
+
+function dismissWABanner() {
+  try { localStorage.setItem('wa_banner_dismissed', '1'); } catch {}
+  const b = document.getElementById('wa-info-banner');
+  if (b) b.style.display = 'none';
+}
+
 async function loadWAInbox() {
+  _waShowInfoBanner();
   const list = document.getElementById('wa-inbox-list');
   if (!list) return;
   list.innerHTML = '<p style="color:#888;padding:14px">Caricamento…</p>';

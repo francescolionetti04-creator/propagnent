@@ -126,3 +126,65 @@ Endpoints attesi (curl con cookie sessione):
 - `GET    /api/agente/whatsapp/inbox`                → `{messaggi[], counters{}}`
 - `PATCH  /api/agente/whatsapp/{id}/status`          → `{success:true}` (body: `{status}` e/o `{note}`)
 - `DELETE /api/agente/whatsapp/{id}`                 → `{success:true}` (soft delete)
+
+
+## Test Sprint 5.1 — Manual phone input (annuncio senza telefono)
+
+Premessa: oggi quasi nessun annuncio ha il campo `telefono` popolato (gli scraper
+non riescono a estrarre il numero, Sprint 5.2 lo risolverà con Playwright).
+Sprint 5.1 introduce un input manuale del numero direttamente nel modal
+"💬 WhatsApp Auto" così l'agente può comunque procedere.
+
+1. Login come `info@houseradar.it` (founder).
+2. Vai su `/app`, trova una card di privato **senza telefono** (la maggior parte oggi).
+3. Click **"💬 WhatsApp Auto"** sulla card.
+4. Modal si apre con uno spinner breve "Verifico annuncio…".
+5. Backend ritorna **400** con `detail.error="no_phone"` → appare lo **STEP 0**:
+   - Icona 📞
+   - Titolo "Numero non disponibile"
+   - Testo "Questo annuncio non ha un telefono nel nostro database…"
+   - Pulsante azzurro **"🔗 Apri annuncio originale ↗"** che apre `url_originale`
+     in nuova scheda (verifica)
+   - Label "Numero del privato"
+   - Input `<input type="tel">` con placeholder "+39 333 1234567"
+   - Help text grigio "Formato: numero italiano con prefisso +39"
+   - Pulsanti **"Annulla"** + **"✓ Genera messaggio"** (quest'ultimo disabilitato)
+6. Validazione real-time mentre digiti:
+   - Vuoto → help "Inserisci un numero" rosso, bottone disabilitato
+   - `0123` (fisso) → help "I numeri fissi non supportano WhatsApp" rosso
+   - `333 12` (<9 cifre) → help "Numero troppo corto" rosso
+   - `333 1234567 1234567` (>13 cifre) → help "Numero troppo lungo" rosso
+   - `333 1234567` (valido) → help **"✓ Verrà usato: +39 333 1234567"** verde,
+     bottone abilitato
+7. Click **"✓ Genera messaggio"** → spinner "Generando messaggio con AI…" →
+   modal cambia: appare la textarea col messaggio AI, telefono mascherato
+   `+39 333 ●●● ●●67` sotto.
+8. Click **"📱 Apri WhatsApp"** → si apre `https://wa.me/393331234567?text=…`
+   con il messaggio precompilato; il record viene salvato lato server con il
+   numero inserito manualmente.
+9. Vai sulla tab **"💬 WhatsApp"** in sidebar → il record appare in lista con
+   il numero che hai inserito manualmente, status "🔵 Inviato".
+
+Banner suggerimento:
+- Apri tab "💬 WhatsApp" la prima volta → in alto compare il banner azzurro
+  "💡 Suggerimento: se un annuncio non ha telefono…" con la X in alto a destra.
+- Click su X → il banner sparisce e `localStorage.wa_banner_dismissed === "1"`.
+- Refresh pagina → il banner resta nascosto (persistenza ok).
+
+Edge cases Sprint 5.1:
+- **Annuncio CON telefono in DB**: il flusso resta quello di Sprint 5 — nessun
+  STEP 0, modal va diretto allo spinner di generazione AI.
+- **Numero manuale invalido inviato al backend**: se l'agente bypassa il
+  frontend, il backend valida via `_wa_normalize_it_phone` e ritorna 400
+  "Numero non valido per WhatsApp."
+- **Rigenera (♻)** dopo STEP 0: il pulsante "🔄 Rigenera" riusa lo stesso
+  numero manuale (`_waUsedManual=true`) — non riapre lo STEP 0.
+- **ESC su STEP 0**: chiude il modal (equivale ad "Annulla").
+
+Endpoints aggiornati Sprint 5.1:
+- `POST /api/agente/whatsapp/genera/{annuncio_id}?telefono=<num>` →
+  - 200 `{messaggio, telefono}` se ann.telefono presente OPPURE `?telefono` passato
+  - 400 `{detail:{error:"no_phone", detail, url_originale}}` se nessun telefono disponibile
+- `POST /api/agente/whatsapp/invia` body ora ha `telefono` opzionale; se assente,
+  fallback su `annuncio.telefono` del DB.
+
