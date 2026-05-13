@@ -363,6 +363,226 @@ def script_chiamata_ai(annuncio_id: int, user=Depends(require_paid)):
     return {"script": out["script"]}
 
 
+# ─── Sprint 5: Killer App #3 — WhatsApp Auto-Acquisizione ───────────────────
+
+# Rate limit in-memory per generazione messaggi WhatsApp: 20/h per agente
+_WA_RL_WINDOW = 3600
+_WA_RL_MAX    = 20
+_wa_rl: dict  = {}
+_wa_rl_lock   = None
+
+VALID_WA_STATUS = {"inviato", "letto", "risposto", "non_risposto"}
+
+
+def _rate_limit_wa(user_id: int) -> Optional[int]:
+    """Ritorna None se ok, oppure i secondi di retry-after."""
+    import time
+    import threading
+    global _wa_rl_lock
+    if _wa_rl_lock is None:
+        _wa_rl_lock = threading.Lock()
+    now = time.time()
+    with _wa_rl_lock:
+        hist = [t for t in _wa_rl.get(user_id, []) if now - t < _WA_RL_WINDOW]
+        if len(hist) >= _WA_RL_MAX:
+            retry = int(_WA_RL_WINDOW - (now - hist[0])) + 1
+            _wa_rl[user_id] = hist
+            return max(1, retry)
+        hist.append(now)
+        _wa_rl[user_id] = hist
+        return None
+
+
+class WhatsAppInviaIn(BaseModel):
+    annuncio_id: int
+    telefono:    str
+    messaggio:   str
+
+
+class WhatsAppStatusIn(BaseModel):
+    status: Optional[str] = None
+    note:   Optional[str] = None
+
+
+@router_agent.post("/whatsapp/genera/{annuncio_id}")
+def whatsapp_genera(annuncio_id: int, user=Depends(require_paid)):
+    """Genera messaggio WhatsApp AI per un annuncio. Non salva nel DB."""
+    retry_after = _rate_limit_wa(user["id"])
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Hai raggiunto il limite di {_WA_RL_MAX} messaggi/ora. "
+                   f"Riprova tra {retry_after // 60} min.",
+        )
+
+    from services.ai_whatsapp import genera_messaggio_whatsapp, AIWhatsAppError
+    try:
+        out = genera_messaggio_whatsapp(annuncio_id, user)
+    except AIWhatsAppError as e:
+        msg = str(e)
+        low = msg.lower()
+        if "non trovato" in low:
+            raise HTTPException(404, "Annuncio non trovato")
+        if "numero di telefono" in low or "non ha un numero" in low:
+            raise HTTPException(400, msg)
+        print(f"[whatsapp-ai] errore: {msg}")
+        raise HTTPException(
+            status_code=503,
+            detail="Servizio AI temporaneamente non disponibile. Riprova tra qualche minuto.",
+        )
+
+    return {
+        "messaggio": out["messaggio"],
+        "telefono":  out["telefono"],
+    }
+
+
+@router_agent.post("/whatsapp/invia")
+def whatsapp_invia(body: WhatsAppInviaIn, user=Depends(require_paid)):
+    """Salva il messaggio come 'inviato' (ottimistico, prima del click WhatsApp)."""
+    from database import get_conn as _gc, _cur as _gcur, _sql as _gsql
+
+    telefono  = (body.telefono or "").strip()
+    messaggio = (body.messaggio or "").strip()
+    if not messaggio:
+        raise HTTPException(400, "Messaggio vuoto")
+
+    conn = _gc(); cur = _gcur(conn)
+    try:
+        cur.execute(_gsql("SELECT id FROM annunci WHERE id = ?"), (body.annuncio_id,))
+        if not cur.fetchone():
+            conn.close()
+            raise HTTPException(404, "Annuncio non trovato")
+
+        cur.execute(_gsql("""
+            INSERT INTO whatsapp_messages
+                (agente_user_id, annuncio_id, telefono_privato, messaggio_inviato, status)
+            VALUES (?, ?, ?, ?, 'inviato')
+        """), (user["id"], body.annuncio_id, telefono[:20], messaggio))
+        conn.commit()
+
+        # ID dell'ultimo inserimento (SQLite + Postgres compat)
+        try:
+            new_id = cur.lastrowid  # SQLite
+        except Exception:
+            new_id = None
+        if not new_id:
+            cur.execute(_gsql("""
+                SELECT id FROM whatsapp_messages
+                WHERE agente_user_id = ? AND annuncio_id = ?
+                ORDER BY id DESC LIMIT 1
+            """), (user["id"], body.annuncio_id))
+            row = cur.fetchone()
+            new_id = row[0] if row else None
+    finally:
+        conn.close()
+
+    return {"success": True, "id": new_id}
+
+
+@router_agent.get("/whatsapp/inbox")
+def whatsapp_inbox(user=Depends(require_paid)):
+    """Lista messaggi WhatsApp dell'agente con info annuncio collegato."""
+    from database import get_conn as _gc, _cur as _gcur, _sql as _gsql, _to_dict as _gto
+
+    conn = _gc(); cur = _gcur(conn)
+    cur.execute(_gsql("""
+        SELECT  w.id, w.annuncio_id, w.telefono_privato, w.messaggio_inviato,
+                w.inviato_at, w.status, w.note, w.aggiornato_at,
+                a.indirizzo, a.citta, a.provincia, a.prezzo, a.mq, a.tipo,
+                a.foto_url, a.url_originale
+        FROM whatsapp_messages w
+        LEFT JOIN annunci a ON a.id = w.annuncio_id
+        WHERE w.agente_user_id = ? AND w.removed_at IS NULL
+        ORDER BY w.inviato_at DESC
+    """), (user["id"],))
+    rows = [_gto(r) for r in cur.fetchall()]
+    conn.close()
+
+    counters = {"tutti": 0, "inviato": 0, "letto": 0, "risposto": 0, "non_risposto": 0}
+    for r in rows:
+        counters["tutti"] += 1
+        st = r.get("status") or "inviato"
+        if st in counters:
+            counters[st] += 1
+
+    return {"messaggi": rows, "counters": counters}
+
+
+@router_agent.patch("/whatsapp/{wa_id}/status")
+def whatsapp_update_status(wa_id: int, body: WhatsAppStatusIn,
+                           user=Depends(require_paid)):
+    """Aggiorna status e/o note di un messaggio (solo del proprietario)."""
+    from database import get_conn as _gc, _cur as _gcur, _sql as _gsql
+    from datetime import datetime
+
+    new_status = body.status
+    new_note   = body.note
+    if new_status is not None and new_status not in VALID_WA_STATUS:
+        raise HTTPException(400, f"Status non valido. Usa: {sorted(VALID_WA_STATUS)}")
+
+    conn = _gc(); cur = _gcur(conn)
+    cur.execute(_gsql("""
+        SELECT agente_user_id, removed_at FROM whatsapp_messages WHERE id = ?
+    """), (wa_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close(); raise HTTPException(404, "Messaggio non trovato")
+    owner_id  = row[0] if not isinstance(row, dict) else row["agente_user_id"]
+    removed   = row[1] if not isinstance(row, dict) else row["removed_at"]
+    if owner_id != user["id"]:
+        conn.close(); raise HTTPException(403, "Non autorizzato")
+    if removed:
+        conn.close(); raise HTTPException(404, "Messaggio rimosso")
+
+    now = datetime.utcnow().isoformat()
+    if new_status is not None and new_note is not None:
+        cur.execute(_gsql("""
+            UPDATE whatsapp_messages
+            SET status = ?, note = ?, aggiornato_at = ?
+            WHERE id = ?
+        """), (new_status, new_note, now, wa_id))
+    elif new_status is not None:
+        cur.execute(_gsql("""
+            UPDATE whatsapp_messages SET status = ?, aggiornato_at = ? WHERE id = ?
+        """), (new_status, now, wa_id))
+    elif new_note is not None:
+        cur.execute(_gsql("""
+            UPDATE whatsapp_messages SET note = ?, aggiornato_at = ? WHERE id = ?
+        """), (new_note, now, wa_id))
+    else:
+        conn.close(); raise HTTPException(400, "Nessun campo da aggiornare (status o note)")
+    conn.commit(); conn.close()
+    return {"success": True}
+
+
+@router_agent.delete("/whatsapp/{wa_id}")
+def whatsapp_delete(wa_id: int, user=Depends(require_paid)):
+    """Soft delete del messaggio."""
+    from database import get_conn as _gc, _cur as _gcur, _sql as _gsql
+    from datetime import datetime
+
+    conn = _gc(); cur = _gcur(conn)
+    cur.execute(_gsql("""
+        SELECT agente_user_id, removed_at FROM whatsapp_messages WHERE id = ?
+    """), (wa_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close(); raise HTTPException(404, "Messaggio non trovato")
+    owner_id  = row[0] if not isinstance(row, dict) else row["agente_user_id"]
+    removed   = row[1] if not isinstance(row, dict) else row["removed_at"]
+    if owner_id != user["id"]:
+        conn.close(); raise HTTPException(403, "Non autorizzato")
+    if removed:
+        conn.close(); return {"success": True}  # idempotente
+
+    cur.execute(_gsql("""
+        UPDATE whatsapp_messages SET removed_at = ? WHERE id = ?
+    """), (datetime.utcnow().isoformat(), wa_id))
+    conn.commit(); conn.close()
+    return {"success": True}
+
+
 # ─── Email helper inline (sfrutta wrapper di services.email) ────────────────
 
 def _send_privato_contattato_email(privato_email: str, privato_nome: Optional[str],

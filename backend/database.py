@@ -393,6 +393,44 @@ def init_db():
     except Exception:
         pass
 
+    # ── Sprint 5: Killer App #3 WhatsApp Auto-Acquisizione ───────────────
+    cur.execute(_sql("""
+        CREATE TABLE IF NOT EXISTS whatsapp_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agente_user_id INTEGER NOT NULL,
+            annuncio_id INTEGER NOT NULL,
+            telefono_privato VARCHAR(20),
+            messaggio_inviato TEXT,
+            inviato_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(20) DEFAULT 'inviato',
+            note TEXT,
+            aggiornato_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            tokens_input INTEGER DEFAULT 0,
+            tokens_output INTEGER DEFAULT 0,
+            costo_eur REAL DEFAULT 0
+        )
+    """))
+    # Soft-delete (idempotente)
+    if IS_PG:
+        try:
+            cur.execute("ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS removed_at TEXT")
+        except Exception:
+            pass
+    else:
+        try:
+            cur.execute("ALTER TABLE whatsapp_messages ADD COLUMN removed_at TEXT")
+        except Exception:
+            pass  # colonna già presente
+    for idx_def in [
+        "CREATE INDEX IF NOT EXISTS idx_wa_agente     ON whatsapp_messages(agente_user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_wa_inviato_at ON whatsapp_messages(inviato_at)",
+        "CREATE INDEX IF NOT EXISTS idx_wa_status     ON whatsapp_messages(status)",
+    ]:
+        try:
+            cur.execute(_sql(idx_def))
+        except Exception:
+            pass
+
     # ── Sprint 5.0: agenzie multi-account (ombrello) ─────────────────────
     cur.execute(_sql("""
         CREATE TABLE IF NOT EXISTS agencies (

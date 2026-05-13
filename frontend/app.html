@@ -591,6 +591,9 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
     <button class="sb-link" id="sb-tab-leadp" onclick="switchTab('leadp')">
       📥 Lead proprietari <span class="cnt" id="cnt-leadp">—</span>
     </button>
+    <button class="sb-link" id="sb-tab-wa" onclick="switchTab('wa')">
+      💬 WhatsApp <span class="cnt" id="cnt-wa">—</span>
+    </button>
     <a class="sb-link muted" tabindex="-1">💬 Chat <small>Presto</small></a>
     <a class="sb-link muted" tabindex="-1">📝 Valutazioni <small>Presto</small></a>
   </div>
@@ -905,6 +908,64 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
   </div>
 
   <!-- LEAD PRIVATI PANEL -->
+  <!-- WHATSAPP INBOX PANEL (Sprint 5 Killer App #3) -->
+  <div class="val-panel" id="wa-panel" style="display:none">
+    <div class="val-card">
+      <div class="val-title">💬 I tuoi messaggi WhatsApp inviati</div>
+      <div class="val-sub">Traccia chi hai contattato. Aggiorna lo status quando hai una risposta.</div>
+      <div style="margin:14px 0 18px;display:flex;gap:8px;flex-wrap:wrap" id="wa-filters">
+        <button class="tab-btn active" data-wa-filter="tutti"        onclick="setWAFilter('tutti')">Tutti <span class="wa-fcnt" data-c="tutti">0</span></button>
+        <button class="tab-btn"        data-wa-filter="inviato"      onclick="setWAFilter('inviato')">🔵 Inviati <span class="wa-fcnt" data-c="inviato">0</span></button>
+        <button class="tab-btn"        data-wa-filter="letto"        onclick="setWAFilter('letto')">🟢 Letti <span class="wa-fcnt" data-c="letto">0</span></button>
+        <button class="tab-btn"        data-wa-filter="risposto"     onclick="setWAFilter('risposto')">✅ Risposti <span class="wa-fcnt" data-c="risposto">0</span></button>
+        <button class="tab-btn"        data-wa-filter="non_risposto" onclick="setWAFilter('non_risposto')">⚪ Senza risposta <span class="wa-fcnt" data-c="non_risposto">0</span></button>
+      </div>
+      <div id="wa-inbox-list" style="display:flex;flex-direction:column;gap:14px"></div>
+    </div>
+  </div>
+
+  <!-- WHATSAPP DETAIL MODAL (Sprint 5) -->
+  <div class="modal-bg" id="wa-detail-bg" onclick="if(event.target===this)closeWADetail()">
+    <div class="modal ai-modal">
+      <div class="ai-header">
+        <div>
+          <h3 id="wa-detail-title">💬 Dettaglio messaggio</h3>
+          <div class="ai-sub" id="wa-detail-sub"></div>
+        </div>
+        <button class="ai-x" onclick="closeWADetail()" aria-label="Chiudi">&times;</button>
+      </div>
+      <div id="wa-detail-content">
+        <div style="font-size:12px;color:#666;margin-bottom:6px">Messaggio inviato</div>
+        <div class="ai-body" id="wa-detail-body"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label style="font-size:13px;font-weight:600;color:#444">Status:</label>
+          <select id="wa-detail-status" onchange="waDetailSaveStatus()"
+            style="padding:7px 10px;border:1px solid #d0d0cc;border-radius:8px;font-size:13px">
+            <option value="inviato">🔵 Inviato</option>
+            <option value="letto">🟢 Letto</option>
+            <option value="risposto">✅ Risposto</option>
+            <option value="non_risposto">⚪ Senza risposta</option>
+          </select>
+          <span id="wa-detail-status-msg" style="font-size:12px;color:#1D9E75"></span>
+        </div>
+        <div style="margin-top:14px">
+          <label style="font-size:13px;font-weight:600;color:#444;display:block;margin-bottom:4px">Note private</label>
+          <textarea id="wa-detail-note" rows="3" oninput="waDetailScheduleNoteSave()"
+            placeholder="Es: ha risposto domani alle 10, vuole rivedersi il prezzo…"
+            style="width:100%;box-sizing:border-box;padding:.7rem .8rem;border:1px solid #e5e5e0;border-radius:8px;font-size:13px;font-family:inherit;background:#f9f9f7;resize:vertical"></textarea>
+          <div id="wa-detail-note-msg" style="font-size:11px;color:#888;text-align:right;margin-top:3px"></div>
+        </div>
+      </div>
+      <div class="ai-actions">
+        <button class="ai-btn ai-btn-wa"    onclick="waDetailReopen()">📱 Riapri WhatsApp</button>
+        <button class="ai-btn ai-btn-copy"  onclick="waDetailCopy()">📋 Copia testo</button>
+        <button class="ai-btn"
+          style="background:#FCEBEB;color:#A32D2D;border-color:#F09595"
+          onclick="waDetailDelete()">🗑 Elimina</button>
+      </div>
+    </div>
+  </div>
+
   <div class="val-panel" id="leadp-panel" style="display:none">
     <div class="val-card">
       <div class="val-title">📋 Lead Privati — Annunci da privati nella tua zona</div>
@@ -1033,6 +1094,39 @@ button.btn-primary:hover,.btn-pri:hover,.cf-btn:hover{
     <div class="modal-actions">
       <button class="modal-copy" onclick="copyModal()">&#128203; Copia testo</button>
       <button class="modal-close" onclick="closeModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL WHATSAPP AUTO (Sprint 5 Killer App #3) -->
+<div class="modal-bg" id="wa-modal-bg" onclick="if(event.target===this)closeWAAuto()">
+  <div class="modal ai-modal">
+    <div class="ai-header">
+      <div>
+        <h3 id="wa-modal-title">&#128172; WhatsApp Auto-Acquisizione</h3>
+        <div class="ai-sub" id="wa-modal-sub"></div>
+      </div>
+      <button class="ai-x" onclick="closeWAAuto()" aria-label="Chiudi">&times;</button>
+    </div>
+    <div id="wa-modal-content">
+      <div class="ai-spinner" id="wa-spinner">
+        <div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div>Generando messaggio con AI&hellip;</div>
+      </div>
+      <div id="wa-editor" style="display:none">
+        <textarea id="wa-text" rows="12"
+          style="width:100%;box-sizing:border-box;padding:.85rem 1rem;border:1px solid #e5e5e0;border-radius:8px;background:#f9f9f7;font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;font-size:13px;line-height:1.65;color:#222;resize:vertical;min-height:200px"
+          oninput="waUpdateCount()"></textarea>
+        <div id="wa-counter" style="font-size:11px;color:#888;text-align:right;margin-top:4px">0 caratteri</div>
+        <div id="wa-tel-line" style="font-size:12px;color:#666;margin-top:6px"></div>
+        <div id="wa-warn" class="ai-error" style="display:none;margin-top:10px"></div>
+      </div>
+      <div class="ai-error" id="wa-error" style="display:none"></div>
+    </div>
+    <div class="ai-actions">
+      <button class="ai-btn ai-btn-copy"  id="wa-btn-copy"  onclick="waCopyText()" disabled>&#128203; Copia testo</button>
+      <button class="ai-btn ai-btn-wa"    id="wa-btn-open"  onclick="waOpenWhatsApp()" disabled>&#128241; Apri WhatsApp</button>
+      <button class="ai-btn ai-btn-regen" id="wa-btn-regen" onclick="waRegen()" disabled>&#8635; Rigenera</button>
     </div>
   </div>
 </div>
@@ -1506,7 +1600,7 @@ function cardHTML(d) {
     : '';
 
   const footerFull = isP ? `
-    <button class="cf-btn cf-green" onclick="event.stopPropagation();showScript('whatsapp',${id})">&#128172; WhatsApp</button>
+    <button class="cf-btn cf-green" onclick="event.stopPropagation();openWhatsAppAuto(${id})">&#128172; WhatsApp Auto</button>
     <button class="cf-btn cf-outline" onclick="event.stopPropagation();openAIScript(${id})">&#128222; Script</button>
     <button class="cf-btn cf-blue" onclick="event.stopPropagation();showScript('esclusiva',${id})">+ Esclusiva</button>
     ${btnVedi}${btnReport}${btnCal}
@@ -1757,10 +1851,470 @@ function aiOpenWhatsApp() {
   window.open(url, '_blank', 'noopener');
 }
 
+/* ========== WHATSAPP AUTO-ACQUISIZIONE (Sprint 5 Killer App #3) ========== */
+let _waCurrentId = null;
+let _waCurrentAnnuncio = null;
+let _waTelefonoRaw = '';
+let _waTelefonoNorm = '';
+let _waPhoneError = '';
+
+/** Normalizza un numero per wa.me:
+ *  - rimuove tutti i caratteri non numerici
+ *  - "00..." → "..." (toglie prefisso internazionale 00)
+ *  - se inizia con "3" e 10 cifre (mobile IT) → "39" + numero
+ *  - se inizia con "0" → ERRORE (numero fisso)
+ *  Ritorna {numero, error}
+ */
+function normalizzaTelefono(tel) {
+  if (!tel) return { numero: '', error: 'Numero di telefono mancante.' };
+  let n = String(tel).replace(/\D+/g, '');
+  if (!n) return { numero: '', error: 'Numero di telefono non valido.' };
+  if (n.startsWith('00')) n = n.slice(2);
+  if (n.startsWith('39')) return { numero: n, error: '' };
+  if (n.startsWith('3') && n.length >= 9 && n.length <= 11) return { numero: '39' + n, error: '' };
+  if (n.startsWith('0')) {
+    return { numero: '', error: 'Questo è un numero fisso, WhatsApp non funziona. Usa Script Chiamata per chiamarli.' };
+  }
+  // Fallback: usalo come è, assumendo che includa già un prefisso internazionale
+  return { numero: n, error: '' };
+}
+
+function _waMaskTel(tel) {
+  if (!tel) return '—';
+  const n = String(tel).replace(/\D+/g, '');
+  if (n.length < 6) return tel;
+  return '+' + n.slice(0, 2) + ' ' + n.slice(2, 5) + ' ●●● ●●' + n.slice(-2);
+}
+
+function openWhatsAppAuto(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+  _waCurrentId = id;
+  _waCurrentAnnuncio = d;
+  _waTelefonoRaw = '';
+  _waTelefonoNorm = '';
+  _waPhoneError = '';
+
+  document.getElementById('wa-modal-title').innerHTML =
+    '&#128172; WhatsApp Auto — ' + (d.indirizzo || '');
+  document.getElementById('wa-modal-sub').textContent =
+    [d.zona, d.tipo, d.mq ? d.mq + ' m²' : null, d.prezzo ? fmt(d.prezzo) : null]
+      .filter(Boolean).join(' · ');
+  document.getElementById('wa-modal-bg').classList.add('open');
+  _waFetch();
+}
+
+function closeWAAuto() {
+  document.getElementById('wa-modal-bg').classList.remove('open');
+  _waCurrentId = null;
+  _waCurrentAnnuncio = null;
+  _waTelefonoRaw = '';
+  _waTelefonoNorm = '';
+  _waPhoneError = '';
+}
+
+function _waSetLoading() {
+  document.getElementById('wa-spinner').style.display = 'flex';
+  document.getElementById('wa-editor').style.display = 'none';
+  document.getElementById('wa-error').style.display = 'none';
+  document.getElementById('wa-warn').style.display = 'none';
+  document.getElementById('wa-btn-copy').disabled  = true;
+  document.getElementById('wa-btn-open').disabled  = true;
+  document.getElementById('wa-btn-regen').disabled = true;
+}
+
+function _waShowError(msg) {
+  document.getElementById('wa-spinner').style.display = 'none';
+  document.getElementById('wa-editor').style.display = 'none';
+  const err = document.getElementById('wa-error');
+  err.textContent = msg;
+  err.style.display = 'block';
+  document.getElementById('wa-btn-copy').disabled  = true;
+  document.getElementById('wa-btn-open').disabled  = true;
+  document.getElementById('wa-btn-regen').disabled = false;
+}
+
+function _waShowMessage(text, telefono) {
+  _waTelefonoRaw = telefono || '';
+  const r = normalizzaTelefono(_waTelefonoRaw);
+  _waTelefonoNorm = r.numero;
+  _waPhoneError = r.error;
+
+  document.getElementById('wa-spinner').style.display = 'none';
+  document.getElementById('wa-error').style.display = 'none';
+  document.getElementById('wa-editor').style.display = 'block';
+
+  const ta = document.getElementById('wa-text');
+  ta.value = text || '';
+  waUpdateCount();
+
+  const telLine = document.getElementById('wa-tel-line');
+  telLine.textContent = _waTelefonoRaw
+    ? '📱 Telefono: ' + _waMaskTel(_waTelefonoRaw)
+    : '';
+
+  const warn = document.getElementById('wa-warn');
+  if (_waPhoneError) {
+    warn.textContent = _waPhoneError;
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+
+  document.getElementById('wa-btn-copy').disabled  = !text;
+  document.getElementById('wa-btn-open').disabled  = !text || !!_waPhoneError || !_waTelefonoNorm;
+  document.getElementById('wa-btn-regen').disabled = false;
+}
+
+function waUpdateCount() {
+  const ta = document.getElementById('wa-text');
+  const len = (ta.value || '').length;
+  document.getElementById('wa-counter').textContent = len + ' caratteri';
+}
+
+async function _waFetch() {
+  if (!_waCurrentId) return;
+  _waSetLoading();
+  try {
+    const r = await fetch(`${API}/api/agente/whatsapp/genera/${_waCurrentId}`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!r.ok) {
+      let msg = 'Errore generazione messaggio. Riprova tra qualche minuto.';
+      try {
+        const j = await r.json();
+        if (j && j.detail) msg = j.detail;
+      } catch {}
+      if (r.status === 401) msg = 'Sessione scaduta. Ricarica la pagina e accedi di nuovo.';
+      _waShowError(msg);
+      return;
+    }
+    const j = await r.json();
+    _waShowMessage(j.messaggio || '', j.telefono || '');
+  } catch (e) {
+    _waShowError('Connessione fallita. Controlla la rete e riprova.');
+  }
+}
+
+function waRegen() { _waFetch(); }
+
+function waCopyText() {
+  const text = document.getElementById('wa-text').value || '';
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('wa-btn-copy');
+    const original = btn.innerHTML;
+    btn.innerHTML = '&#10003; Copiato!';
+    setTimeout(() => { btn.innerHTML = original; }, 2000);
+  });
+}
+
+async function waOpenWhatsApp() {
+  const text = (document.getElementById('wa-text').value || '').trim();
+  if (!text || !_waCurrentId) return;
+  if (_waPhoneError || !_waTelefonoNorm) {
+    document.getElementById('wa-warn').style.display = 'block';
+    return;
+  }
+
+  // Best-effort: salva sul DB PRIMA di aprire WhatsApp
+  try {
+    const r = await fetch(`${API}/api/agente/whatsapp/invia`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        annuncio_id: _waCurrentId,
+        telefono:    _waTelefonoRaw,
+        messaggio:   text,
+      }),
+    });
+    // Non bloccare l'apertura di WhatsApp se il salvataggio fallisce: l'agente
+    // potrà comunque inviare manualmente e ricreare il tracking dopo.
+    if (!r.ok) console.warn('[whatsapp] invia fallito', r.status);
+  } catch (e) {
+    console.warn('[whatsapp] invia errore', e);
+  }
+
+  const url = `https://wa.me/${_waTelefonoNorm}?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank', 'noopener');
+
+  // Toast minimal + chiudi modal
+  closeWAAuto();
+  _waToast('✓ Messaggio salvato. WhatsApp aperto.');
+  // Aggiorna lista inbox se la tab è aperta
+  if (typeof loadWAInbox === 'function' &&
+      document.getElementById('wa-panel') &&
+      document.getElementById('wa-panel').style.display !== 'none') {
+    loadWAInbox();
+  }
+}
+
+function _waToast(msg) {
+  let t = document.getElementById('wa-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'wa-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0F6E56;color:#fff;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14px;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:0;transition:opacity .2s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(() => { t.style.opacity = '1'; });
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = '0'; }, 2600);
+}
+
+/* ========== WHATSAPP INBOX (Sprint 5) ========== */
+let _waInbox = [];
+let _waInboxFilter = 'tutti';
+let _waDetailItem = null;
+let _waNoteDebounce = null;
+
+const _waStatusBadge = {
+  inviato:      { cls: 'background:#EDF4FC;color:#185FA5;border:1px solid #b7d3ef',  txt: '🔵 Inviato' },
+  letto:        { cls: 'background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5',  txt: '🟢 Letto' },
+  risposto:     { cls: 'background:#EAF3DE;color:#27500A;border:1px solid #97C459',  txt: '✅ Risposto' },
+  non_risposto: { cls: 'background:#f1f1ee;color:#666;border:1px solid #d0d0cc',     txt: '⚪ Senza risposta' },
+};
+
+function _waTimeAgo(iso) {
+  if (!iso) return '';
+  // Parse robusto: backend salva con CURRENT_TIMESTAMP (UTC) sia SQLite sia PG
+  const s = String(iso).replace(' ', 'T');
+  const d = new Date(s.endsWith('Z') || s.includes('+') ? s : s + 'Z');
+  if (isNaN(d.getTime())) return iso;
+  const diffMs = Date.now() - d.getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1)    return 'adesso';
+  if (min < 60)   return min + ' min fa';
+  const ore = Math.floor(min / 60);
+  if (ore < 24)   return ore + ' or' + (ore === 1 ? 'a' : 'e') + ' fa';
+  const gg = Math.floor(ore / 24);
+  if (gg === 1)   return 'ieri';
+  if (gg < 30)    return gg + ' giorni fa';
+  return d.toLocaleDateString('it-IT');
+}
+
+async function loadWAInbox() {
+  const list = document.getElementById('wa-inbox-list');
+  if (!list) return;
+  list.innerHTML = '<p style="color:#888;padding:14px">Caricamento…</p>';
+  try {
+    const r = await fetch(`${API}/api/agente/whatsapp/inbox`, {credentials:'include'});
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || 'Errore di caricamento');
+    }
+    const j = await r.json();
+    _waInbox = j.messaggi || [];
+
+    // Counter sidebar = stato 'inviato' (non ancora rispostati)
+    const cnt = (j.counters && j.counters.inviato) || 0;
+    const sbCnt = document.getElementById('cnt-wa');
+    if (sbCnt) sbCnt.textContent = cnt;
+
+    // Counter sui filtri
+    document.querySelectorAll('.wa-fcnt').forEach(el => {
+      const k = el.getAttribute('data-c');
+      el.textContent = (j.counters && j.counters[k]) || 0;
+    });
+
+    _waRenderInbox();
+  } catch (e) {
+    list.innerHTML = `<p style="color:#C92E2E;padding:14px">Errore: ${e.message}</p>`;
+  }
+}
+
+function setWAFilter(f) {
+  _waInboxFilter = f;
+  document.querySelectorAll('[data-wa-filter]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-wa-filter') === f);
+  });
+  _waRenderInbox();
+}
+
+function _waRenderInbox() {
+  const list = document.getElementById('wa-inbox-list');
+  if (!list) return;
+
+  const items = _waInbox.filter(m => {
+    if (_waInboxFilter === 'tutti') return true;
+    return (m.status || 'inviato') === _waInboxFilter;
+  });
+
+  if (items.length === 0) {
+    list.innerHTML = `<p style="color:#888;padding:32px;text-align:center;background:#fff;border:1px dashed #d3d1c7;border-radius:12px">
+      Nessun messaggio in questo gruppo.</p>`;
+    return;
+  }
+
+  list.innerHTML = items.map(m => {
+    const b = _waStatusBadge[m.status || 'inviato'] || _waStatusBadge.inviato;
+    const tel = _waMaskTel(m.telefono_privato);
+    const prezzo = m.prezzo ? '€ ' + Number(m.prezzo).toLocaleString('it-IT') : '—';
+    const indirizzo = m.indirizzo || '(indirizzo non disponibile)';
+    const luogo = [m.citta, m.provincia].filter(Boolean).join(' · ');
+    const preview = (m.messaggio_inviato || '').slice(0, 180).replace(/\n/g, ' ');
+    const foto = m.foto_url
+      ? `<img src="${m.foto_url}" alt="" style="width:96px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0" loading="lazy"/>`
+      : `<div style="width:96px;height:72px;background:#f1f1ee;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;color:#bbb">🏠</div>`;
+
+    return `
+      <div onclick="openWADetail(${m.id})"
+           style="background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,.04);cursor:pointer;display:flex;gap:14px;align-items:flex-start"
+           onmouseover="this.style.borderColor='#185FA5'"
+           onmouseout="this.style.borderColor='#e5e5e0'">
+        ${foto}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start">
+            <div style="flex:1;min-width:200px">
+              <div style="font-weight:700;font-size:15px;color:#1a1a1a">${indirizzo}</div>
+              <div style="color:#666;font-size:13px">${luogo}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700;font-size:14px;color:#185FA5">${prezzo}</div>
+              <div style="font-size:11px;color:#888">${_waTimeAgo(m.inviato_at)}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px">
+            <span style="display:inline-block;padding:3px 10px;font-size:11px;font-weight:700;border-radius:6px;${b.cls}">${b.txt}</span>
+            <span style="font-size:12px;color:#666">📱 ${tel}</span>
+          </div>
+          <div style="margin-top:8px;font-size:13px;color:#555;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+            ${preview}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openWADetail(id) {
+  const m = _waInbox.find(x => x.id === id);
+  if (!m) return;
+  _waDetailItem = m;
+  document.getElementById('wa-detail-title').innerHTML =
+    '💬 ' + (m.indirizzo || 'Messaggio');
+  document.getElementById('wa-detail-sub').textContent =
+    [m.citta, m.provincia, m.prezzo ? '€ ' + Number(m.prezzo).toLocaleString('it-IT') : null]
+      .filter(Boolean).join(' · ');
+  document.getElementById('wa-detail-body').textContent = m.messaggio_inviato || '';
+  document.getElementById('wa-detail-status').value = m.status || 'inviato';
+  document.getElementById('wa-detail-status-msg').textContent = '';
+  document.getElementById('wa-detail-note').value = m.note || '';
+  document.getElementById('wa-detail-note-msg').textContent = '';
+  document.getElementById('wa-detail-bg').classList.add('open');
+}
+
+function closeWADetail() {
+  document.getElementById('wa-detail-bg').classList.remove('open');
+  _waDetailItem = null;
+  if (_waNoteDebounce) { clearTimeout(_waNoteDebounce); _waNoteDebounce = null; }
+}
+
+async function waDetailSaveStatus() {
+  if (!_waDetailItem) return;
+  const sel = document.getElementById('wa-detail-status');
+  const msg = document.getElementById('wa-detail-status-msg');
+  const newStatus = sel.value;
+  msg.textContent = 'Salvataggio…'; msg.style.color = '#888';
+  try {
+    const r = await fetch(`${API}/api/agente/whatsapp/${_waDetailItem.id}/status`, {
+      method: 'PATCH', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status: newStatus}),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || 'Errore');
+    }
+    _waDetailItem.status = newStatus;
+    // Aggiorna anche la cache locale per re-render
+    const idx = _waInbox.findIndex(x => x.id === _waDetailItem.id);
+    if (idx >= 0) _waInbox[idx].status = newStatus;
+    msg.textContent = '✓ Salvato'; msg.style.color = '#1D9E75';
+    _waRenderInbox();
+    // Refresh dei counter
+    loadWAInbox();
+  } catch (e) {
+    msg.textContent = 'Errore: ' + e.message; msg.style.color = '#C92E2E';
+  }
+}
+
+function waDetailScheduleNoteSave() {
+  if (!_waDetailItem) return;
+  const msg = document.getElementById('wa-detail-note-msg');
+  msg.textContent = 'Modifica non salvata…'; msg.style.color = '#888';
+  if (_waNoteDebounce) clearTimeout(_waNoteDebounce);
+  _waNoteDebounce = setTimeout(_waDetailDoSaveNote, 800);
+}
+
+async function _waDetailDoSaveNote() {
+  if (!_waDetailItem) return;
+  const note = document.getElementById('wa-detail-note').value || '';
+  const msg  = document.getElementById('wa-detail-note-msg');
+  msg.textContent = 'Salvataggio…';
+  try {
+    const r = await fetch(`${API}/api/agente/whatsapp/${_waDetailItem.id}/status`, {
+      method: 'PATCH', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({note}),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || 'Errore');
+    }
+    _waDetailItem.note = note;
+    const idx = _waInbox.findIndex(x => x.id === _waDetailItem.id);
+    if (idx >= 0) _waInbox[idx].note = note;
+    msg.textContent = '✓ Salvato automaticamente'; msg.style.color = '#1D9E75';
+  } catch (e) {
+    msg.textContent = 'Errore salvataggio: ' + e.message; msg.style.color = '#C92E2E';
+  }
+}
+
+function waDetailReopen() {
+  if (!_waDetailItem) return;
+  const r = normalizzaTelefono(_waDetailItem.telefono_privato);
+  if (r.error || !r.numero) {
+    alert(r.error || 'Numero di telefono non valido.');
+    return;
+  }
+  const text = _waDetailItem.messaggio_inviato || '';
+  const url = `https://wa.me/${r.numero}?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank', 'noopener');
+}
+
+function waDetailCopy() {
+  if (!_waDetailItem) return;
+  const text = _waDetailItem.messaggio_inviato || '';
+  navigator.clipboard.writeText(text).then(() => _waToast('📋 Testo copiato'));
+}
+
+async function waDetailDelete() {
+  if (!_waDetailItem) return;
+  if (!confirm('Eliminare questo messaggio dal tuo inbox? L\'azione è reversibile solo via supporto.')) return;
+  try {
+    const r = await fetch(`${API}/api/agente/whatsapp/${_waDetailItem.id}`, {
+      method: 'DELETE', credentials: 'include',
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || 'Errore');
+    }
+    closeWADetail();
+    loadWAInbox();
+  } catch (e) {
+    alert('Errore: ' + e.message);
+  }
+}
+
 // Chiusura su ESC per entrambi i modali
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (document.getElementById('welcome-modal-bg').classList.contains('open')) welcomeSkip();
+    else if (document.getElementById('wa-modal-bg') && document.getElementById('wa-modal-bg').classList.contains('open')) closeWAAuto();
+    else if (document.getElementById('wa-detail-bg') && document.getElementById('wa-detail-bg').classList.contains('open')) closeWADetail();
     else if (document.getElementById('ai-modal-bg').classList.contains('open')) closeAIScript();
     else if (document.getElementById('modal-bg').classList.contains('open')) closeModal();
   }
@@ -1858,6 +2412,19 @@ async function loadMiniStats(){
     document.getElementById('cnt-noescl').textContent = s.non_esclusiva ?? '—';
     document.getElementById('cnt-leadp').textContent  = s.lead_proprietari_week ?? '—';
   } catch {}
+  // Counter sidebar WhatsApp (Sprint 5)
+  try {
+    const r = await fetch('/api/agente/whatsapp/inbox', {credentials:'include'});
+    if (r.ok) {
+      const j = await r.json();
+      const c = (j.counters && j.counters.inviato) || 0;
+      const el = document.getElementById('cnt-wa');
+      if (el) el.textContent = c;
+      // Mini-stats topbar: "Messaggi nuovi" = inviati non ancora rispostati
+      const ms = document.getElementById('ms-msg');
+      if (ms) ms.textContent = c;
+    }
+  } catch {}
 }
 
 const _stimaCache = {};
@@ -1916,9 +2483,10 @@ function switchTab(tab) {
   const isM = tab === 'match';
   const isV = tab === 'valuta';
   const isL = tab === 'leadp';
+  const isW = tab === 'wa';
   // Sidebar active state
   document.querySelectorAll('.sb-link[id^="sb-tab-"]').forEach(b => b.classList.remove('active'));
-  const sbMap = {annunci:'sb-tab-annunci', match:'sb-tab-match', valuta:'sb-tab-valuta', leadp:'sb-tab-leadp'};
+  const sbMap = {annunci:'sb-tab-annunci', match:'sb-tab-match', valuta:'sb-tab-valuta', leadp:'sb-tab-leadp', wa:'sb-tab-wa'};
   const sbActive = document.getElementById(sbMap[tab]);
   if (sbActive) sbActive.classList.add('active');
   // Su mobile, chiudi sidebar dopo il click
@@ -1931,6 +2499,8 @@ function switchTab(tab) {
   document.getElementById('match-panel').style.display = isM ? 'block' : 'none';
   document.getElementById('val-panel').style.display   = isV ? 'block' : 'none';
   document.getElementById('leadp-panel').style.display = isL ? 'block' : 'none';
+  const waP = document.getElementById('wa-panel');
+  if (waP) waP.style.display = isW ? 'block' : 'none';
   // Sezioni visibili solo nel tab Annunci
   ['annunci-search', 'alert-banner', 'spinner', 'empty', 'cards'].forEach(id => {
     const el = document.getElementById(id);
@@ -1939,6 +2509,7 @@ function switchTab(tab) {
   document.querySelector('.stats-row').style.display      = isA ? '' : 'none';
   document.querySelector('.results-header').style.display = isA ? '' : 'none';
   if (isL) loadLeadPrivati();
+  if (isW) loadWAInbox();
 }
 
 /* ========== LEAD PRIVATI ========== */
