@@ -409,6 +409,113 @@ async def sync_annunci(request: Request):
     return JSONResponse(content=result)
 
 
+# ── Sprint 5.2: Backfill telefoni Subito da VPS (Playwright) ─────────────────
+
+def _check_sync_token(request: Request):
+    """Helper auth comune per endpoint admin /api/annunci/telefono-*"""
+    token = request.headers.get("X-Sync-Token") or request.query_params.get("token") or ""
+    expected = os.environ.get("SYNC_TOKEN", "")
+    if not expected:
+        return JSONResponse(status_code=503,
+                            content={"error": "SYNC_TOKEN non configurato sul server."})
+    if token != expected:
+        return JSONResponse(status_code=401, content={"error": "Token non valido."})
+    return None
+
+
+@app.get("/api/annunci/subito-senza-telefono")
+def annunci_subito_senza_telefono(request: Request, limit: int = Query(200, ge=1, le=1000)):
+    """Lista annunci Subito di privati che non hanno ancora un telefono.
+
+    Usato dal backfill VPS per sapere quali URL scrappare con Playwright.
+    Auth: X-Sync-Token header oppure ?token=... in query.
+    """
+    err = _check_sync_token(request)
+    if err is not None:
+        return err
+
+    conn = get_conn(); cur = _cur(conn)
+    cur.execute(_sql("""
+        SELECT id, url_originale
+          FROM annunci
+         WHERE portale = ?
+           AND fonte = ?
+           AND (telefono IS NULL OR telefono = '')
+           AND url_originale IS NOT NULL
+         ORDER BY id DESC
+         LIMIT ?
+    """), ("subito.it", "privato", limit))
+    rows = cur.fetchall()
+    conn.close()
+
+    out = []
+    for r in rows:
+        if isinstance(r, dict):
+            out.append({"id": r["id"], "url": r["url_originale"]})
+        else:
+            out.append({"id": r[0], "url": r[1]})
+    return JSONResponse(content=out)
+
+
+@app.post("/api/annunci/telefono-batch")
+async def aggiorna_telefoni_batch(request: Request):
+    """Aggiorna in batch i telefoni di annunci esistenti (idempotente).
+
+    Body: [{"id": int, "telefono": "3331234567"}, ...]
+    Auth : X-Sync-Token header.
+    Update solo se il telefono attualmente è NULL/'' (no overwrite).
+    Telefono validato via normalizza_telefono_it: scarta non-cellulari IT.
+    """
+    err = _check_sync_token(request)
+    if err is not None:
+        return err
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Body JSON non valido."})
+    if not isinstance(body, list):
+        return JSONResponse(status_code=400, content={"error": "Atteso un array JSON."})
+
+    sys.path.insert(0, SCRAPER_DIR)
+    from subito_phone_extractor import normalizza_telefono_it
+
+    aggiornati = 0
+    saltati = 0
+    invalidi = 0
+
+    conn = get_conn(); cur = _cur(conn)
+    for item in body:
+        if not isinstance(item, dict):
+            invalidi += 1
+            continue
+        ann_id = item.get("id")
+        tel_norm = normalizza_telefono_it(item.get("telefono"))
+        if not ann_id or not tel_norm:
+            invalidi += 1
+            continue
+        cur.execute(_sql("""
+            UPDATE annunci
+               SET telefono = ?
+             WHERE id = ?
+               AND (telefono IS NULL OR telefono = '')
+        """), (tel_norm, ann_id))
+        if cur.rowcount and cur.rowcount > 0:
+            aggiornati += 1
+        else:
+            saltati += 1
+    conn.commit()
+    conn.close()
+
+    print(f"[Telefono-Batch] ricevuti={len(body)} "
+          f"aggiornati={aggiornati} saltati={saltati} invalidi={invalidi}")
+    return JSONResponse(content={
+        "aggiornati": aggiornati,
+        "saltati": saltati,
+        "invalidi": invalidi,
+    })
+
+
 @app.get("/api/report-pdf")
 def report_pdf(
     indirizzo: Optional[str] = Query(""),
