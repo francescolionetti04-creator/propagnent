@@ -123,16 +123,47 @@ async def _start_match_scheduler():
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
         from services.match_service import run_full_pipeline
 
         sched = BackgroundScheduler(timezone="Europe/Rome", daemon=True)
-        # Ogni notte alle 03:00 Europe/Rome
+        # Match pipeline ogni notte alle 03:00 Europe/Rome
         sched.add_job(run_full_pipeline,
                       CronTrigger(hour=3, minute=0),
                       id="match_pipeline",
                       replace_existing=True,
                       max_instances=1,
                       coalesce=True)
+
+        # Sprint 5.2.1: cron Subito.it (precedentemente girava solo a DB vuoto).
+        # Default ogni 2h, primo run dopo 60s dal boot. Disabilita: DISABLE_SUBITO_CRON=1
+        if os.environ.get("DISABLE_SUBITO_CRON") != "1":
+            from datetime import datetime, timedelta
+            subito_hours = int(os.environ.get("SUBITO_CRON_HOURS", "2"))
+
+            def _run_subito_safe():
+                try:
+                    sys.path.insert(0, SCRAPER_DIR)
+                    from subito_api import scrapa_subito
+                    print(f"[subito-cron] avvio scraping Subito.it...")
+                    n = scrapa_subito()
+                    print(f"[subito-cron] completato: {n} nuovi annunci")
+                except Exception as e:
+                    import traceback
+                    print(f"[subito-cron] errore: {e}")
+                    traceback.print_exc()
+
+            sched.add_job(_run_subito_safe,
+                          IntervalTrigger(hours=subito_hours),
+                          id="subito_cron",
+                          next_run_time=datetime.now() + timedelta(seconds=60),
+                          replace_existing=True,
+                          max_instances=1,
+                          coalesce=True)
+            print(f"[subito-cron] scheduler attivo — primo run +60s, ricorrenza {subito_hours}h")
+        else:
+            print("[subito-cron] disabilitato via DISABLE_SUBITO_CRON=1")
+
         sched.start()
         _scheduler = sched
         print("[match] scheduler avviato — match pipeline 03:00 Europe/Rome")
