@@ -123,7 +123,6 @@ async def _start_match_scheduler():
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
-        from apscheduler.triggers.interval import IntervalTrigger
         from services.match_service import run_full_pipeline
 
         sched = BackgroundScheduler(timezone="Europe/Rome", daemon=True)
@@ -134,36 +133,6 @@ async def _start_match_scheduler():
                       replace_existing=True,
                       max_instances=1,
                       coalesce=True)
-
-        # Sprint 5.2.1: cron Subito.it (precedentemente girava solo a DB vuoto).
-        # Default ogni 2h, primo run dopo 60s dal boot. Disabilita: DISABLE_SUBITO_CRON=1
-        if os.environ.get("DISABLE_SUBITO_CRON") != "1":
-            from datetime import datetime, timedelta
-            subito_hours = int(os.environ.get("SUBITO_CRON_HOURS", "2"))
-
-            def _run_subito_safe():
-                try:
-                    sys.path.insert(0, SCRAPER_DIR)
-                    from subito_api import scrapa_subito
-                    print(f"[subito-cron] avvio scraping Subito.it...")
-                    n = scrapa_subito()
-                    print(f"[subito-cron] completato: {n} nuovi annunci")
-                except Exception as e:
-                    import traceback
-                    print(f"[subito-cron] errore: {e}")
-                    traceback.print_exc()
-
-            sched.add_job(_run_subito_safe,
-                          IntervalTrigger(hours=subito_hours),
-                          id="subito_cron",
-                          next_run_time=datetime.now() + timedelta(seconds=60),
-                          replace_existing=True,
-                          max_instances=1,
-                          coalesce=True)
-            print(f"[subito-cron] scheduler attivo — primo run +60s, ricorrenza {subito_hours}h")
-        else:
-            print("[subito-cron] disabilitato via DISABLE_SUBITO_CRON=1")
-
         sched.start()
         _scheduler = sched
         print("[match] scheduler avviato — match pipeline 03:00 Europe/Rome")
@@ -214,13 +183,9 @@ def _popola_db_in_background():
     print("[Startup] Idealista.it — temporaneamente disabilitato su Render (IP cloud bloccato)")
 
     # ── Subito.it ─────────────────────────────────────────────────────
-    try:
-        print("[Scraping] Avvio Subito.it...")
-        from subito_api import scrapa_subito
-        n = scrapa_subito()
-        print(f"[Scraping] Subito.it completato — {n} nuovi annunci")
-    except Exception as e:
-        print(f"[Scraping] Subito.it ERRORE: {e}")
+    # Sprint 5.3: spostato al scheduler VPS (subito_sync.py). L'IP cloud
+    # Render è blacklistato Akamai (HTTP 403). Sync ogni 30 min via VPS Hetzner.
+    print("[Startup] Subito.it — gestito da scheduler VPS (Sprint 5.3)")
 
     # ── Immobiliare.it ────────────────────────────────────────────────
     try:
@@ -275,11 +240,8 @@ async def avvia_scraper():
         sys.path.insert(0, SCRAPER_DIR)
         # Idealista disabilitato su Render (403 IP cloud)
         print("[Scraper] Idealista.it — disabilitato su Render (IP cloud bloccato)")
-        try:
-            from subito_api import scrapa_subito
-            await asyncio.to_thread(scrapa_subito)
-        except Exception as e:
-            print(f"[Scraper] Subito.it errore: {e}")
+        # Subito.it — Sprint 5.3: spostato a scheduler VPS (IP Render bloccato Akamai)
+        print("[Scraper] Subito.it — gestito da scheduler VPS (Sprint 5.3)")
         try:
             from immobiliare_scraper import scrapa_immobiliare
             await asyncio.to_thread(scrapa_immobiliare)
