@@ -29,6 +29,7 @@ class Annuncio:
     portale: Optional[str]        # "subito.it" / "idealista.it" / "immobiliare.it"
     citta: Optional[str]          # Sprint 5.0.2 SX: comune normalizzato (es. "Cecina")
     provincia: Optional[str]      # Sprint 5.0.2 SX: codice 2 lettere (LI/PI/...)
+    tipologia: Optional[str]      # Sprint 5.4: appartamento/casa_villa/terreno/garage/altro
 
     @staticmethod
     def from_row(row: dict) -> "Annuncio":
@@ -75,6 +76,7 @@ class Annuncio:
             portale=row.get("portale"),
             citta=row.get("citta"),
             provincia=row.get("provincia"),
+            tipologia=row.get("tipologia"),
         )
 
     def to_dict(self) -> dict:
@@ -103,4 +105,5 @@ class Annuncio:
             "portale": self.portale,
             "citta": self.citta,
             "provincia": self.provincia,
+            "tipologia": self.tipologia,
         }

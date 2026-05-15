@@ -166,6 +166,8 @@ def init_db():
             # Sprint 5.0.2 SX: campi geografici normalizzati
             "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS citta VARCHAR(100) DEFAULT NULL",
             "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS provincia VARCHAR(2) DEFAULT NULL",
+            # Sprint 5.4: tipologia canonicalizzata (appartamento/casa_villa/terreno/garage/altro)
+            "ALTER TABLE annunci ADD COLUMN IF NOT EXISTS tipologia VARCHAR(20) DEFAULT NULL",
         ]:
             cur.execute(col_def)
     else:
@@ -174,15 +176,17 @@ def init_db():
             "ALTER TABLE annunci ADD COLUMN portale TEXT",
             "ALTER TABLE annunci ADD COLUMN citta TEXT",
             "ALTER TABLE annunci ADD COLUMN provincia TEXT",
+            "ALTER TABLE annunci ADD COLUMN tipologia TEXT",
         ]:
             try:
                 cur.execute(col_def)
             except Exception:
                 pass  # colonna già presente
-    # Indici geo (idempotenti)
+    # Indici geo + tipologia (idempotenti)
     for idx_def in [
         "CREATE INDEX IF NOT EXISTS idx_annunci_citta     ON annunci(citta)",
         "CREATE INDEX IF NOT EXISTS idx_annunci_provincia ON annunci(provincia)",
+        "CREATE INDEX IF NOT EXISTS idx_annunci_tipologia ON annunci(tipologia)",
     ]:
         try:
             cur.execute(_sql(idx_def))
@@ -661,13 +665,16 @@ def get_comparabili(zona: str, tipo: str, mq=None, limit: int = 5) -> list:
 
 
 def get_annunci(zona=None, tipo=None, fonte=None, sort="new",
-                prezzo_max=None, provincia=None, citta=None, q=None):
+                prezzo_max=None, provincia=None, citta=None, q=None,
+                tipologia=None):
     """Filtri:
       - zona: legacy (LIKE su zona/indirizzo) — mantenuto per compatibilità
       - tipo, fonte, prezzo_max, sort: invariati
       - provincia: codice 2 lettere (LI/PI/FI/...) — match esatto
       - citta: nome comune (es. "Cecina") — match esatto
       - q: ricerca testo libera su indirizzo OR zona OR citta (case-insensitive)
+      - tipologia: CSV di una o più tra appartamento/casa_villa/terreno/garage/altro
+                   (Sprint 5.4). Esempio: "appartamento,casa_villa"
     """
     conn = get_conn()
     cur = _cur(conn)
@@ -695,6 +702,13 @@ def get_annunci(zona=None, tipo=None, fonte=None, sort="new",
     if citta:
         query += " AND lower(citta) = lower(?)"
         params.append(citta)
+    # Sprint 5.4: filtro tipologia (CSV)
+    if tipologia:
+        valori = [v.strip().lower() for v in str(tipologia).split(",") if v.strip()]
+        if valori:
+            placeholders = ",".join(["?"] * len(valori))
+            query += f" AND tipologia IN ({placeholders})"
+            params += valori
     if q:
         like = f"%{q.strip()}%"
         # case-insensitive: usiamo lower() (SQLite + Postgres compatibili)
@@ -714,6 +728,25 @@ def get_annunci(zona=None, tipo=None, fonte=None, sort="new",
     rows = [_to_dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
+
+
+def get_conteggio_per_tipologia() -> dict:
+    """Sprint 5.4: ritorna {tipologia: count} per dashboard / pillole filtro."""
+    conn = get_conn(); cur = _cur(conn)
+    cur.execute(_sql("""
+        SELECT COALESCE(tipologia, 'altro') AS tipologia, COUNT(*) AS n
+          FROM annunci
+         GROUP BY COALESCE(tipologia, 'altro')
+         ORDER BY n DESC
+    """))
+    out = {}
+    for row in cur.fetchall():
+        if isinstance(row, dict):
+            out[row["tipologia"]] = row["n"]
+        else:
+            out[row[0]] = row[1]
+    conn.close()
+    return out
 
 
 def get_zone_disponibili() -> dict:
@@ -812,6 +845,40 @@ def get_alert():
     return {"ha_alert": True, "testo": testo, "annunci": rows}
 
 
+def determina_tipologia_da_titolo(titolo: str, tipo_hint: str = "") -> str:
+    """Sprint 5.4: canonicalizza la tipologia immobile a 1 di 5 valori
+    (appartamento/casa_villa/terreno/garage/altro) usando keyword nel titolo
+    e nel campo `tipo` (es. "Villa", "Bilocale").
+
+    Heuristic title-based — accettata fragilità per i 5 portali non-Subito
+    (Sprint 5.4 v1). Subito popola `tipologia` direttamente da Hades
+    `category.friendly_name`, salta questo fallback.
+    """
+    t = (titolo or "").lower() + " " + (tipo_hint or "").lower()
+    if any(x in t for x in [
+        "villa", "villino", "villetta", "bifamiliare", "trifamiliare",
+        "casale", "rustico", "cascina", "casa indipendente", "fienile",
+        "casolare", "casa singola",
+    ]):
+        return "casa_villa"
+    if any(x in t for x in [
+        "terreno", "terreni", "agricolo", "edificabile", "fondo agricolo",
+    ]):
+        return "terreno"
+    if any(x in t for x in [
+        "garage", " box ", "box auto", "posto auto", "posto moto", "autorimessa",
+    ]):
+        return "garage"
+    # Esclusioni implicite (rientreranno in "altro")
+    if any(x in t for x in [
+        "ufficio", "uffici", "magazzino", "capannone", "negozio", "fondo commerciale",
+        "locale commerciale", "loft", "mansarda", "multiproprieta", "multiproprietà",
+    ]):
+        return "altro"
+    # Default per appartamenti/bilocali/trilocali/monolocali/attici
+    return "appartamento"
+
+
 def upsert_sync_annunci(annunci: list) -> dict:
     """
     Upsert annunci via /api/sync (es. da Idealista locale).
@@ -856,14 +923,23 @@ def upsert_sync_annunci(annunci: list) -> dict:
                     provincia_n = provincia_n or p2
                 except Exception:
                     pass
+            # Sprint 5.4: tipologia canonicalizzata. Subito invia già il valore
+            # da Hades category.friendly_name; altri portali → fallback dal titolo.
+            tipologia_in = a.get("tipologia")
+            if not tipologia_in:
+                tipologia_in = determina_tipologia_da_titolo(
+                    a.get("indirizzo") or a.get("titolo") or "",
+                    a.get("tipo") or "",
+                )
+
             cur.execute(_sql("""
                 INSERT INTO annunci (
                     indirizzo, indirizzo_preciso, zona, tipo, mq, camere,
                     prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                     intel_privato, intel_warning, ai_insight,
                     is_nuovo, data_inserimento, url_originale, foto_url, portale,
-                    citta, provincia
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    citta, provincia, tipologia
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """), (
                 a.get("indirizzo"), a.get("indirizzo_preciso", False),
                 a.get("zona"), a.get("tipo", "Appartamento"),
@@ -880,6 +956,7 @@ def upsert_sync_annunci(annunci: list) -> dict:
                 a.get("foto_url"),
                 a.get("portale", "idealista.it"),
                 citta_n, provincia_n,
+                tipologia_in,
             ))
             inseriti += 1
 

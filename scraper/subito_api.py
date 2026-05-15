@@ -52,6 +52,24 @@ HADES_BASE = (
 SUBITO_MAX_PAGES = 30  # 100 ann/pagina × 30 = 3000 ann/categoria max
 
 
+# Sprint 5.4: filtro categoria Subito alla fonte (via category.friendly_name)
+# Categorie disponibili sotto macrocategory_id=6 (Immobili Toscana, verificate empiricamente):
+#   appartamenti  ville-singole-e-a-schiera  terreni-e-rustici  garage-e-box
+#   loft-mansarde  uffici-locali-commerciali  multiproprieta (precauzionale)
+SUBITO_CATEGORY_TO_TIPOLOGIA = {
+    "appartamenti":                "appartamento",
+    "ville-singole-e-a-schiera":   "casa_villa",
+    "terreni-e-rustici":           "terreno",
+    "garage-e-box":                "garage",
+    "loft-mansarde":               "altro",
+}
+SUBITO_CATEGORY_BLACKLIST = {
+    "uffici-locali-commerciali",
+    "multiproprieta",
+    "negozi",  # precauzionale (non visto nel campione ma possibile)
+}
+
+
 def determina_zona(citta: str, provincia: str) -> str:
     c = (citta or "").lower()
     if "livorno" in c:
@@ -200,8 +218,8 @@ def salva_annunci(annunci_raw: list) -> int:
                 prezzo, giorni_online, fonte, agenzie, proprietario, telefono,
                 intel_privato, intel_warning, ai_insight,
                 is_nuovo, data_inserimento, url_originale, foto_url, portale,
-                citta, provincia
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                citta, provincia, tipologia
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             a.get("indirizzo"), a.get("indirizzo_preciso", False),
             a.get("zona"), a.get("tipo", "Appartamento"),
@@ -216,6 +234,7 @@ def salva_annunci(annunci_raw: list) -> int:
             ora.isoformat(), url,
             a.get("foto_url"), "subito.it",
             citta_n, provincia_n,
+            a.get("tipologia"),  # Sprint 5.4: già canonicalizzato in parse_ads_json
         ))
         nuovi += 1
 
@@ -237,14 +256,27 @@ def salva_annunci(annunci_raw: list) -> int:
 
 
 def parse_ads_json(data: dict, provincia: str) -> list:
-    """Converte la risposta JSON dell'API Subito in lista di annunci normalizzati."""
+    """Converte la risposta JSON dell'API Subito in lista di annunci normalizzati.
+
+    Sprint 5.4: scarta annunci di categoria blacklist (uffici/commerciali,
+    multiproprietà, negozi) e popola il campo `tipologia` dal friendly_name.
+    """
     annunci = []
     ads = data.get("ads", [])
+    skipped_blacklist = 0
     for a in ads:
         try:
             titolo = a.get("subject", "").strip()
             if not titolo:
                 continue
+
+            # Sprint 5.4: filtro categoria
+            cat = a.get("category") or {}
+            cat_friendly = (cat.get("friendly_name") or "").lower().strip()
+            if cat_friendly in SUBITO_CATEGORY_BLACKLIST:
+                skipped_blacklist += 1
+                continue
+            tipologia = SUBITO_CATEGORY_TO_TIPOLOGIA.get(cat_friendly, "altro")
 
             # Advertiser
             adv = a.get("advertiser", {})
@@ -292,6 +324,7 @@ def parse_ads_json(data: dict, provincia: str) -> list:
                 "indirizzo_preciso": has_via,
                 "zona": zona,
                 "tipo": tipo,
+                "tipologia": tipologia,
                 "mq": feats.get("mq"),
                 "camere": feats.get("camere"),
                 "prezzo": feats.get("prezzo"),
@@ -306,6 +339,8 @@ def parse_ads_json(data: dict, provincia: str) -> list:
         except Exception as e:
             print(f"  Errore parsing annuncio: {e}")
             continue
+    if skipped_blacklist:
+        print(f"  [filtro 5.4] skip categoria blacklist: {skipped_blacklist} annunci")
     return annunci
 
 

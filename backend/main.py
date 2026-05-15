@@ -209,13 +209,21 @@ def annunci(
     provincia: Optional[str] = Query(None),   # Sprint 5.0.2 SX: LI/PI/FI/...
     citta: Optional[str]     = Query(None),
     q: Optional[str]         = Query(None),    # ricerca testo libera
+    tipologia: Optional[str] = Query(None),    # Sprint 5.4: CSV (es. "appartamento,casa_villa")
 ):
     rows = get_annunci(
         zona=zona, tipo=tipo, fonte=fonte, sort=sort, prezzo_max=prezzo_max,
-        provincia=provincia, citta=citta, q=q,
+        provincia=provincia, citta=citta, q=q, tipologia=tipologia,
     )
     result = [Annuncio.from_row(r).to_dict() for r in rows]
     return JSONResponse(content=result)
+
+
+@app.get("/api/annunci/conteggio-per-tipologia")
+def conteggio_per_tipologia():
+    """Sprint 5.4: ritorna {tipologia: count} per pillole filtro frontend."""
+    from database import get_conteggio_per_tipologia
+    return JSONResponse(content=get_conteggio_per_tipologia())
 
 
 @app.get("/stats")
@@ -506,6 +514,55 @@ async def aggiorna_telefoni_batch(request: Request):
         "aggiornati": aggiornati,
         "saltati": saltati,
         "invalidi": invalidi,
+    })
+
+
+# ── Sprint 5.4: Cleanup retroattivo annunci Subito senza telefono ────────────
+# DELETE solo annunci che il backfill (Sprint 5.2) NON ha già arricchito di
+# telefono — preserva il lavoro del backfill. Idempotente. Auth X-Sync-Token.
+
+@app.post("/api/admin/cleanup-subito-no-phone")
+async def cleanup_subito_no_phone(request: Request, dry_run: int = Query(1, ge=0, le=1)):
+    """Sprint 5.4 task C — elimina gli annunci Subito.it che NON hanno ancora
+    un telefono popolato. Lasciato per sicurezza in dry-run di default.
+
+    Esecuzione live: POST /api/admin/cleanup-subito-no-phone?dry_run=0
+    Auth: header X-Sync-Token o query ?token=...
+
+    Idempotente: dopo il primo run, ulteriori chiamate ritornano da_eliminare=0
+    (lo scheduler VPS ri-popolerà il DB con filtro tipologia attivo).
+    """
+    err = _check_sync_token(request)
+    if err is not None:
+        return err
+
+    conn = get_conn(); cur = _cur(conn)
+    # Conta prima
+    cur.execute(_sql("""
+        SELECT COUNT(*) AS n FROM annunci
+         WHERE portale = ?
+           AND (telefono IS NULL OR telefono = '')
+    """), ("subito.it",))
+    row = cur.fetchone()
+    da_eliminare = row["n"] if isinstance(row, dict) else row[0]
+
+    eliminati = 0
+    if dry_run == 0 and da_eliminare > 0:
+        cur.execute(_sql("""
+            DELETE FROM annunci
+             WHERE portale = ?
+               AND (telefono IS NULL OR telefono = '')
+        """), ("subito.it",))
+        eliminati = cur.rowcount or 0
+        conn.commit()
+    conn.close()
+
+    print(f"[Cleanup-Subito-NoPhone] dry_run={dry_run} "
+          f"da_eliminare={da_eliminare} eliminati={eliminati}")
+    return JSONResponse(content={
+        "dry_run": bool(dry_run),
+        "da_eliminare": da_eliminare,
+        "eliminati": eliminati,
     })
 
 
