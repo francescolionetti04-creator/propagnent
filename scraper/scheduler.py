@@ -10,9 +10,11 @@ Pipeline (in ordine):
   3. Casa.it            (casa_sync.py)
   4. Wikicasa.it        (wikicasa_sync.py)
   5. Tecnocasa.it       (tecnocasa_sync.py)
+  6. Subito.it          (subito_sync.py — curl_cffi Chrome120, Sprint 5.3)
 
-Render gestisce autonomamente Subito.it e Immobiliare.it (curl_cffi)
-direttamente al boot, quindi non sono qui.
+Subito.it è stato spostato dal boot Render al VPS in Sprint 5.3 perché
+l'IP cloud di Render è blacklistato Akamai (HTTP 403). L'IP del VPS
+Hetzner accetta le richieste con curl_cffi + warm-up cookies.
 
 Env vars richieste:
     SYNC_TOKEN      — token segreto (stesso di Render)
@@ -35,6 +37,7 @@ SYNC_MODULES = [
     ("Casa.it",               "casa_sync"),
     ("Wikicasa.it",           "wikicasa_sync"),
     ("Tecnocasa.it",          "tecnocasa_sync"),
+    ("Subito.it",             "subito_sync"),
 ]
 
 
